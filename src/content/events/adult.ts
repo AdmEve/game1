@@ -87,9 +87,9 @@ defEvents([
     ],
   },
   {
-    id: 'a_jobless_blues', emoji: '🛋️', w: 1.5, age: [22, 55], once: false, cd: 3,
+    id: 'a_jobless_blues', emoji: '🛋️', title: 'بیکاری', w: 1.5, age: [22, 55], once: false, cd: 3,
     when: (c) => !c.L.job && c.L.edu.stage === 'none' && !c.L.pension && c.L.mil.status !== 'serving',
-    text: (c) => `${c.count('jobless') > 2 ? 'چند ساله' : 'یه مدته'} بیکاری. ${c.rel('father') ? 'بابات سر سفره' : 'فامیل'} مدام می‌پرسن «کار پیدا نکردی؟»`,
+    text: (c) => `${c.count('jobless') > 2 ? 'چند ساله' : 'یه مدته'} بیکاری. ${c.rel('father') ? 'بابات سر سفره مدام می‌پرسه' : 'فامیل مدام می‌پرسن'} «کار پیدا نکردی؟»`,
     choices: [
       { label: 'هر کاری باشه قبول می‌کنم', do: (c) => { const j = jobById(c.pick(['courier', 'seller', 'worker', 'peddler']))!; c.L.job = { id: j.id, since: c.L.year, perf: 50, level: 0, salary: 0 }; c.L.job.salary = Math.round(j.pay * c.L.econ.wage); if (!c.L.career.some((x) => x.id === j.id)) c.L.career.push({ id: j.id, title: j.title, years: 0 }); c.happy(2); return `شدی «${j.title}». یه شروعه!`; } },
       { label: 'منتظر کار مناسب می‌مونم', do: (c) => { c.happy(-4); return 'گفتی «من با این مدرک کارگری نمی‌کنم!» و منتظر موندی.'; } },
@@ -191,7 +191,7 @@ defEvents([
   {
     id: 'a_baby_question', emoji: '🍼', title: 'بچه کِی؟', w: 1.5, age: [24, 45], once: false, cd: 5,
     when: (c) => married(c) && c.kids.length === 0,
-    text: 'مادرشوهر/مادرزنت سر سفره پرسید: «نوه‌ی ما کِی میاد؟»'.replace('مادرشوهر/مادرزنت', 'مادرزن/مادرشوهرت'),
+    text: (c) => `${c.male ? 'مادرزنت' : 'مادرشوهرت'} سر سفره پرسید: «نوه‌ی ما کِی میاد؟»`,
     choices: [
       { label: '«فعلاً زوده»', do: (c) => { c.happy(-1); return 'گفتی «فعلاً زوده» و موضوع رو عوض کردی.'; } },
       { label: '«به‌زودی!»', do: (c) => { c.happy(2); return 'گفتی «به‌زودی» و همه دست زدن. حالا هر هفته زنگ می‌زنن خبر بگیرن!'; } },

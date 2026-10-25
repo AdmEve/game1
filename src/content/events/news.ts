@@ -1,4 +1,4 @@
-import { money } from '../../engine/fmt';
+import { fa, money } from '../../engine/fmt';
 import { defEvents } from '../../engine/registry';
 
 defEvents([
@@ -72,7 +72,7 @@ defEvents([
   },
   {
     id: 'n_new_metro', emoji: '🚇', age: [10, 100], w: 0.4, text: '', when: (c) => ['tehran', 'mashhad', 'isfahan', 'shiraz', 'tabriz', 'karaj', 'qom', 'ahvaz', 'kermanshah'].includes(c.L.city),
-    auto: (c) => { c.happy(3); return `🚇 بالاخره خط جدید مترو بعد از ${c.int(12, 20)} سال افتتاح شد! حالا ۲۰ دقیقه زودتر می‌رسی.`; },
+    auto: (c) => { c.happy(3); return `🚇 بالاخره خط جدید مترو بعد از ${fa(c.int(12, 20))} سال افتتاح شد! حالا ۲۰ دقیقه زودتر می‌رسی.`; },
     kind: 'good',
   },
   {

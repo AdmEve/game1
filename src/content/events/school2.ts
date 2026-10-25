@@ -6,7 +6,7 @@ const inSchool = (c: { L: { edu: { stage: string } } }) => c.L.edu.stage === 'sc
 
 defEvents([
   {
-    id: 'c_first_day', age: [7, 7], emoji: '🏫', title: 'روز اول مدرسه', w: 3, when: inSchool,
+    id: 'c_first_day', age: [6, 6], emoji: '🏫', title: 'روز اول مدرسه', w: 3, when: inSchool,
     text: 'روز اول مدرسه‌ست. همه‌ی بچه‌ها گریه می‌کنن و مامان‌ها پشت در مدرسه وایسادن.',
     choices: [
       { label: 'منم گریه می‌کنم!', do: (c) => { c.happy(-3); return 'تا ظهر گریه کردی. معلم بهت یه آبنبات داد و آروم شدی.'; } },

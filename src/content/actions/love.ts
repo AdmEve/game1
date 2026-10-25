@@ -151,7 +151,7 @@ function mehrOptions(c: Ctx, k: Candidate): ChoiceDef[] {
         c2.happy(-8);
         return `خانواده‌ی ${k.first} گفتن «دختر ما رو با ${fa(n)} سکه می‌خواین؟!» و جواب منفی دادن.`;
       }
-      const n2 = c2.addPerson({ rel: 'fiance', gender: k.gender, born: c2.L.year - k.age, first: k.first, last: k.last, close: 75, job: k.job, rich: k.rich, looks: k.looks, smarts: k.smarts, traits: [k.trait], met: k.via });
+      const n2 = c2.addPerson({ flags: { since: c2.L.year }, rel: 'fiance', gender: k.gender, born: c2.L.year - k.age, first: k.first, last: k.last, close: 75, job: k.job, rich: k.rich, looks: k.looks, smarts: k.smarts, traits: [k.trait], met: k.via });
       c2.L.mehr = n;
       c2.L.flags.mehrMax = Math.max(c2.L.flags.mehrMax ?? 0, n);
       if (n === 1404) award(c2, 'mehr1404');
@@ -246,7 +246,8 @@ defEvents([
     milestone: true,
     emoji: '💒',
     title: 'عروسی',
-    text: (c) => `${c.rel('fiance')?.first} و تو آماده‌ی عروسی هستین. چه جور عروسی‌ای می‌گیرین؟`,
+    when: (c) => !!c.rel('fiance'),
+    text: (c) => `${c.rel('fiance')?.first} و تو یه ساله نامزدین و خانواده‌ها می‌گن «پس عروسی کِی؟» چه جور عروسی‌ای می‌گیرین؟`,
     choices: [
       { label: 'تالار لاکچری با ۵۰۰ مهمون', cost: (c) => c.price(2.5e9), note: (c) => money(c.price(2.5e9)), do: (c) => marry(c, 15, 10, 'یه عروسی شاهانه گرفتین که تا سال‌ها فامیل ازش حرف می‌زنن!') },
       {
@@ -256,6 +257,17 @@ defEvents([
       },
       { label: 'تالار معمولی', cost: (c) => c.price(700e6), note: (c) => money(c.price(700e6)), do: (c) => marry(c, 10, 4, 'یه عروسی گرم و صمیمی تو تالار گرفتین. ساعت ۱۲ شب هنوز می‌رقصیدن!') },
       { label: 'جشن کوچیک خونگی', cost: (c) => c.price(120e6), note: (c) => money(c.price(120e6)), do: (c) => marry(c, 6, 0, 'یه جشن کوچیک تو حیاط خونه‌ی مادربزرگ گرفتین.') },
+      {
+        label: 'نامزدی رو به هم می‌زنم',
+        do: (c) => {
+          const f = c.rel('fiance')!;
+          f.rel = 'ex';
+          c.happy(-12).rep(-5);
+          if (c.male && c.L.mehr) { const half = Math.round((c.L.mehr / 2) * c.L.econ.coin); c.L.mehr = undefined; c.queue('mehr_claim', { coins: Math.round(c.L.flags.mehrMax / 2), owed: half }); return `نامزدی با ${f.first} به هم خورد. چون عقد کرده بودین، نصف مهریه رو باید بدی!`; }
+          c.L.mehr = undefined;
+          return `نامزدی با ${f.first} به هم خورد. فامیل تا یه سال درباره‌اش پچ‌پچ کردن.`;
+        },
+      },
       { label: 'فقط ماه عسل (کیش)', cost: (c) => c.price(200e6), note: (c) => money(c.price(200e6)), do: (c) => marry(c, 8, -3, 'عروسی نگرفتین و رفتین کیش. عمه‌ات هنوز ناراحته!') },
     ],
   },

@@ -236,9 +236,9 @@ export function continueAs(L: Life, childId: number): Life {
   N.log = [{ age, year: L.year, lines: [{ t: `🌱 زندگی ${N.first}، ${child.gender === 'm' ? 'پسر' : 'دختر'} ${L.first}، رو ادامه می‌دی.`, k: 'big' }] }];
   if (share > 0) N.log[0].lines.push({ t: `📜 سهم‌الارثت از ${L.first}: ${money(share)}`, k: 'good' });
   // Education/military state for the age.
-  if (age >= 7 && age < 19) { N.edu.stage = 'school'; N.edu.grade = Math.min(12, age - 6); if (age >= 16) N.edu.track = 'riazi'; }
-  else if (age >= 5 && age < 7) N.edu.stage = 'pre';
-  else if (age >= 19) {
+  if (age >= 6 && age < 18) { N.edu.stage = 'school'; N.edu.grade = Math.min(12, age - 5); if (age >= 15) N.edu.track = 'riazi'; }
+  else if (age === 5) N.edu.stage = 'pre';
+  else if (age >= 18) {
     N.edu.stage = 'none';
     N.edu.degrees.push({ kind: 'diploma', major: 'riazi', uni: 'دبیرستان', tier: 0, gpa: 15 });
     if (N.gender === 'm') N.mil.status = age > 40 ? 'exempt' : 'due';

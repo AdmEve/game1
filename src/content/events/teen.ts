@@ -1,5 +1,5 @@
 import { award } from '../../engine/achieve';
-import { money } from '../../engine/fmt';
+import { fa, money } from '../../engine/fmt';
 import { defEvents } from '../../engine/registry';
 
 defEvents([
@@ -28,7 +28,7 @@ defEvents([
   },
   {
     id: 't_growth', age: [13, 16], emoji: '📏', text: '',
-    auto: (c) => { c.looks(c.int(2, 6)).health(2); return `📏 یه‌دفعه ${c.int(8, 15)} سانت قد کشیدی! همه‌ی شلوارهات کوتاه شد.`; },
+    auto: (c) => { c.looks(c.int(2, 6)).health(2); return `📏 یه‌دفعه ${fa(c.int(8, 15))} سانت قد کشیدی! همه‌ی شلوارهات کوتاه شد.`; },
     kind: 'good',
   },
   {

@@ -242,9 +242,10 @@ defActions([
     id: 'doctor', group: 'body', emoji: '🩺',
     label: 'دکتر رفتن', desc: (c) => `ویزیت: ${money(c.price(1.5e6))}`,
     cost: (c) => (c.age < 18 ? 0 : c.price(1.5e6)),
-    when: (c) => free(c),
+    when: (c) => free(c) && c.age >= 2,
     do: (c) => {
       const ill = c.L.ills[0];
+      if (!ill && c.age < 14) { c.health(1); return c.pick(['مامانت بردت دکتر اطفال. دکتر یه آبنبات بهت داد!', 'دکتر گفت «ماشالله، سالمِ سالمه!»', 'واکسن زدی و یه کوچولو گریه کردی.']); }
       if (!ill) { c.health(1); return c.pick(['دکتر گفت «هیچیت نیست، فقط استرس داری».', 'آزمایش دادی و همه چی نرمال بود. دکتر گفت کمتر نمک بخور!']); }
       ill.severity -= c.int(15, 35);
       c.health(3);

@@ -4,7 +4,7 @@ import { newLife } from '../src/engine/life';
 import { Rng } from '../src/engine/rng';
 import { STAT_KEYS, type Life } from '../src/engine/types';
 
-const BAD = /undefined|NaN|\[object|Infinity/;
+const BAD = /undefined|NaN|\[object|Infinity|[0-9]/;
 
 function checkText(s: string, where: string) {
   if (BAD.test(s)) throw new Error(`bad text in ${where}: ${s}`);

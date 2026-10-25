@@ -183,7 +183,7 @@ export function schoolGpa(c: Ctx): number {
 
 function school(c: Ctx) {
   const L = c.L;
-  if (L.age === 7 && L.edu.stage === 'pre') {
+  if (L.age === 6 && L.edu.stage === 'pre') {
     L.edu.stage = 'school';
     L.edu.grade = 1;
     c.queue('m_school_start');
@@ -221,7 +221,7 @@ function school(c: Ctx) {
   if (passed && grade === 12) {
     L.edu.stage = 'none';
     L.edu.degrees.push({ kind: 'diploma', major: L.edu.track ?? 'riazi', uni: 'دبیرستان', tier: 0, gpa: g });
-    c.line(`🎓 دیپلم ${L.edu.track === 'fani' ? 'فنی‌وحرفه‌ای' : ''} گرفتی!`, 'good');
+    c.line(L.edu.track === 'fani' ? '🎓 دیپلم فنی‌وحرفه‌ای گرفتی!' : '🎓 دیپلم گرفتی!', 'good');
     c.queue('m_konkur');
   }
 }
@@ -338,6 +338,11 @@ function work(c: Ctx) {
   }
   const d = jobById(j.id);
   if (!d) { L.job = null; return; }
+  if (d.part && L.edu.stage !== 'school' && L.edu.stage !== 'uni' && L.age > 24) {
+    c.line(`👋 دیگه دانشجو نیستی؛ کار پاره‌وقت «${d.title}» رو گذاشتی کنار.`);
+    L.job = null;
+    return;
+  }
   L.flags.jobless = 0;
   const years = L.year - j.since;
   j.perf = clamp(j.perf + c.rng.gauss((L.grit - 50) / 25, 6) + (L.stats.smarts - 50) / 40);
@@ -502,6 +507,12 @@ function family(c: Ctx) {
       p.died = L.year;
       relativeDied(c, p);
     }
+  }
+  // Engaged for a year or more: the families want a wedding date.
+  const fiance = L.people.find((p) => p.rel === 'fiance' && p.alive);
+  if (fiance && !L.prison) {
+    fiance.flags = { ...(fiance.flags ?? {}), since: fiance.flags?.since ?? L.year - 1 };
+    if (L.year - fiance.flags.since >= 1 && !L.queue.some((q) => q.id === 'wedding')) c.queue('wedding');
   }
   // Kids leaving the nest.
   for (const k of c.kids) {
