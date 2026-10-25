@@ -51,7 +51,7 @@ export function ageUp(L: Life): void {
   if (L.log.length > 140) L.log.splice(0, L.log.length - 140);
 
   const news = stepEcon(L.econ, c.rng);
-  if (L.econ.price >= 2000) redenominate(c);
+  if (L.econ.price >= 1000) redenominate(c);
   const invested = L.assets.some((a) => ['coin', 'dollar', 'stock', 'crypto'].includes(a.kind));
   if (L.age >= 16 && (invested || c.chance(0.5))) for (const n of news.slice(0, 2)) c.line(n, 'info');
 
@@ -130,7 +130,7 @@ export function die(c: Ctx, cause: string) {
 }
 
 /**
- * Iran-style currency reform: once prices have grown 2000× since 1405 the government drops three
+ * Iran-style currency reform: once prices have grown 1000× since 1405 the government drops three
  * zeros, which keeps the numbers readable across an 80-year life.
  */
 export function redenominate(c: Ctx) {
@@ -239,7 +239,7 @@ function university(c: Ctx) {
   const tuition = tuitionFor(c);
   if (tuition > 0) {
     const fam = familyBudget(L.flags.rich ?? 2) * L.econ.price;
-    if (L.home === 'parents' && c.parents.length && fam >= tuition) c.line(`💸 خانواده شهریه‌ی امسالت (${money(tuition)}) رو دادن.`);
+    if (c.parents.length && fam >= tuition && L.age < 32 && L.home !== 'own') c.line(`💸 خانواده شهریه‌ی امسالت (${money(tuition)}) رو دادن.`);
     else {
       c.money(-tuition);
       c.line(`💸 شهریه‌ی امسال: ${money(tuition)}`, 'bad');
@@ -266,7 +266,6 @@ export function tuitionFor(c: Ctx): number {
   const azad = (majorTuition(u.major) || 60e6) * c.L.econ.price;
   if (u.tier === 3) return azad;
   if (u.tier === 4) return 18e6 * c.L.econ.price;
-  if (u.tier === 2 && c.L.flags.night) return azad * 0.6;
   return 0;
 }
 

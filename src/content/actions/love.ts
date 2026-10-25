@@ -153,6 +153,7 @@ function mehrOptions(c: Ctx, k: Candidate): ChoiceDef[] {
       }
       const n2 = c2.addPerson({ rel: 'fiance', gender: k.gender, born: c2.L.year - k.age, first: k.first, last: k.last, close: 75, job: k.job, rich: k.rich, looks: k.looks, smarts: k.smarts, traits: [k.trait], met: k.via });
       c2.L.mehr = n;
+      c2.L.flags.mehrMax = Math.max(c2.L.flags.mehrMax ?? 0, n);
       if (n === 1404) award(c2, 'mehr1404');
       c2.happy(15).rep(4);
       return `مهریه ${fa(n)} سکه تعیین شد و با ${n2.first} عقد کردین! حالا نامزدین. (از تب «عشق» عروسی بگیرین)`;

@@ -71,7 +71,7 @@ export const JOBS: JobDef[] = [
   // ── kardani ──
   { id: 'technician', title: 'تکنسین برق صنعتی', emoji: '⚡', degree: 'kardani', majors: ['k_elec', 'elec'], pay: 1.9, growth: 1.15, levels: ['تکنسین', 'سرپرست فنی'], stress: 0.4, hard: 0.2, tier: 1 },
   { id: 'autotech', title: 'تکنسین خودرو', emoji: '🚗', degree: 'kardani', majors: ['k_mech', 'mech'], pay: 1.8, growth: 1.15, levels: ['تکنسین', 'سرپرست تعمیرگاه'], stress: 0.4, hard: 0.2, tier: 1 },
-  { id: 'it', title: 'پشتیبان شبکه', emoji: '🖧', degree: 'kardani', majors: ['k_comp', 'comp', 'elec'], pay: 1.9, growth: 1.2, levels: ['پشتیبان', 'کارشناس شبکه', 'مدیر IT'], stress: 0.4, hard: 0.25, tier: 1 },
+  { id: 'it', title: 'پشتیبان شبکه', emoji: '🌐', degree: 'kardani', majors: ['k_comp', 'comp', 'elec'], pay: 1.9, growth: 1.2, levels: ['پشتیبان', 'کارشناس شبکه', 'مدیر IT'], stress: 0.4, hard: 0.25, tier: 1 },
   { id: 'bookkeeper', title: 'دفتردار', emoji: '🧾', degree: 'kardani', majors: ['k_acc', 'acc', 'mgmt', 'econ'], pay: 1.5, growth: 1.15, levels: ['دفتردار', 'حسابدار'], stress: 0.3, hard: 0.2, tier: 0 },
   // ── bachelor ──
   { id: 'dev', title: 'برنامه‌نویس', emoji: '💻', degree: 'karshenasi', majors: ['comp', 'elec', 'math', 'phys', 'ind'], smarts: 55, pay: 3.6, growth: 1.35, levels: ['برنامه‌نویس جونیور', 'برنامه‌نویس', 'برنامه‌نویس ارشد', 'مدیر فنی (CTO)'], stress: 0.5, hard: 0.35, tier: 2 },

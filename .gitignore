@@ -13,3 +13,4 @@ android/.idea/
 # Signing keys never go in the repo (it is public).
 *.keystore
 *.jks
+public/emoji/

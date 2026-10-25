@@ -31,7 +31,7 @@ export function stepEcon(e: Econ, r: Rng): string[] {
   const prevStock = e.stock;
   const prevCrypto = e.crypto;
 
-  let infl = e.infl * 0.55 + 0.35 * 0.45 + r.gauss(0, 0.07);
+  let infl = e.infl * 0.55 + 0.29 * 0.45 + r.gauss(0, 0.07);
   if (r.chance(0.07)) infl += r.range(0.15, 0.3); // shock year
   if (r.chance(0.06)) infl -= r.range(0.08, 0.15); // calm year
   e.infl = clamp(infl, 0.12, 0.75);

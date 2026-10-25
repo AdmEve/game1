@@ -62,7 +62,6 @@ export function startUni(c: Ctx, o: Offer) {
   const L = c.L;
   L.edu.stage = 'uni';
   L.edu.uni = { kind: o.kind, major: o.major, uni: o.uni, tier: o.tier, year: 1, length: o.len, gpa: 0 };
-  if (o.tier === 2) c.flag('night', c.chance(0.4) ? L.year : 0);
   if (L.gender === 'm' && ['na', 'due'].includes(L.mil.status)) L.mil.status = 'deferred';
   const far = !o.uni.includes(cityById(L.city).name) && o.tier !== 3 && o.tier !== 4;
   if (far && L.home === 'parents') {

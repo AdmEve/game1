@@ -1,0 +1,83 @@
+name: Build game
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test + build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/zendegi.keystore
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "SIGNED_WITH=release key" >> "$GITHUB_ENV"
+          else
+            # No release key configured: sign with a throwaway key so the APK still installs for testing.
+            PW=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore android/app/zendegi.keystore -alias zendegi -keyalg RSA -keysize 2048 \
+              -validity 3650 -storepass "$PW" -keypass "$PW" -dname "CN=Test build" >/dev/null
+            echo "::add-mask::$PW"
+            echo "KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
+            echo "SIGNED_WITH=temporary test key (NOT for Cafe Bazaar upload)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Android APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../ZendegiIrooni.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZendegiIrooni-android-apk
+          path: ZendegiIrooni.apk
+
+      - name: Publish "latest" release (download link for your phone)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest ZendegiIrooni.apk \
+            --target "$GITHUB_SHA" \
+            --title "Zendegi Irooni – latest build (${GITHUB_REF_NAME}, #${{ github.run_number }})" \
+            --notes "Install on Android: open this page on your phone, tap **ZendegiIrooni.apk**, then allow installing from this source.
+
+          Signed with: ${SIGNED_WITH}.
+
+          Built from commit ${GITHUB_SHA::7}."
