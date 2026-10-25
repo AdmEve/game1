@@ -73,7 +73,12 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 
 ## Next (most valuable first)
 
-1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
-   more choices with real consequences; proof-read with `scripts/story.ts`.
-2. More mini-games for big moments.
-3. Balance pass with `scripts/sim.ts` after each content batch.
+1. More events with choices, especially ages 3–12 and 45–65; proof-read new text with
+   `scripts/story.ts <seed>` and check that texts never mention a dead parent or a missing spouse/kids
+   (scan lives for «بابات»/«مامانت»/«همسرت» while that person is gone; use `Ctx.parent()`).
+2. More mini-games: a TV quiz show (reuse the quiz UI), backgammon with grandpa, jumping the fire at
+   Chaharshanbe Suri (timing, like parallel parking).
+3. Balance with `scripts/sim.ts` after each content batch; the random bot is reckless, so judge
+   prison/debt numbers with that in mind.
+4. Once the owner has set up Bazaar and Tapsell (see «Before publishing»), test purchases and ads on a
+   real phone.
