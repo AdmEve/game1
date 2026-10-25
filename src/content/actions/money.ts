@@ -317,14 +317,31 @@ defEvents([
     milestone: true,
     emoji: (c) => (c.p.kind === 'car' ? '🚗' : '🏠'),
     title: 'چونه زدن',
-    text: (c) => {
-      const what = c.p.kind === 'car' ? CARS.find((x) => x.id === c.p.ref)?.name : `${HOUSES.find((x) => x.id === c.p.ref)?.name} در ${c.p.hood}`;
-      return `${c.p.kind === 'car' ? 'فروشنده' : 'بنگاه‌دار'} قیمت ${what} رو ${money(c.p.price as number)} گفت. چی‌کار می‌کنی؟`;
-    },
+    text: (c) => `${c.p.kind === 'car' ? 'فروشنده' : 'بنگاه‌دار'} قیمت ${haggleWhat(c.p)} رو ${money(c.p.price as number)} گفت. چی‌کار می‌کنی؟`,
     choices: [
-      { label: 'قبول! بخریمش', do: (c) => buyNow(c, c.p.price as number) },
+      // Settled in the haggling mini-game.
+      {
+        label: 'تحویل بگیر',
+        when: (c) => c.p.deal !== undefined,
+        do: (c) => {
+          const deal = c.p.deal as number;
+          const off = (c.p.price as number) - deal;
+          return `${off > 0 ? `با چونه زدن ${money(off)} تخفیف گرفتی! ` : ''}${buyNow(c, deal)}`;
+        },
+      },
+      {
+        label: 'باشه',
+        when: (c) => !!c.p.walk,
+        do: (c) => {
+          c.money(c.p.price as number);
+          if (c.p.walk === 1) { c.happy(-4); return `فروشنده‌ی ${haggleWhat(c.p)} قهر کرد و معامله به هم خورد.`; }
+          return `از خرید ${haggleWhat(c.p)} منصرف شدی.`;
+        },
+      },
+      { label: 'قبول! بخریمش', when: haggleOpen, do: (c) => buyNow(c, c.p.price as number) },
       {
         label: 'چونه می‌زنم!',
+        when: haggleOpen,
         do: (c) => {
           const price = c.p.price as number;
           const skill = (c.trait('charming') ? 0.2 : 0) + (c.trait('stingy') ? 0.15 : 0);
@@ -340,7 +357,7 @@ defEvents([
           return `فروشنده کوتاه نیومد. ${buyNow(c, price)}`;
         },
       },
-      { label: 'پشیمون شدم', do: (c) => { c.money(c.p.price as number); return 'از خرید منصرف شدی.'; } },
+      { label: 'پشیمون شدم', when: haggleOpen, do: (c) => { c.money(c.p.price as number); return 'از خرید منصرف شدی.'; } },
     ],
   },
   {
@@ -367,6 +384,15 @@ defEvents([
     ],
   },
 ]);
+
+/** What is being bought, for the haggle texts. */
+export function haggleWhat(p: Record<string, unknown>): string {
+  return p.kind === 'car' ? CARS.find((x) => x.id === p.ref)?.name ?? '' : `${HOUSES.find((x) => x.id === p.ref)?.name} در ${p.hood}`;
+}
+
+function haggleOpen(c: Ctx) {
+  return c.p.deal === undefined && !c.p.walk;
+}
 
 function buyNow(c: Ctx, paid: number): string {
   const L = c.L;

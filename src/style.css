@@ -150,6 +150,25 @@ input, select { font: inherit; }
 .quiz-a { text-align: center; align-items: center; }
 .quiz-a.right { border-color: var(--green); background: #e3f6ec; }
 .quiz-a.wrong { border-color: var(--rose); background: #fde6e4; }
+.haggle { text-align: center; }
+.haggle-head { display: flex; align-items: center; gap: 10px; text-align: right; }
+.haggle-head .event-emoji { margin: 0; flex: none; }
+.haggle-who { flex: 1; min-width: 0; }
+.haggle-name { font-weight: 900; color: var(--teal-dark); }
+.haggle-what { font-size: 13px; color: var(--muted); }
+.haggle-mood { font-size: 12.5px; color: var(--muted); }
+.haggle-mood .gone { opacity: .45; }
+.haggle-bubble { position: relative; background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 10px 14px; margin: 12px 0 10px; font-weight: 700; line-height: 1.8; }
+.haggle-bubble::before { content: ''; position: absolute; top: -9px; right: 30px; width: 14px; height: 14px; background: #fff; border-top: 2px solid var(--line); border-left: 2px solid var(--line); transform: rotate(45deg); }
+.haggle-ask { font-size: 14.5px; margin-bottom: 6px; }
+.haggle-ask b { color: var(--teal-dark); font-size: 16px; }
+.haggle-ask s { color: var(--muted); font-size: 12.5px; margin-right: 4px; }
+.haggle-saved { font-weight: 800; color: var(--green); margin-bottom: 4px; }
+.haggle-slide { background: var(--bg2); border-radius: 16px; padding: 8px 12px 4px; }
+.haggle-offer b { color: #9a5b00; font-size: 16px; }
+.haggle-off { font-size: 12px; font-weight: 800; color: var(--green); background: #ddf3e8; border-radius: 99px; padding: 0 8px; }
+.haggle-range { width: 100%; accent-color: var(--gold); margin: 8px 0 0; height: 28px; }
+.haggle-ends { display: flex; flex-direction: row-reverse; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
 
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 12px; }
 .chip { font-size: 13px; font-weight: 800; border-radius: 999px; padding: 1px 10px; }

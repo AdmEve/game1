@@ -13,23 +13,24 @@ export function num(n: number): string {
   return (neg ? '−' : '') + fa(s);
 }
 
-function short(x: number): string {
+/** `fine` keeps three significant digits («۱٫۲۳») for prices that matter to the toman. */
+function short(x: number, fine = false): string {
   if (x >= 100) return fa(Math.round(x));
-  if (x >= 10) return fa(Math.round(x * 10) / 10);
-  return fa(Math.round(x * 10) / 10);
+  if (x >= 10 || !fine) return fa(Math.round(x * 10) / 10);
+  return fa(Math.round(x * 100) / 100);
 }
 
 /** Money in the way people say it: «۲۷۰ میلیون تومان», «۱٫۵ میلیارد تومان». */
-export function money(n: number, unit = 'تومان'): string {
+export function money(n: number, unit = 'تومان', fine = false): string {
   const neg = n < 0;
   const a = Math.abs(n);
   let s: string;
   if (a < 1000) s = `${fa(Math.round(a))} ${unit}`;
-  else if (a < 1e6) s = `${short(a / 1e3)} هزار ${unit}`;
-  else if (a < 1e9) s = `${short(a / 1e6)} میلیون ${unit}`;
-  else if (a < 1e12) s = `${short(a / 1e9)} میلیارد ${unit}`;
-  else if (a < 1e15) s = `${short(a / 1e12)} هزار میلیارد ${unit}`;
-  else s = `${short(a / 1e15)} میلیون میلیارد ${unit}`;
+  else if (a < 1e6) s = `${short(a / 1e3, fine)} هزار ${unit}`;
+  else if (a < 1e9) s = `${short(a / 1e6, fine)} میلیون ${unit}`;
+  else if (a < 1e12) s = `${short(a / 1e9, fine)} میلیارد ${unit}`;
+  else if (a < 1e15) s = `${short(a / 1e12, fine)} هزار میلیارد ${unit}`;
+  else s = `${short(a / 1e15, fine)} میلیون میلیارد ${unit}`;
   return neg ? `منفی ${s}` : s;
 }
 

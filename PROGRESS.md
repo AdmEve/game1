@@ -37,12 +37,16 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
 - First-run tutorial; incremental life-log rendering for budget phones.
 - `scripts/story.ts <seed>` prints a whole life to proof-read.
+- Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
+- Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
+  «کارنامه» card, and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
+  slide an offer, the seller counters, loses patience at lowballs and makes a last offer.
+- Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
+  (`src/content/events/traits.ts`).
 
 ## Next (most valuable first)
 
 1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
    more choices with real consequences; proof-read with `scripts/story.ts`.
-2. Local notifications for retention (daily gift ready) — needs @capacitor/local-notifications and a
-   white notification icon drawable.
-3. Mini-games for big moments (konkur quiz, haggling slider) to make them feel more like a game.
-4. Balance pass with `scripts/sim.ts` after each content batch.
+2. More mini-games for big moments: the driving test, the khastegari conversation, a prison escape.
+3. Balance pass with `scripts/sim.ts` after each content batch.

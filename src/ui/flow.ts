@@ -8,6 +8,8 @@ import { haptic } from '../haptics';
 import { meta, persist, spendGems } from '../save';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
+import { haggleWhat } from '../content/actions/money';
+import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
 import { shareKarname } from './share';
 
@@ -104,6 +106,16 @@ export async function runQueue(L: Life): Promise<void> {
     if (head?.id === 'm_konkur' && !head.p?._prep && L.flags.konkurQuiz === undefined) {
       L.flags.konkurQuiz = await konkurQuiz(L);
       persist();
+    }
+    // Buying a car or a house: haggle with the seller, then settle the deal.
+    if (head?.id === 'haggle' && head.p && head.p.deal === undefined && !head.p.walk) {
+      const r = await haggleGame(L, head.p, haggleWhat(head.p));
+      Object.assign(head.p, r);
+      const out = choose(L, 0);
+      persist();
+      hooks.refresh();
+      if ('deal' in r) await showOutcome(out);
+      continue;
     }
     const ev = currentEvent(L);
     if (!ev) break;
