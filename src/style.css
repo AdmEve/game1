@@ -133,6 +133,8 @@ input, select { font: inherit; }
 .event-emoji.small .emo.big { width: 52px; height: 52px; }
 .event-title { font-weight: 900; font-size: 19px; color: var(--teal-dark); margin-bottom: 4px; }
 .event-text { font-size: 15.5px; line-height: 1.9; margin: 4px 2px 12px; text-align: center; }
+.meter { display: flex; align-items: center; gap: 10px; margin: -4px 4px 14px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.meter .track { height: 11px; }
 .choices { display: flex; flex-direction: column; gap: 8px; }
 .choice { display: flex; position: relative; flex-direction: column; align-items: stretch; text-align: right; background: #fff; border: 2px solid #dfe8e6; border-radius: 16px; padding: 10px 14px; position: relative; transition: transform .08s, border-color .15s; }
 .choice:active { transform: scale(.98); border-color: var(--teal2); }

@@ -41,7 +41,9 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
   «کارنامه» card, and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
   slide an offer, the seller counters, loses patience at lowballs and makes a last offer. The driving
-  test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps.
+  test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. The
+  khastegari is an interview (`src/content/events/khastegari.ts`): three questions from the other family
+  with a «رضایت خانواده» meter (events can show a `meter`); lies help now and may come out later.
 - Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
   (`src/content/events/traits.ts`).
 
@@ -49,5 +51,5 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 
 1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
    more choices with real consequences; proof-read with `scripts/story.ts`.
-2. More mini-games for big moments: the khastegari conversation, a prison escape.
+2. More mini-games for big moments: a prison escape, a job interview.
 3. Balance pass with `scripts/sim.ts` after each content batch.

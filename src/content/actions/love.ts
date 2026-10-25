@@ -3,6 +3,7 @@ import { clamp, type Ctx } from '../../engine/ctx';
 import { fa, money } from '../../engine/fmt';
 import { defActions, defEvents, type ChoiceDef } from '../../engine/registry';
 import type { Gender, Npc } from '../../engine/types';
+import { answers, pickQuestion, questionText, ROUNDS, startApproval } from '../events/khastegari';
 import { sendJail } from '../events/milestones';
 
 /** A possible spouse, kept in the event parameters until a decision is made. */
@@ -184,49 +185,39 @@ defEvents([
     },
   },
   {
+    // Three questions from the other family; their approval decides the answer.
     id: 'khastegari_session',
     milestone: true,
     emoji: '🫖',
     title: 'جلسه‌ی خواستگاری',
+    prep: (c) => {
+      const k = c.p.k as unknown as Candidate;
+      const asked = (c.p.asked as string[] | undefined) ?? [];
+      return { A: c.p.A ?? startApproval(c, k), asked, qid: pickQuestion(c, k, asked) };
+    },
     text: (c) => {
       const k = c.p.k as unknown as Candidate;
-      return c.male
-        ? `نشستین تو پذیرایی. ${k.first} با سینی چای اومد. باباش پرسید «خب آقا ${c.name}، شغلت چیه و چقدر درآمد داری؟»`
-        : `${k.first} با یه دسته گل بزرگ اومده. مامانش پرسید «${c.name} خانم آشپزی بلدی؟»`;
+      const asked = c.p.asked as string[];
+      const intro = c.male ? `نشستین تو پذیرایی. ${k.first} با سینی چای اومد.` : `${k.first} و خانواده‌اش با یه دسته گل بزرگ اومدن.`;
+      return `${asked.length ? `${c.p.react}\n` : `${intro}\n`}${questionText(c, k, c.p.qid as string)}`;
     },
+    meter: (c) => ({ label: 'رضایت خانواده', v: Math.round(c.p.A as number), d: c.p.dA as number | undefined }),
     dyn: (c) => {
       const k = c.p.k as unknown as Candidate;
-      const decide = (c2: Ctx, bonus: number) => {
-        const score = c2.s('looks') / 200 + c2.s('rep') / 250 + (c2.L.job ? 0.15 : -0.1) + (c2.L.assets.some((a) => a.kind === 'house') ? 0.15 : 0) + (c2.L.assets.some((a) => a.kind === 'car') ? 0.05 : 0) + bonus - k.rich * 0.05;
-        return c2.lucky(clamp(0.3 + score, 0.08, 0.92));
-      };
-      return [
-        {
-          label: c.male ? 'راستش رو می‌گم' : 'آره، قورمه‌سبزی‌ام معروفه!',
-          do: (c2: Ctx) => {
-            if (!decide(c2, 0.1)) { c2.happy(-8); return `بعد از سه روز زنگ زدن گفتن «قسمت نیست».`; }
-            c2.queue('mehr_talk', { k: k as unknown as Record<string, unknown> });
-            return 'جلسه خوب پیش رفت و جواب مثبت دادن! حالا نوبت صحبت سر مهریه‌ست.';
-          },
-        },
-        {
-          label: c.male ? 'یه کم اغراق می‌کنم (خونه و ماشین دارم!)' : 'می‌گم آشپزیم عالیه (دروغ)',
-          do: (c2: Ctx) => {
-            if (!decide(c2, 0.2)) { c2.happy(-8); return 'یکی از فامیل‌هاشون می‌شناختت و دستت رو شد! جواب منفی دادن.'; }
-            c2.flag('lied_khastegari');
-            c2.queue('mehr_talk', { k: k as unknown as Record<string, unknown> });
-            return 'خوششون اومد و جواب مثبت دادن! (امیدوارم بعداً دستت رو نشه…)';
-          },
-        },
-        {
-          label: 'شعر حافظ می‌خونم',
-          do: (c2: Ctx) => {
-            if (!decide(c2, c2.s('smarts') > 60 ? 0.15 : -0.05)) { c2.happy(-6); return 'فکر کردن یه کم عجیبی. جواب منفی دادن.'; }
-            c2.queue('mehr_talk', { k: k as unknown as Record<string, unknown> });
-            return `«الا یا ایها الساقی…» خوندی و ${k.first} لبخند زد. جواب مثبت!`;
-          },
-        },
-      ];
+      return answers(c, k, c.p.qid as string, (c2, d, react) => {
+        const A = clamp((c2.p.A as number) + d, 0, 100);
+        const asked = [...(c2.p.asked as string[]), c2.p.qid as string];
+        if (asked.length < ROUNDS) {
+          c2.next('khastegari_session', { k: k as unknown as Record<string, unknown>, A, dA: Math.round(A - (c2.p.A as number)), asked, react });
+          return '';
+        }
+        if (c2.lucky(clamp((A - 15) / 75, 0.05, 0.97))) {
+          c2.next('mehr_talk', { k: k as unknown as Record<string, unknown> });
+          return `${react}\nچند روز بعد مامان ${k.first} زنگ زد: «ان‌شاءالله که خوشبخت بشید!» جواب مثبت دادن! حالا نوبت صحبت سر مهریه‌ست.`;
+        }
+        c2.happy(-8);
+        return `${react}\nبعد از سه روز زنگ زدن و گفتن «قسمت نیست».`;
+      });
     },
   },
   {

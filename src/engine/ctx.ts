@@ -143,6 +143,8 @@ export class Ctx {
   // ───────── log & queue ─────────
   line(t: string, k?: LogLine['k']) { this.extra.push({ t, k }); return this; }
   queue(id: string, p?: Record<string, unknown>) { this.L.queue.push({ id, p }); return this; }
+  /** Show this event right after the current one (multi-step scenes). */
+  next(id: string, p?: Record<string, unknown>) { this.L.queue.unshift({ id, p }); return this; }
 
   // ───────── misc ─────────
   get net() { return netWorth(this.L); }

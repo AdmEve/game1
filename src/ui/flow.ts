@@ -72,6 +72,8 @@ function eventCard(ev: EventView, onPick: (i: number) => void, L?: Life): HTMLEl
     h('div', { class: 'event-emoji', html: emo(ev.emoji || '✨', 'emo big') }),
     ev.title ? rt('div', 'event-title', ev.title) : null,
     rt('div', 'event-text', ev.text),
+    ev.meter ? h('div', { class: 'meter' }, rt('span', 'meter-label', ev.meter.label), h('span', { class: 'track' }, h('span', { class: `fill ${ev.meter.v >= 60 ? 'hi' : ev.meter.v >= 35 ? 'mid' : 'low'}`, style: `width:${ev.meter.v}%` })),
+      ev.meter.d ? h('span', { class: `chip ${ev.meter.d > 0 ? 'up' : 'down'}`, text: `${ev.meter.d > 0 ? '▲' : '▼'}${fa(Math.abs(ev.meter.d))}` }) : null) : null,
     deltaChips(ev.deltas),
     ev.id === 'm_konkur' && L?.queue[0]?.p ? btn('📤 اشتراک کارنامه', () => void shareKarname(L, L.queue[0].p!.rank as number, L.queue[0].p!.n as number), 'btn share small') : null,
     h('div', { class: 'choices' }, ...choices));

@@ -34,6 +34,8 @@ export interface EventDef {
   emoji: Txt;
   title?: Txt;
   text: Txt;
+  /** A bar shown under the text (e.g. how much the in-laws like you), 0..100. */
+  meter?: (c: Ctx) => { label: string; v: number; d?: number };
   choices?: ChoiceDef[];
   /** Choices built from the event's parameters (konkur offers, candidates…). */
   dyn?: (c: Ctx) => ChoiceDef[];

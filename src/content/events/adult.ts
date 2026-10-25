@@ -241,7 +241,7 @@ defEvents([
   {
     id: 'a_lied_found', emoji: '🤥', w: 3, age: [20, 60],
     when: (c) => married(c) && c.has('lied_khastegari'),
-    text: '', auto: (c) => { c.unflag('lied_khastegari'); c.close(c.spouse!, -25); c.rep(-5); return `🤥 ${c.spouse!.first} فهمید سر خواستگاری درباره‌ی خونه و ماشین دروغ گفته بودی! حسابی دلخوره.`; },
+    text: '', auto: (c) => { c.unflag('lied_khastegari'); c.close(c.spouse!, -25); c.rep(-5); return `🤥 ${c.spouse!.first} فهمید سر خواستگاری چاخان کرده بودی! حسابی دلخوره.`; },
     kind: 'bad', pop: true,
   },
   {

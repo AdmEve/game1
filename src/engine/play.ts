@@ -25,6 +25,7 @@ export interface EventView {
   /** A passive notice: one «باشه» button. */
   notice?: boolean;
   deltas?: Deltas;
+  meter?: { label: string; v: number; d?: number };
 }
 
 export interface Outcome {
@@ -93,7 +94,7 @@ export function currentEvent(L: Life): EventView | null {
     });
   }
   if (!choices.length) choices.push({ label: 'باشه' });
-  return { id: e.id, emoji: txt(e.emoji, c), title: txt(e.title, c), text: txt(e.text, c), choices };
+  return { id: e.id, emoji: txt(e.emoji, c), title: txt(e.title, c), text: txt(e.text, c), choices, meter: e.meter?.(c) };
 }
 
 /** Pick a choice of the current event (index into the visible choices). */
