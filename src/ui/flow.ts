@@ -11,6 +11,7 @@ import { emo } from './emoji';
 import { haggleWhat } from '../content/actions/money';
 import { drivingTest } from './driving';
 import { fireJump } from './fire';
+import { tvQuiz } from './tvquiz';
 import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
 import { shareKarname, shareWedding } from './share';
@@ -106,6 +107,7 @@ export function showOutcome(out: Outcome, extra?: HTMLElement | null): Promise<v
 const MINIGAMES: Record<string, (L: Life) => Promise<object>> = {
   driving_test: drivingTest,
   fire_jump: fireJump,
+  tv_quiz: tvQuiz,
 };
 
 /** Show every queued event of this year, one at a time. */

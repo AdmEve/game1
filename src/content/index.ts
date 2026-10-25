@@ -24,5 +24,6 @@ import './events/interview';
 import './events/prison';
 import './events/calendar';
 import './events/everyday';
+import './events/tvshow';
 
 export { GROUPS } from './actions/core';

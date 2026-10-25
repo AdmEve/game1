@@ -151,6 +151,8 @@ input, select { font: inherit; }
 .quiz-q { font-size: 19px; font-weight: 900; color: var(--teal-dark); margin: 6px 0 14px; line-height: 1.7; }
 .quiz-a { text-align: center; align-items: center; }
 .quiz-a.right { border-color: var(--green); background: #e3f6ec; }
+.quiz-a.gone { visibility: hidden; }
+.quiz .btn.ghost.small { min-height: 36px; font-size: 13px; margin: 10px auto 0; }
 .quiz-a.wrong { border-color: var(--rose); background: #fde6e4; }
 .drive { text-align: center; }
 .drive-text { font-weight: 700; line-height: 1.8; margin: 4px 0 14px; min-height: 3.6em; }
