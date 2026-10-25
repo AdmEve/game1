@@ -41,7 +41,7 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - `scripts/story.ts <seed>` prints a whole life to proof-read.
 - Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
 - Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
-  «کارنامه» card, and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
+  «کارنامه» card (and a «کارت عروسی» card after the wedding, `drawWedding` in `src/ui/share.ts`), and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
   slide an offer, the seller counters, loses patience at lowballs and makes a last offer. The driving
   test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. The
   khastegari is an interview (`src/content/events/khastegari.ts`): three questions from the other family
