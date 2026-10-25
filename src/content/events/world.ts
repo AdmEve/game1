@@ -125,8 +125,8 @@ defEvents([
   },
   {
     id: 'prison_parole', emoji: '🔓', w: 2, age: [18, 100],
-    when: (c) => !!c.L.prison && c.L.prison.until - c.L.year >= 1, title: 'عفو',
-    text: 'به مناسبت عید، شامل عفو و آزادی مشروط شدی؛ فقط باید وثیقه بذاری.',
+    when: (c) => !!c.L.prison && c.L.prison.until - c.L.year >= 1, title: 'آزادی مشروط',
+    text: 'به خاطر رفتار خوبت، شامل آزادی مشروط شدی؛ فقط باید وثیقه بذاری.',
     choices: [
       { label: 'وثیقه می‌ذارم', cost: (c) => c.price(300e6), note: (c) => money(c.price(300e6)), do: (c) => { c.L.prison = undefined; c.happy(15); return 'آزاد شدی! اولین کار، یه نفس عمیق کشیدی.'; } },
       { label: 'پولش رو ندارم', do: (c) => { c.happy(-4); return 'نتونستی وثیقه جور کنی.'; } },

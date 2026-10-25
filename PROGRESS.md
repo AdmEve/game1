@@ -52,6 +52,10 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
   canaries, the Nowruz goldfish, turtles, rabbits. They live in `L.pets` (not `people`), age, cost money
   each year, have their own sheet in the people tab (cuddle, play, Instagram, vet, give away) and ~18
   events (the parrot swears in front of guests, the dog scares off a thief, kittens, getting lost…).
+- Prison (`src/content/events/prison.ts`): a «زندان» activities tab (work out, the library, a trade
+  workshop that grants a real certificate, family visits, an appeal, settling a debt with the plaintiff,
+  bail for 15💎) and events (Nowruz amnesty, a charity paying debt prisoners out, a cellmate friend,
+  letters from mum, the prison show).
 - Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
   (`src/content/events/traits.ts`).
 
@@ -59,5 +63,5 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 
 1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
    more choices with real consequences; proof-read with `scripts/story.ts`.
-2. More mini-games for big moments: a prison escape.
+2. More mini-games for big moments.
 3. Balance pass with `scripts/sim.ts` after each content batch.

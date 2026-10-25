@@ -7,6 +7,7 @@ import { ILL_NAMES, LIFESTYLES, familyBudget, livingCost, rentCost, salaryOf } f
 import { jobById } from '../jobs';
 
 export const GROUPS: { id: string; name: string; emoji: string }[] = [
+  { id: 'prison', name: 'زندان', emoji: '⛓️' },
   { id: 'edu', name: 'درس', emoji: '📚' },
   { id: 'job', name: 'کار', emoji: '💼' },
   { id: 'body', name: 'سلامت و ظاهر', emoji: '💪' },

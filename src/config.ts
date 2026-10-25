@@ -46,4 +46,6 @@ export const GEM_COST = {
   matchmaker: 8,
   /** A reference letter at a job interview. */
   reference: 6,
+  /** Out of prison on bail. */
+  bail: 15,
 };
