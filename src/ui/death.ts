@@ -16,6 +16,7 @@ import { netWorth } from '../engine/wealth';
 import { rateApp, rewardedAvailable, showRewarded } from '../monetize';
 import { bury, collectAchievements, collectChallenges, meta, persist, spendGems, type Grave } from '../save';
 import { lifeTitle } from '../engine/challenges';
+import { askNotifyPermission } from '../notify';
 import { btn, closeAll, h, modal, rt, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
 import { hooks, needGems } from './flow';
@@ -258,7 +259,7 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
       persist();
       actions.play(N);
     }, 'btn ghost'))) : null,
-    btn('👶 یه زندگی جدید', () => { finish(); actions.newLife(); }, 'btn primary wide'),
+    btn('👶 یه زندگی جدید', () => { finish(); void askNotifyPermission(); actions.newLife(); }, 'btn primary wide'),
     !meta.owned.vip ? h('button', { class: 'upsell', html: `${emo('👑')} <b>زندگی VIP</b><span>زندگی بعدی رو خودت انتخاب کن: شهر، خانواده و بدون تبلیغ</span>`, onclick: () => hooks.openShop() }) : null,
     meta.stats.lives >= 1 && !meta.rated ? h('button', { class: 'upsell rate', html: `${emo('⭐')} <b>از بازی خوشت اومده؟</b><span>با پنج ستاره تو کافه‌بازار کمکمون کن!</span>`, onclick: () => rateApp() }) : null), { locked: true, cls: 'death-modal' });
 

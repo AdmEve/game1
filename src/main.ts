@@ -8,6 +8,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import type { Life } from './engine/types';
 import { killNow } from './engine/play';
 import { initMonetization } from './monetize';
+import { cancelReminders, scheduleReminders } from './notify';
 import { meta, persist } from './save';
 import { closeTop, h, layers } from './ui/dom';
 import { showDeath } from './ui/death';
@@ -55,7 +56,9 @@ function boot() {
   if (Capacitor.isNativePlatform()) {
     StatusBar.setStyle({ style: Style.Light }).catch(() => {});
     CapApp.addListener('backButton', onBack);
-    CapApp.addListener('pause', () => persist());
+    CapApp.addListener('pause', () => { persist(); void scheduleReminders(); });
+    CapApp.addListener('resume', () => void cancelReminders());
+    void cancelReminders();
   }
   window.addEventListener('beforeunload', () => persist());
   if (meta.life && !meta.life.dead) play(meta.life);

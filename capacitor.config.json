@@ -15,6 +15,10 @@
       "launchShowDuration": 600,
       "backgroundColor": "#1F6F6B",
       "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notify",
+      "iconColor": "#1F6F6B"
     }
   }
 }

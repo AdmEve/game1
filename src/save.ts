@@ -44,6 +44,7 @@ export interface Meta {
   firstOpen: number;
   rated: boolean;
   tutorial: boolean;
+  notifyAsked?: boolean;
   /** Weekly challenges finished this week. */
   challenges: { week: number; done: string[] };
 }
