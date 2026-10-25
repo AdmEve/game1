@@ -112,6 +112,20 @@ function startService(c: Ctx, months: number, place?: string) {
 
 defEvents([
   {
+    // The first choice of a life.
+    id: 'm_first_word',
+    milestone: true,
+    emoji: '🗣️',
+    title: 'اولین کلمه',
+    text: 'همه دورت جمع شدن و منتظرن اولین کلمه‌ات رو بگی… مامانت فیلم می‌گیره!',
+    choices: [
+      { label: '«مامان»', do: (c) => { const m = c.rel('mother'); if (m) c.close(m, 10); return 'گفتی «مامان»! مامانت از ذوق گریه کرد و بابات یه کم حسودیش شد.'; } },
+      { label: '«بابا»', do: (c) => { const f = c.rel('father'); if (f) c.close(f, 10); return 'گفتی «بابا»! بابات فیلمش رو برای کل فامیل فرستاد.'; } },
+      { label: '«نه!»', do: (c) => { c.happy(3); return 'اولین کلمه‌ات «نه!» بود. همه خندیدن… ولی از اون روز به همه چی می‌گی «نه!»'; } },
+      { label: '«ماشین!»', do: (c) => { c.smarts(1); return 'گفتی «ماشین!» و به پراید همسایه اشاره کردی. همه گفتن «چه باهوشه!»'; } },
+    ],
+  },
+  {
     id: 'm_school_start',
     milestone: true,
     emoji: '🎒',

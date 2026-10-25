@@ -158,10 +158,10 @@ export function redenominate(c: Ctx) {
 function childhood(c: Ctx) {
   const L = c.L;
   if (L.age === 1) c.line('👶 اولین قدم‌هات رو برداشتی. همه دست زدن!', 'good');
-  if (L.age === 2) c.line(`🗣️ اولین کلمه‌ات «${c.pick(['بابا', 'مامان', 'آب', 'نه!', 'ماشین', 'جیش'])}» بود.`);
+  if (L.age === 2) c.queue('m_first_word');
   if (L.age === 5) {
     L.edu.stage = 'pre';
-    c.line('🎒 رفتی پیش‌دبستانی. یه کوله‌پشتی عروسکی خریدی!');
+    c.line('🎒 رفتی پیش‌دبستانی. برات یه کوله‌پشتی عروسکی خریدن!');
   }
   // Allowance while young.
   if (L.age >= 6 && L.home === 'parents' && L.country === 'ir') {
