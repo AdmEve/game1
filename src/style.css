@@ -150,6 +150,16 @@ input, select { font: inherit; }
 .quiz-a { text-align: center; align-items: center; }
 .quiz-a.right { border-color: var(--green); background: #e3f6ec; }
 .quiz-a.wrong { border-color: var(--rose); background: #fde6e4; }
+.drive { text-align: center; }
+.drive-text { font-weight: 700; line-height: 1.8; margin: 4px 0 14px; min-height: 3.6em; }
+.drive-road { position: relative; height: 64px; margin: 0 6px; border-radius: 12px; background: repeating-linear-gradient(90deg, #5d6566 0 22px, #535a5b 22px 44px); box-shadow: inset 0 -6px 0 #c9c2b3, inset 0 6px 0 #f2f2f2; }
+.drive-zone { position: absolute; top: 8px; bottom: 8px; background: rgba(240, 161, 46, .55); border-radius: 6px; }
+.drive-green { position: absolute; top: 0; bottom: 0; background: rgba(57, 179, 122, .9); border-radius: 6px; color: #fff; font-weight: 900; display: grid; place-items: center; font-size: 13px; }
+.drive-car { position: absolute; top: 50%; transform: translateY(-50%); font-size: 27px; line-height: 1; pointer-events: none; }
+.drive-car .emo { vertical-align: middle; }
+.drive-car.crash { animation: crash .5s; }
+@keyframes crash { 0%, 100% { transform: translateY(-50%); } 20% { transform: translate(-6px, -50%) rotate(-12deg); } 40% { transform: translate(6px, -50%) rotate(10deg); } 60% { transform: translate(-4px, -50%) rotate(-6deg); } }
+.drive-msg { min-height: 1.9em; font-weight: 800; margin: 10px 0 0; }
 .haggle { text-align: center; }
 .haggle-head { display: flex; align-items: center; gap: 10px; text-align: right; }
 .haggle-head .event-emoji { margin: 0; flex: none; }

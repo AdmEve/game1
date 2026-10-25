@@ -25,6 +25,7 @@ export function jobBlock(L: Life, j: JobDef): string | null {
   if (j.mil && L.country === 'ir' && !milCardOk(L)) return 'کارت پایان خدمت نداری';
   if (j.flag && !(j.flag in L.flags)) return FLAG_NEED[j.flag] ?? 'مهارتش رو نداری';
   if (j.car && !L.assets.some((a) => a.kind === 'car')) return 'ماشین نداری';
+  if (j.car && L.country === 'ir' && !('driver' in L.flags)) return 'گواهینامه نداری';
   if (j.smarts && L.stats.smarts < j.smarts - 15) return 'هوشت کافی نیست';
   if (j.looks && L.stats.looks < j.looks - 15) return 'ظاهرت مناسب نیست';
   if (j.health && L.stats.health < j.health - 15) return 'آمادگی جسمانی نداری';

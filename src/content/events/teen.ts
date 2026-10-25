@@ -124,8 +124,8 @@ defEvents([
     when: (c) => !!c.rel('father'),
     text: 'بابات قبول کرده تو کوچه بهت رانندگی یاد بده.',
     choices: [
-      { label: 'با اعتماد به نفس گاز می‌دم', do: (c) => { if (c.chance(0.3)) { const d = c.rel('father')!; c.close(d, -5); return 'ماشین رو کوبوندی به سطل آشغال شهرداری! بابات دستش رو گذاشت رو قلبش.'; } c.happy(4); return 'خیلی خوب رانندگی کردی! بابات گفت «بد نبود».'; } },
-      { label: 'آروم و با احتیاط', do: (c) => { c.happy(2); const d = c.rel('father'); if (d) c.close(d, 5); return 'با سرعت ده کیلومتر کل کوچه رو رفتی. بابات خوابش برد!'; } },
+      { label: 'با اعتماد به نفس گاز می‌دم', do: (c) => { if (c.chance(0.3)) { const d = c.rel('father')!; c.close(d, -5); return 'ماشین رو کوبوندی به سطل آشغال شهرداری! بابات دستش رو گذاشت رو قلبش.'; } c.happy(4); c.flag('drivePractice'); return 'خیلی خوب رانندگی کردی! بابات گفت «بد نبود».'; } },
+      { label: 'آروم و با احتیاط', do: (c) => { c.happy(2); c.flag('drivePractice'); const d = c.rel('father'); if (d) c.close(d, 5); return 'با سرعت ده کیلومتر کل کوچه رو رفتی. بابات خوابش برد!'; } },
     ],
   },
   {

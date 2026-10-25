@@ -9,6 +9,7 @@ import { meta, persist, spendGems } from '../save';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
 import { haggleWhat } from '../content/actions/money';
+import { drivingTest } from './driving';
 import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
 import { shareKarname } from './share';
@@ -106,6 +107,14 @@ export async function runQueue(L: Life): Promise<void> {
     if (head?.id === 'm_konkur' && !head.p?._prep && L.flags.konkurQuiz === undefined) {
       L.flags.konkurQuiz = await konkurQuiz(L);
       persist();
+    }
+    if (head?.id === 'driving_test' && !head.p?.result) {
+      head.p = { ...(head.p ?? {}), ...(await drivingTest(L)) };
+      const out = choose(L, 0);
+      persist();
+      hooks.refresh();
+      await showOutcome(out);
+      continue;
     }
     // Buying a car or a house: haggle with the seller, then settle the deal.
     if (head?.id === 'haggle' && head.p && head.p.deal === undefined && !head.p.walk) {

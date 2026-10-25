@@ -399,9 +399,8 @@ defActions([
     cost: (c) => c.price(12e6),
     when: (c) => c.age >= 18 && !c.has('driver') && free(c) && !c.abroad,
     do: (c) => {
-      if (c.lucky(0.65)) { c.flag('driver'); c.happy(6); return 'آزمون شهری رو قبول شدی! افسره گفت «خوب پارک دوبل کردی»'; }
-      c.happy(-4);
-      return 'تو آزمون شهری رد شدی؛ موقع دنده‌عقب به جدول زدی!';
+      c.queue('driving_test');
+      return 'تو آموزشگاه رانندگی ثبت‌نام کردی و چند جلسه با مربی تمرین کردی.';
     },
   },
   {

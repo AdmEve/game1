@@ -18,5 +18,6 @@ import './events/news';
 import './events/abroad';
 import './events/family2';
 import './events/traits';
+import './events/driving';
 
 export { GROUPS } from './actions/core';

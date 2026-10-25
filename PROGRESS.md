@@ -40,7 +40,8 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
 - Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
   «کارنامه» card, and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
-  slide an offer, the seller counters, loses patience at lowballs and makes a last offer.
+  slide an offer, the seller counters, loses patience at lowballs and makes a last offer. The driving
+  test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps.
 - Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
   (`src/content/events/traits.ts`).
 
@@ -48,5 +49,5 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 
 1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
    more choices with real consequences; proof-read with `scripts/story.ts`.
-2. More mini-games for big moments: the driving test, the khastegari conversation, a prison escape.
+2. More mini-games for big moments: the khastegari conversation, a prison escape.
 3. Balance pass with `scripts/sim.ts` after each content batch.
