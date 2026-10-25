@@ -88,6 +88,8 @@ export interface JobState {
   salary: number;
   /** Part-time jobs can be held alongside school. */
   part?: boolean;
+  /** Salary multiplier negotiated in the job interview. */
+  deal?: number;
 }
 
 export type Track = 'riazi' | 'tajrobi' | 'ensani' | 'honar' | 'fani';

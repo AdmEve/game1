@@ -315,7 +315,7 @@ export function salaryOf(L: Life): number {
   if (!j) return 0;
   const d = jobById(j.id);
   if (!d) return 0;
-  const perf = 0.85 + (j.perf / 100) * 0.3;
+  const perf = (0.85 + (j.perf / 100) * 0.3) * (j.deal ?? 1);
   if (L.country !== 'ir') {
     const co = countryById(L.country);
     const usd = (co?.usd ?? 2000) * [0.45, 1, 1.8][d.tier] * Math.pow(1.12, j.level) * perf;

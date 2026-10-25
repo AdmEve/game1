@@ -2,6 +2,7 @@
 import { clamp, type Ctx } from '../../engine/ctx';
 import { money } from '../../engine/fmt';
 import type { ChoiceDef } from '../../engine/registry';
+import { answerChoices, askable, type Question as Q } from '../talk';
 import { majorName } from '../edu';
 import { jobById } from '../jobs';
 import { salaryOf } from '../../engine/year';
@@ -13,24 +14,10 @@ export interface Cand {
   trait: string;
 }
 
-interface Answer {
-  label: string | ((c: Ctx, k: Cand) => string);
-  when?: (c: Ctx, k: Cand) => boolean;
-  /** Change in the family's approval. */
-  d: (c: Ctx, k: Cand) => number;
-  react: string | ((c: Ctx, k: Cand) => string);
-  /** A lie: helps now, may come out on the spot or years later. */
-  lie?: number;
-}
-
-interface Question {
-  id: string;
-  /** Who asks, for a groom (m) or a bride (f). */
+interface Question extends Q<Cand> {
+  /** Asked of a groom (m), a bride (f) or anyone. */
   g: 'm' | 'f' | 'any';
-  when?: (c: Ctx, k: Cand) => boolean;
   who: 'father' | 'mother' | 'aunt';
-  q: (c: Ctx, k: Cand) => string;
-  a: Answer[];
 }
 
 const modern = (k: Cand) => ['اهل سفر', 'کتاب‌خون', 'اهل مهمونی', 'شوخ‌طبع'].includes(k.trait);
@@ -182,7 +169,7 @@ export function startApproval(c: Ctx, k: Cand): number {
 
 export function pickQuestion(c: Ctx, k: Cand, asked: string[]): string {
   if (!asked.length) return c.male ? 'job' : 'cook';
-  const pool = QUESTIONS.filter((q) => !asked.includes(q.id) && (q.g === 'any' || q.g === c.L.gender) && (!q.when || q.when(c, k)) && q.a.some((a) => !a.when || a.when(c, k)));
+  const pool = QUESTIONS.filter((q) => !asked.includes(q.id) && (q.g === 'any' || q.g === c.L.gender) && askable(c, k, q));
   return c.rng.pick(pool)?.id ?? 'height';
 }
 
@@ -193,21 +180,5 @@ export function questionText(c: Ctx, k: Cand, qid: string): string {
 
 /** Answers; `after` gets the approval change and the family's reaction. */
 export function answers(c: Ctx, k: Cand, qid: string, after: (c: Ctx, d: number, react: string) => string): ChoiceDef[] {
-  const q = QUESTIONS.find((x) => x.id === qid)!;
-  return q.a
-    .filter((a) => !a.when || a.when(c, k))
-    .map((a) => ({
-      label: typeof a.label === 'string' ? a.label : a.label(c, k),
-      do: (c2: Ctx) => {
-        let d = a.d(c2, k);
-        let react = typeof a.react === 'string' ? a.react : a.react(c2, k);
-        if (a.lie) {
-          if (c2.chance(a.lie)) {
-            d = -18;
-            react = c2.pick(['یکی از فامیل‌هاشون می‌شناختت و دستت رو شد!', 'خاله‌اش یه زنگ زد و استعلام گرفت. دروغت لو رفت!', 'هول شدی و دو بار دو تا جواب مختلف دادی. همه فهمیدن!']);
-          } else c2.flag('lied_khastegari');
-        }
-        return after(c2, d, react);
-      },
-    }));
+  return answerChoices(c, k, QUESTIONS.find((x) => x.id === qid)!, 'lied_khastegari', after);
 }

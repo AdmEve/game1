@@ -20,5 +20,6 @@ import './events/family2';
 import './events/traits';
 import './events/driving';
 import './events/pets';
+import './events/interview';
 
 export { GROUPS } from './actions/core';

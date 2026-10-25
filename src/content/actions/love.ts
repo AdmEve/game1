@@ -211,7 +211,7 @@ defEvents([
           c2.next('khastegari_session', { k: k as unknown as Record<string, unknown>, A, dA: Math.round(A - (c2.p.A as number)), asked, react });
           return '';
         }
-        if (c2.lucky(clamp((A - 15) / 75, 0.05, 0.97))) {
+        if (c2.lucky(clamp((A - 5) / 70, 0.08, 0.97))) {
           c2.next('mehr_talk', { k: k as unknown as Record<string, unknown> });
           return `${react}\nچند روز بعد مامان ${k.first} زنگ زد: «ان‌شاءالله که خوشبخت بشید!» جواب مثبت دادن! حالا نوبت صحبت سر مهریه‌ست.`;
         }

@@ -44,6 +44,8 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
   test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. The
   khastegari is an interview (`src/content/events/khastegari.ts`): three questions from the other family
   with a «رضایت خانواده» meter (events can show a `meter`); lies help now and may come out later.
+  Skilled jobs (tier ≥ 1 or hard ≥ 0.3) go to a job interview (`src/content/events/interview.ts`) the
+  same way, ending with the salary question that sets `job.deal`. Shared Q&A logic: `src/content/talk.ts`.
 - Pets (`src/content/pets.ts`, `src/content/events/pets.ts`): street cats, Persian cats, dogs, parrots,
   canaries, the Nowruz goldfish, turtles, rabbits. They live in `L.pets` (not `people`), age, cost money
   each year, have their own sheet in the people tab (cuddle, play, Instagram, vet, give away) and ~18
@@ -55,5 +57,5 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 
 1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
    more choices with real consequences; proof-read with `scripts/story.ts`.
-2. More mini-games for big moments: a prison escape, a job interview.
+2. More mini-games for big moments: a prison escape.
 3. Balance pass with `scripts/sim.ts` after each content batch.

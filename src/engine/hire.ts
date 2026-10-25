@@ -58,23 +58,45 @@ export function jobList(L: Life): { job: JobDef; block: string | null }[] {
   return [...open, ...locked];
 }
 
-/** Try to get hired. Returns the story. */
-export function applyJob(c: Ctx, j: JobDef, connections = false): string {
-  const L = c.L;
+/** Jobs with a sit-down interview; the rest hire on the spot. */
+export function interviews(j: JobDef): boolean {
+  return !j.part && (j.tier >= 1 || j.hard >= 0.3);
+}
+
+/** Chance of getting the job from your stats, degree and reputation. */
+export function hireChance(L: Life, j: JobDef): number {
   let p = 1 - j.hard;
   if (j.smarts) p *= clamp(0.6 + (L.stats.smarts - j.smarts) / 50, 0.25, 1.3);
   if (j.looks) p *= clamp(0.6 + (L.stats.looks - j.looks) / 50, 0.25, 1.3);
   const deg = L.edu.degrees[L.edu.degrees.length - 1];
   if (deg && deg.tier <= 1 && j.degree) p *= 1.15;
   p *= 0.85 + L.stats.rep / 300;
-  if (connections || c.lucky(clamp(p, 0.04, 0.95))) {
-    L.job = { id: j.id, since: L.year, perf: 55, level: 0, salary: 0, part: j.part };
-    L.job.salary = salaryOf(L);
-    if (!L.career.some((x) => x.id === j.id)) L.career.push({ id: j.id, title: j.title, years: 0 });
-    c.happy(8).rep(2);
-    return connections
-      ? `با یه پارتی کلفت استخدام شدی! حالا «${j.levels[0]}» هستی. حقوق ماهانه: ${money(L.job.salary)}`
-      : `استخدام شدی! حالا «${j.levels[0]}» هستی. حقوق ماهانه: ${money(L.job.salary)}`;
+  return clamp(p, 0.04, 0.95);
+}
+
+/** Start the job; `deal` scales the salary negotiated in an interview. */
+export function hire(c: Ctx, j: JobDef, deal = 1) {
+  const L = c.L;
+  L.job = { id: j.id, since: L.year, perf: 55, level: 0, salary: 0, part: j.part, deal: deal === 1 ? undefined : deal };
+  L.job.salary = salaryOf(L);
+  if (!L.career.some((x) => x.id === j.id)) L.career.push({ id: j.id, title: j.title, years: 0 });
+  c.happy(8).rep(2);
+}
+
+/** Try to get hired (skilled jobs go to an interview first). Returns the story. */
+export function applyJob(c: Ctx, j: JobDef, connections = false): string {
+  const L = c.L;
+  if (connections) {
+    hire(c, j);
+    return `با یه پارتی کلفت استخدام شدی! حالا «${j.levels[0]}» هستی. حقوق ماهانه: ${money(L.job!.salary)}`;
+  }
+  if (interviews(j)) {
+    c.queue('job_interview', { job: j.id, A: Math.round(25 + hireChance(L, j) * 50) });
+    return `رزومه‌ات رو برای «${j.title}» فرستادی و برای مصاحبه دعوتت کردن!`;
+  }
+  if (c.lucky(hireChance(L, j))) {
+    hire(c, j);
+    return `استخدام شدی! حالا «${j.levels[0]}» هستی. حقوق ماهانه: ${money(L.job!.salary)}`;
   }
   c.happy(-4);
   return c.pick([
