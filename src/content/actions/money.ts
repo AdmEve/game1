@@ -259,6 +259,17 @@ defActions([
     },
   },
   {
+    id: 'recognize', group: 'abroad', emoji: '📜',
+    label: 'معادل‌سازی مدرک', desc: (c) => `یه سال دوره و امتحان، ${money(4000 * c.L.econ.dollar)}`,
+    cost: (c) => Math.round(4000 * c.L.econ.dollar),
+    when: (c) => c.abroad && !c.has('recognized') && c.L.edu.degrees.some((d) => d.kind !== 'diploma') && !c.L.prison,
+    do: (c) => {
+      if (c.lucky(0.7 + c.s('smarts') / 500)) { c.flag('recognized'); c.smarts(2); return 'مدرکت رو معادل‌سازی کردی! حالا می‌تونی برای کارهای تخصصی درخواست بدی.'; }
+      c.happy(-5);
+      return 'امتحان معادل‌سازی رو رد شدی. سال بعد دوباره.';
+    },
+  },
+  {
     id: 'return_home', group: 'abroad', emoji: '🇮🇷',
     label: 'برگشت به ایران',
     confirm: 'مطمئنی می‌خوای برگردی ایران؟',

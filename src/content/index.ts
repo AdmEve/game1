@@ -15,5 +15,7 @@ import './events/young';
 import './events/jobs';
 import './events/middle';
 import './events/news';
+import './events/abroad';
+import './events/family2';
 
 export { GROUPS } from './actions/core';

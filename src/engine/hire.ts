@@ -30,6 +30,7 @@ export function jobBlock(L: Life, j: JobDef): string | null {
   if (j.health && L.stats.health < j.health - 15) return 'آمادگی جسمانی نداری';
   if (L.country !== 'ir' && j.gov) return 'شغل دولتیه';
   if (L.country !== 'ir' && (L.edu.ielts ?? 0) < 5.5 && j.tier > 0) return 'زبانت ضعیفه';
+  if (L.country !== 'ir' && j.tier === 2 && j.degree && !('recognized' in L.flags)) return 'مدرکت هنوز معادل‌سازی نشده';
   return null;
 }
 
