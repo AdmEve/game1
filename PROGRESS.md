@@ -23,6 +23,18 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 | `src/save.ts` | Meta progress (gems, purchases, achievements, graveyard) and the current life in localStorage |
 | `src/monetize.ts`, `src/config.ts` | Bazaar Poolakey billing + Tapsell ads; SKUs and gem prices |
 
+## Before publishing on Cafe Bazaar (needs the owner)
+
+1. **Permanent signing key.** Without secrets every CI build is signed with a new throwaway key, and an app
+   uploaded with one key can never be updated. Once, on any computer:
+   `keytool -genkeypair -keystore zendegi.keystore -alias zendegi -keyalg RSA -keysize 2048 -validity 10000`
+   then add GitHub secrets `KEYSTORE_BASE64` (`base64 -w0 zendegi.keystore`) and `KEYSTORE_PASSWORD`, and keep
+   the file safe forever.
+2. **Bazaar developer panel:** create the app (`com.admeve.zendegi`), the in-app products listed in
+   `store/listing-fa.md`, and paste the RSA key into `src/config.ts` (`BAZAAR_RSA_KEY`).
+3. **Tapsell:** create the app and a rewarded + an interstitial zone; put the ids in `src/config.ts`.
+4. Upload the APK from the `android-latest` release, the icon and the eight screenshots in `store/`.
+
 ## Done
 
 - Engine: full year loop, 66 jobs, 40 majors, Konkur with ranks and offers, military service, marriage
