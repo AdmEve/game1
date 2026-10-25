@@ -56,17 +56,47 @@ async function closeLayers(p) {
     await p.locator('.age-btn').click();
     await answerAll(p);
   }
-  await p.evaluate(() => { const L = window.__z.currentLife(); L.edu.track = 'tajrobi'; L.stats.smarts = 92; L.flags.kEffort = 9; });
+  await p.evaluate(() => { const L = window.__z.currentLife(); L.edu.track = 'tajrobi'; L.stats.smarts = 92; L.flags.kEffort = 9; L.flags.konkurQuiz = 5; });
   await p.evaluate(() => window.__z.event('m_konkur'));
   await p.waitForTimeout(700);
   await p.screenshot({ path: `${tmp}/konkur.png` });
   await answerAll(p);
   for (let y = 0; y < 3; y++) { await p.locator('.age-btn').click(); await answerAll(p); }
   await p.screenshot({ path: `${tmp}/life.png` });
-  await p.evaluate(() => window.__z.event('mehr_talk', { k: { first: 'نازنین', last: 'رحیمی', gender: 'f', age: 24, job: 'معمار', rich: 3, looks: 85, smarts: 80, trait: 'مهربون', via: 'دانشگاه' } }));
+  // Khastegari: answer the first question so the meter shows a change.
+  await p.evaluate(() => window.__z.event('khastegari_session', { k: { first: 'نازنین', last: 'رحیمی', gender: 'f', age: 24, job: 'معمار', rich: 2, looks: 85, smarts: 80, trait: 'شوخ‌طبع', via: 'دانشگاه' } }));
   await p.waitForTimeout(700);
-  await p.screenshot({ path: `${tmp}/mehr.png` });
+  await p.locator('.backdrop.in .event-modal .choice:not(.off)', { hasText: 'عشق' }).first().click();
+  await p.waitForTimeout(700);
+  await p.screenshot({ path: `${tmp}/khastegari.png` });
   await answerAll(p);
+  // Haggling for a car: one counter-offer.
+  await p.evaluate(() => { const L = window.__z.currentLife(); L.money += 3e9 * L.econ.price; window.__z.event('haggle', { kind: 'car', ref: '206', price: Math.round(1.9e9 * L.econ.car) }); });
+  await p.waitForTimeout(700);
+  await p.evaluate(() => { const s = document.querySelector('.haggle-range'); s.value = String(Math.round((+s.max * 0.88) / +s.step) * +s.step); s.dispatchEvent(new Event('input')); });
+  await p.waitForTimeout(200);
+  await p.screenshot({ path: `${tmp}/haggle.png` });
+  await p.locator('.haggle .btn.primary').first().click();
+  await p.waitForTimeout(400);
+  const cont = p.locator('.haggle .btn.primary');
+  if (await cont.count()) await cont.click();
+  await answerAll(p);
+  // Pets.
+  await p.evaluate(() => {
+    const L = window.__z.currentLife();
+    L.pets = [
+      { id: 9101, kind: 'persian', name: 'مخمل', born: L.year - 3, life: 15, close: 90, alive: true },
+      { id: 9102, kind: 'parrot', name: 'حسن‌آقا', born: L.year - 6, life: 40, close: 75, alive: true },
+      { id: 9103, kind: 'fish', name: 'نارنجی', born: L.year - 1, life: 5, close: 60, alive: true },
+    ];
+    window.__z.refresh();
+  });
+  await p.locator('.nav-b').nth(3).click();
+  await p.waitForTimeout(500);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('.backdrop.in .sheet .section')].find((x) => x.textContent.includes('حیوون')); b?.scrollIntoView({ block: 'center' }); });
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${tmp}/pets.png` });
+  await closeLayers(p);
   await p.evaluate(() => {
     const L = window.__z.currentLife();
     L.money += L.econ.coin * 60;
@@ -86,8 +116,10 @@ async function closeLayers(p) {
   // Compose with captions.
   const shots = [
     ['life', 'از تولد تا پیری؛ هر سال یه ماجرای جدید!'],
+    ['khastegari', 'خواستگاری! جواب بابای عروس رو چی می‌دی؟'],
     ['konkur', 'کنکور بده، رتبه بیار، رشته انتخاب کن'],
-    ['mehr', 'خواستگاری، مهریه، عروسی… کاملاً ایرونی!'],
+    ['haggle', 'با فروشنده چونه بزن و ارزون بخر!'],
+    ['pets', 'گربه‌ی پرشین، طوطی، ماهی هفت‌سین…'],
     ['assets', 'دلار، سکه، خونه؛ تو تورم پولدار شو!'],
     ['death', 'آخرش اعلامیه‌ات رو برای رفقات بفرست!'],
     ['home', 'زندگی ایرونی؛ شبیه‌ساز زندگی ایرانی'],
