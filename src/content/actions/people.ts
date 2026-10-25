@@ -1,5 +1,5 @@
 import { clamp } from '../../engine/ctx';
-import { money } from '../../engine/fmt';
+import { fa, money } from '../../engine/fmt';
 import { defActions, defPersonActs } from '../../engine/registry';
 import type { Npc } from '../../engine/types';
 import { familyBudget } from '../../engine/year';
@@ -94,6 +94,67 @@ defPersonActs([
       c.close(n, 15);
       c.happy(8);
       return `با ${c.relName(n)} رفتین ${c.pick(['شمال', 'مشهد', 'اصفهان', 'شیراز', 'کیش', 'یزد', 'تبریز'])}. کلی عکس یادگاری گرفتین!`;
+    },
+  },
+  {
+    id: 'call', label: 'زنگ زدن', emoji: '📞',
+    when: (c, n) => n.rel !== 'ex' && (n.rel !== 'child' || c.ageOf(n) >= 18),
+    do: (c, n) => {
+      c.close(n, c.int(3, 7));
+      c.happy(1);
+      return c.pick([
+        `با ${c.relName(n)} یه ساعت تلفنی حرف زدی. آخرش گفت «خب دیگه، کاری نداری؟» و نیم ساعت دیگه حرف زدین!`,
+        `به ${c.relName(n)} زنگ زدی. اول پرسید «چی شده؟! چرا زنگ زدی؟» بعد کلی خوشحال شد.`,
+        `با ${c.relName(n)} تصویری حرف زدی و نصف تماس فقط پیشونیش معلوم بود!`,
+      ]);
+    },
+  },
+  {
+    id: 'dinner', label: 'دعوت به شام', emoji: '🍲',
+    when: (c, n) => c.age >= 20 && c.L.home !== 'parents' && n.rel !== 'ex' && n.rel !== 'child',
+    cost: (c) => c.price(4e6),
+    do: (c, n) => {
+      c.close(n, c.int(8, 14));
+      c.happy(3).rep(1);
+      if (n.rel === 'mother' || n.rel === 'grandma') return c.pick([`${c.relName(n)} اومد شام، از غذات تعریف کرد… بعد گفت «فقط نمکش یه کم کم بود».`, `${c.relName(n)} اومد و تا آخر شب ظرف‌ها رو شست، هر چی گفتی «تو رو خدا بشین!»`]);
+      if (n.rel === 'father' || n.rel === 'grandpa') return `${c.relName(n)} اومد شام و بعدش یه ساعت درباره‌ی قیمت خونه تو قدیم حرف زد.`;
+      return c.pick([`${c.relName(n)} رو دعوت کردی و قورمه‌سبزی پختی. ظرفش رو لیس زد!`, `${c.relName(n)} اومد و تا ساعت یک شب نشستین و خندیدین.`]);
+    },
+  },
+  {
+    id: 'advice', label: 'مشورت گرفتن', emoji: '💬',
+    when: (c, n) => c.age >= 12 && (elder(n) || partner(n)),
+    do: (c, n) => {
+      c.close(n, c.int(4, 8));
+      if (c.chance(0.5)) { c.smarts(1).happy(2); return `${c.relName(n)} یه حرف حساب زد که تا مدت‌ها تو ذهنت موند.`; }
+      return c.pick([
+        `${c.relName(n)} گفت «من جای تو بودم یه تیکه زمین می‌خریدم.» این جواب همه‌ی سؤال‌هاست!`,
+        c.age >= 30 ? `${c.relName(n)} گفت «هر کاری می‌کنی، فقط درست رو بخون.» ${fa(c.age)} سالته!` : `${c.relName(n)} گفت «اول درست، بعد بقیه‌ی چیزها.» همیشه همینو می‌گه!`,
+        `${c.relName(n)} گفت «توکل به خدا، درست می‌شه.» یه کم دلت آروم شد.`,
+      ]);
+    },
+  },
+  {
+    id: 'matchmake', label: 'آستین بالا زدن', emoji: '💐',
+    when: (c, n) => ['brother', 'sister', 'friend'].includes(n.rel) && c.age >= 20 && c.ageOf(n) >= 22 && c.ageOf(n) <= 45 && !n.flags?.married,
+    do: (c, n) => {
+      if (c.lucky(0.3)) {
+        n.flags = { ...(n.flags ?? {}), married: c.L.year };
+        c.close(n, 20).happy(6).rep(3);
+        return `یه نفر خوب به ${c.relName(n)} معرفی کردی و… شد! عروسی گرفتن و تو شدی معرف عزیز دو تا خانواده!`;
+      }
+      c.close(n, c.chance(0.5) ? -6 : 2);
+      return c.pick([`${c.relName(n)} گفت «دستت درد نکنه، ولی خودم بلدم!»`, `${c.relName(n)} رفت سر قرار و برگشت گفت «اصلاً به هم نمی‌خوریم!»`, `دو تا خانواده رو به هم معرفی کردی. حالا دو تا خانواده باهات قهرن!`]);
+    },
+  },
+  {
+    id: 'homework', label: 'کمک تو درس', emoji: '📐',
+    when: (c, n) => n.rel === 'child' && c.ageOf(n) >= 7 && c.ageOf(n) <= 17,
+    do: (c, n) => {
+      n.smarts = clamp((n.smarts ?? 50) + c.int(1, 3));
+      c.close(n, c.int(2, 6));
+      if (c.s('smarts') < 40) return `خواستی ریاضی یادش بدی ولی آخرش ${n.first} به تو یاد داد!`;
+      return c.pick([`با ${n.first} مشق‌هاش رو نوشتین. فردا تو امتحان بیست گرفت!`, `برای ${n.first} کسر و اعشار رو با پیتزا توضیح دادی. فهمید!`, `با ${n.first} برای امتحان خوندین. خوابش برد ولی چیزهایی یاد گرفت.`]);
     },
   },
   {
