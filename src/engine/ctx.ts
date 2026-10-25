@@ -2,7 +2,8 @@ import { CITIES, cityById, countryById } from '../content/cities';
 import { FEMALE, LAST, MALE } from '../content/names';
 import { money } from './fmt';
 import { Rng } from './rng';
-import type { Gender, Life, LogLine, Npc, RelKind, StatKey } from './types';
+import { PET_KINDS, petKind } from '../content/pets';
+import type { Gender, Life, LogLine, Npc, Pet, RelKind, StatKey } from './types';
 import { STAT_KEYS } from './types';
 import { netWorth } from './wealth';
 
@@ -105,6 +106,21 @@ export class Ctx {
 
   randomFirst(g: Gender) { return this.pick(g === 'm' ? MALE : FEMALE); }
   randomLast() { return this.pick(LAST); }
+
+  /** Pets that are alive. */
+  get pets(): Pet[] { return (this.L.pets ?? []).filter((p) => p.alive); }
+  pet(kind: string) { return this.pets.find((p) => p.kind === kind); }
+  addPet(kind: string, age = 0, name?: string): Pet {
+    const k = PET_KINDS.find((x) => x.id === kind)!;
+    const p: Pet = { id: this.L.nextId++, kind, name: name ?? this.pick(k.names), born: this.L.year - age, life: this.int(k.life[0], k.life[1]), close: 70, alive: true };
+    (this.L.pets ??= []).push(p);
+    return p;
+  }
+  /** «پیشی، گربه‌ات» */
+  petName(p: Pet) {
+    const k = petKind(p.kind).name;
+    return `${p.name}، ${k}${/[هی]$/.test(k) ? '‌ات' : 'ت'}`;
+  }
 
   addPerson(o: Partial<Npc> & { rel: RelKind; gender: Gender; born: number }): Npc {
     const n: Npc = {

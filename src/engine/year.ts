@@ -2,6 +2,7 @@ import { CARS, SHOPS } from '../content/assets';
 import { cityById, countryById } from '../content/cities';
 import { DEGREE_NAMES, MAJORS, majorName } from '../content/edu';
 import { jobById } from '../content/jobs';
+import { petKind } from '../content/pets';
 import { checkAchievements } from './achieve';
 import { Ctx, clamp } from './ctx';
 import { stepEcon } from './econ';
@@ -508,6 +509,7 @@ function family(c: Ctx) {
       relativeDied(c, p);
     }
   }
+  petsYear(c);
   // Engaged for a year or more: the families want a wedding date.
   const fiance = L.people.find((p) => p.rel === 'fiance' && p.alive);
   if (fiance && !L.prison) {
@@ -519,6 +521,25 @@ function family(c: Ctx) {
     const age = L.year - k.born;
     if (age === 7) c.line(`🎒 ${c.relName(k)} کلاس اولی شد!`);
     if (age === 18) c.line(`🎓 ${c.relName(k)} دیپلم گرفت.`);
+  }
+}
+
+function petsYear(c: Ctx) {
+  const L = c.L;
+  for (const p of c.pets) {
+    const age = L.year - p.born;
+    p.close = clamp(p.close - c.int(1, 4));
+    if (age >= p.life || c.chance(age > p.life * 0.7 ? 0.08 : 0.01)) {
+      p.alive = false;
+      p.died = L.year;
+      c.happy(-Math.round(4 + p.close / 10));
+      c.line(`🌈 ${c.petName(p)}${age >= 2 ? ` بعد از ${fa(age)} سال` : ''} از پیشت رفت. جاش خیلی خالیه.`, 'bad');
+      continue;
+    }
+    // Food and the vet (parents pay for a kid's pet); a pet you love keeps you cheerful.
+    if (L.age >= 18) c.money(-c.price(petKind(p.kind).care));
+    if (p.close >= 50) c.happy(1);
+    if (p.kind === 'dog' && p.close >= 50) c.health(1);
   }
 }
 

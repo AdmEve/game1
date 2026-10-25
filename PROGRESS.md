@@ -44,6 +44,10 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
   test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. The
   khastegari is an interview (`src/content/events/khastegari.ts`): three questions from the other family
   with a «رضایت خانواده» meter (events can show a `meter`); lies help now and may come out later.
+- Pets (`src/content/pets.ts`, `src/content/events/pets.ts`): street cats, Persian cats, dogs, parrots,
+  canaries, the Nowruz goldfish, turtles, rabbits. They live in `L.pets` (not `people`), age, cost money
+  each year, have their own sheet in the people tab (cuddle, play, Instagram, vet, give away) and ~18
+  events (the parrot swears in front of guests, the dog scares off a thief, kittens, getting lost…).
 - Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
   (`src/content/events/traits.ts`).
 

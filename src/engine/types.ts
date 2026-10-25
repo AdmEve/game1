@@ -7,6 +7,21 @@ export type RelKind =
   | 'father' | 'mother' | 'brother' | 'sister' | 'grandpa' | 'grandma'
   | 'spouse' | 'fiance' | 'child' | 'friend' | 'ex' | 'crush' | 'stepparent';
 
+/** A pet (kinds in content/pets.ts). */
+export interface Pet {
+  id: number;
+  kind: string;
+  name: string;
+  /** Birth year. */
+  born: number;
+  /** Age it will die of old age. */
+  life: number;
+  /** Bond 0..100. */
+  close: number;
+  alive: boolean;
+  died?: number;
+}
+
 export interface Npc {
   id: number;
   first: string;
@@ -198,6 +213,8 @@ export interface Life {
   money: number;
   loans: Loan[];
   people: Npc[];
+  /** Missing in lives saved before pets existed. */
+  pets?: Pet[];
   nextId: number;
   assets: Asset[];
   job: JobState | null;

@@ -152,16 +152,12 @@ defEvents([
     ],
   },
   {
-    id: 'm_pet', emoji: '🐱', title: 'حیوون خونگی', age: [20, 80], when: (c) => !c.has('pet'),
+    id: 'm_pet', emoji: '🐱', title: 'حیوون خونگی', age: [20, 80], when: (c) => !c.pet('cat') && c.pets.length < 4,
     text: 'یه بچه‌گربه‌ی ناز دم در خونه میو میو می‌کنه.',
     choices: [
-      { label: 'نگهش می‌دارم', do: (c) => { c.flag('pet'); c.happy(8); return `اسمش رو گذاشتی «${c.pick(['پیشی', 'ملوس', 'نخودی', 'گربه‌خان'])}». حالا رئیس خونه اونه!`; } },
+      { label: 'نگهش می‌دارم', do: (c) => { const p = c.addPet('cat'); c.happy(8); return `اسمش رو گذاشتی «${p.name}». حالا رئیس خونه اونه!`; } },
       { label: 'بهش غذا می‌دم و می‌ره', do: (c) => { c.happy(2); return 'یه کم شیر بهش دادی. فرداش با دوستاش برگشت!'; } },
     ],
-  },
-  {
-    id: 'm_pet_vet', emoji: '🐾', age: [20, 90], when: (c) => c.has('pet'), once: false, cd: 6, text: '',
-    auto: (c) => { const m = c.price(8e6); c.money(-m); c.happy(-2); return `🐾 حیوون خونگیت مریض شد و ${money(m)} خرج دامپزشک شد. ولی الان دوباره سرحاله!`; },
   },
   {
     id: 'm_neighbor_tree', emoji: '🌳', title: 'درخت همسایه', age: [25, 90], when: (c) => c.L.home === 'own' && c.L.assets.some((a) => a.ref === 'villa'),

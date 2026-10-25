@@ -19,5 +19,6 @@ import './events/abroad';
 import './events/family2';
 import './events/traits';
 import './events/driving';
+import './events/pets';
 
 export { GROUPS } from './actions/core';

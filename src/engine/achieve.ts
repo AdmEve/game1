@@ -58,6 +58,7 @@ export const ACHS: AchDef[] = [
   { id: 'boss', name: 'رئیس', emoji: '👔', desc: 'به بالاترین درجه‌ی یه شغل برس' },
   { id: 'retired', name: 'بازنشسته', emoji: '🪑', desc: 'بازنشسته شو', test: (L) => !!L.pension },
   { id: 'jobless', name: 'بیکار حرفه‌ای', emoji: '🛋️', desc: 'هشت سال پشت سر هم بیکار باش', test: (L) => (L.flags.jobless ?? 0) >= 8 },
+  { id: 'zoo', name: 'باغ وحش', emoji: '🐾', desc: 'سه تا حیوون خونگی همزمان داشته باش', test: (L) => (L.pets ?? []).filter((p) => p.alive).length >= 3, gems: 5 },
   { id: 'hafez', name: 'حافظ‌خون', emoji: '📖', desc: 'پنج بار فال حافظ بگیر', test: (L) => (L.flags.hafez ?? 0) >= 5 },
   { id: 'traveler', name: 'جهانگرد', emoji: '🌍', desc: 'پنج بار سفر خارجی برو', test: (L) => (L.flags.tripsAbroad ?? 0) >= 5 },
   { id: 'irantour', name: 'ایران‌گرد', emoji: '🗺️', desc: 'هشت بار سفر داخلی برو', test: (L) => (L.flags.tripsIran ?? 0) >= 8 },

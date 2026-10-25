@@ -2,7 +2,7 @@ import { deathAchievements, checkAchievements } from './achieve';
 import { Ctx, type Deltas } from './ctx';
 import { money } from './fmt';
 import { newLife } from './life';
-import { ACTIONS, EVENTS, PERSON_ACTS, txt, type ActionDef, type ActionOption, type PersonActDef } from './registry';
+import { ACTIONS, EVENTS, PERSON_ACTS, PET_ACTS, txt, type ActionDef, type ActionOption, type PersonActDef, type PetActDef } from './registry';
 import type { Life, Npc } from './types';
 import { netWorth } from './wealth';
 import { ageUp, die } from './year';
@@ -281,5 +281,40 @@ export function runPersonAct(L: Life, npcId: number, actId: string): Outcome {
   checkAchievements(c);
   c.commit();
   if (L.dead) finishDeath(L);
+  return { emoji: a.emoji, title: txt(a.label, c), text, deltas: c.deltas, died: !!L.dead };
+}
+
+export interface PetActView {
+  def: PetActDef;
+  label: string;
+  off: string | false;
+}
+
+export function petActs(L: Life, petId: number): PetActView[] {
+  const p = (L.pets ?? []).find((x) => x.id === petId);
+  if (!p || !p.alive || L.dead) return [];
+  const c = new Ctx(L);
+  return PET_ACTS.filter((a) => a.when(c, p)).map((a) => {
+    let off: string | false = false;
+    if (L.used[`pet:${a.id}:${p.id}`]) off = 'امسال انجامش دادی';
+    const cost = a.cost?.(c, p);
+    if (!off && cost && cost > L.money) off = 'پول کافی نداری';
+    if (!off && L.queue.length) off = 'اول اتفاق‌های امسال رو جواب بده';
+    if (!off && L.prison) off = 'تو زندانی';
+    return { def: a, label: txt(a.label, c), off };
+  });
+}
+
+export function runPetAct(L: Life, petId: number, actId: string): Outcome {
+  const p = (L.pets ?? []).find((x) => x.id === petId)!;
+  const a = PET_ACTS.find((x) => x.id === actId)!;
+  const c = new Ctx(L);
+  L.used[`pet:${a.id}:${p.id}`] = 1;
+  const cost = a.cost?.(c, p);
+  if (cost) c.money(-cost);
+  const text = a.do(c, p);
+  if (text) logOutcome(c, text, a.emoji);
+  checkAchievements(c);
+  c.commit();
   return { emoji: a.emoji, title: txt(a.label, c), text, deltas: c.deltas, died: !!L.dead };
 }

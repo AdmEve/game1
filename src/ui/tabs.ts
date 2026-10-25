@@ -3,12 +3,13 @@ import { GROUPS } from '../content';
 import { countryById } from '../content/cities';
 import { DEGREE_NAMES, TIER_NAMES, majorName, trackName } from '../content/edu';
 import { jobById } from '../content/jobs';
+import { petKind } from '../content/pets';
 import { TRAITS } from '../content/traits';
 import { fa, gpa, money, num } from '../engine/fmt';
 import { CLASS_NAMES, cityName } from '../engine/life';
-import { actionOptions, actionsFor, personActs, runAction, runPersonAct, type ActionView } from '../engine/play';
+import { actionOptions, actionsFor, personActs, petActs, runAction, runPersonAct, runPetAct, type ActionView } from '../engine/play';
 import type { ActionOption } from '../engine/registry';
-import type { Asset, Life, Npc } from '../engine/types';
+import type { Asset, Life, Npc, Pet } from '../engine/types';
 import { assetValue, debts, netWorth } from '../engine/wealth';
 import { LIFESTYLES, livingCost, rentCost, salaryOf } from '../engine/year';
 import { collectAchievements, persist, spendGems } from '../save';
@@ -236,9 +237,66 @@ function peopleTab(body: HTMLElement) {
       return row;
     })));
   }
+  const pets = (L.pets ?? []).filter((p) => p.alive);
+  const adopt = actionsFor(L).find((a) => a.def.id === 'adopt_pet');
+  if (pets.length || adopt) {
+    body.append(section('🐾 حیوون‌های خونگی', ...pets.map((p) => {
+      const k = petKind(p.kind);
+      const row = h('button', { class: 'person' },
+        h('span', { class: 'p-av', html: emo(k.emoji, 'emo p-emo') }),
+        h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: p.name }), h('span', { class: 'act-d', text: `${k.name}، ${petAge(L, p)}` })),
+        meter(p.close, 'small'));
+      row.addEventListener('click', () => petSheet(p.id));
+      return row;
+    }), adopt ? h('div', { class: 'acts' }, actionRow(adopt)) : null));
+  }
   const gone = L.people.filter((p) => !p.alive && p.died);
-  if (gone.length) body.append(section('🕊️ درگذشتگان', ...gone.map((n) => h('div', { class: 'kv', html: `<span class="k">${rich(`${n.first} ${n.last}`)}</span><span class="v">${relLabel(n)}، ${fa(n.died! - n.born)} ساله</span>` }))));
+  const gonePets = (L.pets ?? []).filter((p) => !p.alive && p.died);
+  if (gone.length || gonePets.length) body.append(section('🕊️ درگذشتگان',
+    ...gone.map((n) => h('div', { class: 'kv', html: `<span class="k">${rich(`${n.first} ${n.last}`)}</span><span class="v">${relLabel(n)}، ${fa(n.died! - n.born)} ساله</span>` })),
+    ...gonePets.map((p) => h('div', { class: 'kv', html: `<span class="k">${rich(`${petKind(p.kind).emoji} ${p.name}`)}</span><span class="v">${petKind(p.kind).name}، ${fa(p.died! - p.born)} ساله</span>` }))));
   if (!people.length) body.append(h('div', { class: 'empty', text: 'هیچ‌کس رو نداری… تنهایی.' }));
+}
+
+function petAge(L: Life, p: Pet) {
+  const a = L.year - p.born;
+  return a ? `${fa(a)} ساله` : 'کوچولو';
+}
+
+function petSheet(id: number) {
+  const L = life();
+  const p = (L.pets ?? []).find((x) => x.id === id);
+  if (!p) return;
+  const k = petKind(p.kind);
+  const s = sheet(`${k.emoji} ${p.name}`);
+  const render = () => {
+    clear(s.body);
+    if (!p.alive) { s.close(); open?.render(); return; }
+    s.body.append(h('div', { class: 'person-card' },
+      h('span', { class: 'p-av big', html: emo(k.emoji, 'emo p-emo') }),
+      h('div', {}, h('div', { class: 'act-l', text: k.name }), h('div', { class: 'act-d', text: `${petAge(L, p)}، خرج سالانه حدود ${money(Math.round(k.care * L.econ.price))}` })),
+    ), h('div', { class: 'kv' }, rt('span', 'k', '❤️ وابستگی'), meter(p.close)));
+    const wrap = h('div', { class: 'acts' });
+    for (const a of petActs(L, id)) {
+      const row = h('button', { class: `act ${a.off ? 'off' : ''}` },
+        h('span', { class: 'act-e', html: emo(a.def.emoji, 'emo act-emo') }),
+        h('span', { class: 'act-t' }, rt('span', 'act-l', a.label), a.off ? rt('span', 'act-d', a.off) : null));
+      row.addEventListener('click', async () => {
+        if (a.off) { toast(a.off); return; }
+        if (a.def.id === 'pet_give' && !(await ask(`واقعاً می‌خوای ${p.name} رو به یکی دیگه بسپاری؟`))) return;
+        const out = runPetAct(L, id, a.def.id);
+        collectAchievements(L);
+        persist();
+        hooks.refresh();
+        render();
+        open?.render();
+        await showOutcome(out);
+      });
+      wrap.append(row);
+    }
+    s.body.append(wrap);
+  };
+  render();
 }
 
 function relLabel(n: Npc): string {

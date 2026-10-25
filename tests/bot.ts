@@ -1,5 +1,5 @@
 import '../src/content';
-import { actionOptions, actionsFor, choose, currentEvent, nextYear, personActs, runAction, runPersonAct } from '../src/engine/play';
+import { actionOptions, actionsFor, choose, currentEvent, nextYear, personActs, petActs, runAction, runPersonAct, runPetAct } from '../src/engine/play';
 import { newLife } from '../src/engine/life';
 import { Rng } from '../src/engine/rng';
 import { STAT_KEYS, type Life } from '../src/engine/types';
@@ -53,6 +53,12 @@ export function playLife(seed: number, opts: { actions?: number } = {}): Life {
       const p = r.pick(people);
       const acts = personActs(L, p.id).filter((a) => !a.off);
       if (acts.length) checkText(runPersonAct(L, p.id, r.pick(acts).def.id).text, 'person act');
+    }
+    const pets = (L.pets ?? []).filter((p) => p.alive);
+    if (pets.length && !L.dead && r.chance(0.4)) {
+      const p = r.pick(pets);
+      const acts = petActs(L, p.id).filter((a) => !a.off);
+      if (acts.length) checkText(runPetAct(L, p.id, r.pick(acts).def.id).text, 'pet act');
     }
     for (const k of STAT_KEYS) if (!(L.stats[k] >= 0 && L.stats[k] <= 100)) throw new Error(`stat ${k} out of range: ${L.stats[k]}`);
     if (!Number.isFinite(L.money)) throw new Error('money is not finite');

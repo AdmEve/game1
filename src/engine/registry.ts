@@ -1,5 +1,5 @@
 import type { Ctx } from './ctx';
-import type { Gender, Npc } from './types';
+import type { Gender, Npc, Pet } from './types';
 
 type Txt = string | ((c: Ctx) => string);
 
@@ -140,6 +140,22 @@ export interface PersonActDef {
 }
 
 export const PERSON_ACTS: PersonActDef[] = [];
+
+/** Things to do with a pet. */
+export interface PetActDef {
+  id: string;
+  label: Txt;
+  emoji: string;
+  when: (c: Ctx, p: Pet) => boolean;
+  cost?: (c: Ctx, p: Pet) => number;
+  do: (c: Ctx, p: Pet) => string;
+}
+
+export const PET_ACTS: PetActDef[] = [];
+
+export function defPetActs(list: PetActDef[]) {
+  PET_ACTS.push(...list);
+}
 
 export function defPersonActs(list: PersonActDef[]) {
   PERSON_ACTS.push(...list);
