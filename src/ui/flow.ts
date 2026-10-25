@@ -8,6 +8,7 @@ import { haptic } from '../haptics';
 import { meta, persist, spendGems } from '../save';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
+import { konkurQuiz } from './quiz';
 
 export const STAT_META: Record<StatKey, { name: string; emoji: string }> = {
   happy: { name: 'شادی', emoji: '😊' },
@@ -96,6 +97,12 @@ export function showOutcome(out: Outcome): Promise<void> {
 export async function runQueue(L: Life): Promise<void> {
   for (let guard = 0; guard < 20; guard++) {
     if (L.dead) break;
+    // The konkur results come after sitting the exam.
+    const head = L.queue[0];
+    if (head?.id === 'm_konkur' && !head.p?._prep && L.flags.konkurQuiz === undefined) {
+      L.flags.konkurQuiz = await konkurQuiz(L);
+      persist();
+    }
     const ev = currentEvent(L);
     if (!ev) break;
     const idx = await new Promise<number>((resolve) => {

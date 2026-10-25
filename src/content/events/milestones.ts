@@ -18,7 +18,9 @@ export function konkurRank(c: Ctx): { rank: number; p: number; n: number } {
   const effort = c.count('kEffort');
   const tries = L.edu.konkur?.tries ?? 0;
   const z = (L.stats.smarts - 50) / 14 + (effort - 3) / 4 + (L.edu.konkurClass ? 0.35 : 0) + (L.edu.school === 'sampad' ? 0.4 : 0)
-    + (L.luck - 50) / 100 + c.rng.gauss(0, 0.45) + tries * 0.2 + (c.trait('genius') ? 0.4 : 0);
+    + (L.luck - 50) / 100 + c.rng.gauss(0, 0.45) + tries * 0.2 + (c.trait('genius') ? 0.4 : 0)
+    + (L.flags.konkurQuiz !== undefined ? (L.flags.konkurQuiz - 2.5) * 0.3 : 0);
+  delete L.flags.konkurQuiz;
   const p = 1 / (1 + Math.exp(1.7 * z));
   return { rank: Math.max(1, Math.round(p * n)), p, n };
 }

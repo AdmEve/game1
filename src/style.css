@@ -142,6 +142,14 @@ input, select { font: inherit; }
 .act .gem-tag, .product .gem-tag { position: static; }
 .gem-tag { position: absolute; left: 10px; top: 10px; font-size: 12px; font-weight: 800; background: #fff3d6; color: #8a5a00; border-radius: 999px; padding: 0 8px; }
 .outcome { text-align: center; }
+.quiz { text-align: center; }
+.quiz-top { display: flex; justify-content: space-between; font-weight: 800; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.quiz-t { height: 8px; margin-bottom: 12px; }
+.quiz-t .fill { transition: width .1s linear; }
+.quiz-q { font-size: 19px; font-weight: 900; color: var(--teal-dark); margin: 6px 0 14px; line-height: 1.7; }
+.quiz-a { text-align: center; align-items: center; }
+.quiz-a.right { border-color: var(--green); background: #e3f6ec; }
+.quiz-a.wrong { border-color: var(--rose); background: #fde6e4; }
 
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 12px; }
 .chip { font-size: 13px; font-weight: 800; border-radius: 999px; padding: 1px 10px; }
