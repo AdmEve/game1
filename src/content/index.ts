@@ -1,0 +1,14 @@
+// Importing these modules registers all events and actions.
+import './events/milestones';
+import './actions/core';
+import './actions/money';
+import './actions/love';
+import './actions/people';
+import './actions/fun';
+import './events/childhood';
+import './events/teen';
+import './events/adult';
+import './events/later';
+import './events/world';
+
+export { GROUPS } from './actions/core';
