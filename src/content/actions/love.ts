@@ -78,7 +78,7 @@ defActions([
     },
   },
   {
-    id: 'wedding', group: 'love', emoji: '💒',
+    id: 'wedding', group: 'love', emoji: '🎊',
     label: 'برگزاری عروسی',
     when: (c) => !!c.rel('fiance'),
     do: (c) => {
@@ -246,7 +246,7 @@ defEvents([
   {
     id: 'wedding',
     milestone: true,
-    emoji: '💒',
+    emoji: '🎊',
     title: 'عروسی',
     when: (c) => !!c.rel('fiance'),
     text: (c) => `${c.rel('fiance')?.first} و تو یه ساله نامزدین و خانواده‌ها می‌گن «پس عروسی کِی؟» چه جور عروسی‌ای می‌گیرین؟`,

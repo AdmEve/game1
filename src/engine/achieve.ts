@@ -38,7 +38,7 @@ export const ACHS: AchDef[] = [
   { id: 'twins', name: 'دوقلو', emoji: '👯', desc: 'دوقلو بیار' },
   { id: 'emigrant', name: 'مهاجر', emoji: '✈️', desc: 'مهاجرت کن', test: (L) => L.country !== 'ir' },
   { id: 'returned', name: 'برگشتم وطن', emoji: '🇮🇷', desc: 'بعد از مهاجرت برگرد ایران' },
-  { id: 'greencard', name: 'برنده‌ی لاتاری', emoji: '🎰', desc: 'تو لاتاری گرین‌کارت برنده شو', gems: 10 },
+  { id: 'greencard', name: 'برنده‌ی لاتاری', emoji: '🎫', desc: 'تو لاتاری گرین‌کارت برنده شو', gems: 10 },
   { id: 'nose', name: 'دماغ عملی', emoji: '👃', desc: 'عمل بینی کن' },
   { id: 'damavand', name: 'فاتح دماوند', emoji: '🏔️', desc: 'قله‌ی دماوند رو فتح کن', gems: 5 },
   { id: 'old80', name: 'پیرِ دیر', emoji: '👴', desc: '۸۰ سال عمر کن', test: (L) => L.age >= 80 },

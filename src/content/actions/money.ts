@@ -249,7 +249,7 @@ defActions([
     },
   },
   {
-    id: 'lottery', group: 'abroad', emoji: '🎰',
+    id: 'lottery', group: 'abroad', emoji: '🎫',
     label: 'ثبت‌نام لاتاری گرین‌کارت', desc: (c) => money(c.price(1e6)),
     cost: (c) => c.price(1e6),
     when: (c) => adultFree(c) && c.L.country !== 'us' && !c.has('greencard') && c.L.edu.degrees.length > 0,

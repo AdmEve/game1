@@ -12,7 +12,7 @@ import { haggleWhat } from '../content/actions/money';
 import { drivingTest } from './driving';
 import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
-import { shareKarname } from './share';
+import { shareKarname, shareWedding } from './share';
 
 export const STAT_META: Record<StatKey, { name: string; emoji: string }> = {
   happy: { name: 'شادی', emoji: '😊' },
@@ -79,7 +79,8 @@ function eventCard(ev: EventView, onPick: (i: number) => void, L?: Life): HTMLEl
     h('div', { class: 'choices' }, ...choices));
 }
 
-export function showOutcome(out: Outcome): Promise<void> {
+/** `extra` goes under the text (e.g. a share button). */
+export function showOutcome(out: Outcome, extra?: HTMLElement | null): Promise<void> {
   return new Promise((resolve) => {
     if (!out.text) { resolve(); return; }
     const d = out.deltas;
@@ -90,6 +91,7 @@ export function showOutcome(out: Outcome): Promise<void> {
       out.emoji ? h('div', { class: 'event-emoji small', html: emo(out.emoji, 'emo big') }) : null,
       rt('div', 'event-text', out.text),
       deltaChips(d),
+      extra ?? null,
       btn('ادامه', () => finish(), 'btn primary wide')), { onClose: () => finish() });
     function finish() {
       if (done) return;
@@ -143,7 +145,9 @@ export async function runQueue(L: Life): Promise<void> {
     const out = choose(L, idx);
     persist();
     hooks.refresh();
-    if (!ev.notice) await showOutcome(out);
+    // Just married: offer the wedding card.
+    const married = out.event === 'wedding' && L.people.some((p) => p.rel === 'spouse' && p.alive);
+    if (!ev.notice) await showOutcome(out, married ? btn('📤 اشتراک کارت عروسی', () => void shareWedding(L), 'btn share small') : null);
   }
   persist();
   hooks.refresh();

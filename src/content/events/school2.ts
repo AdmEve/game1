@@ -149,13 +149,13 @@ defEvents([
     ],
   },
   {
-    id: 't_sibling_wedding', age: [10, 25], emoji: '💒', text: '', when: (c) => c.rels('brother', 'sister').some((s) => c.ageOf(s) >= 22 && !s.flags?.married),
+    id: 't_sibling_wedding', age: [10, 25], emoji: '🎊', text: '', when: (c) => c.rels('brother', 'sister').some((s) => c.ageOf(s) >= 22 && !s.flags?.married),
     auto: (c) => {
       const s = c.rels('brother', 'sister').find((x) => c.ageOf(x) >= 22 && !x.flags?.married)!;
       s.flags = { ...(s.flags ?? {}), married: c.L.year };
       c.happy(6);
       c.close(s, 5);
-      return `💒 عروسی ${c.relName(s)} بود! تا ساعت ۲ صبح رقصیدی و ${c.pick(['شام عروسی رو سه بار کشیدی.', 'تو عکس‌های عروسی همه‌جا هستی!', 'دسته گل عروس افتاد تو بغلت!'])}`;
+      return `🎊 عروسی ${c.relName(s)} بود! تا ساعت ۲ صبح رقصیدی و ${c.pick(['شام عروسی رو سه بار کشیدی.', 'تو عکس‌های عروسی همه‌جا هستی!', 'دسته گل عروس افتاد تو بغلت!'])}`;
     },
     kind: 'good',
   },

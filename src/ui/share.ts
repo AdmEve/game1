@@ -2,6 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { CITIES } from '../content/cities';
 import { trackName } from '../content/edu';
 import { fa, num } from '../engine/fmt';
 import type { Life } from '../engine/types';
@@ -119,4 +120,77 @@ export async function drawKarname(L: Life, rank: number, n: number): Promise<HTM
 export async function shareKarname(L: Life, rank: number, n: number) {
   const cv = await drawKarname(L, rank, n);
   await shareCanvas(cv, `رتبه‌ی کنکورم تو «زندگی ایرونی» شد ${num(rank)}! تو چند می‌شی؟ 😎`, `konkur-${L.id}`);
+}
+
+/** «کارت عروسی» card, after the wedding. */
+export async function drawWedding(L: Life): Promise<HTMLCanvasElement | null> {
+  const sp = L.people.find((p) => p.rel === 'spouse' && p.alive);
+  if (!sp) return null;
+  await document.fonts.ready;
+  const W = 1080, H = 1350;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const x = cv.getContext('2d')!;
+  x.fillStyle = '#fbf5e6';
+  x.fillRect(0, 0, W, H);
+  // Gold double frame.
+  x.strokeStyle = '#c9a24a';
+  x.lineWidth = 10;
+  x.strokeRect(40, 40, W - 80, H - 80);
+  x.lineWidth = 3;
+  x.strokeRect(66, 66, W - 132, H - 132);
+  const flower = await emojiImg('🌸');
+  if (flower) for (const [fx, fy] of [[44, 44], [W - 124, 44], [44, H - 124], [W - 124, H - 124]]) x.drawImage(flower, fx, fy, 80, 80);
+  x.direction = 'rtl';
+  x.textAlign = 'center';
+  x.fillStyle = '#a07a2c';
+  x.font = '500 34px Vazirmatn';
+  x.fillText('به نام آنکه عشق را آفرید', W / 2, 170);
+  const ring = await emojiImg('💍');
+  if (ring) x.drawImage(ring, W / 2 - 70, 210, 140, 140);
+  x.fillStyle = '#7a5a1c';
+  x.font = '700 40px Vazirmatn';
+  x.fillText('دعوت‌نامه‌ی جشن عروسی', W / 2, 410);
+  const [groom, bride] = L.gender === 'm' ? [L.first, sp.first] : [sp.first, L.first];
+  x.fillStyle = '#3b2a10';
+  x.font = '900 96px Vazirmatn';
+  x.fillText(bride, W / 2, 560);
+  x.font = '400 54px Vazirmatn';
+  x.fillStyle = '#c9a24a';
+  x.fillText('و', W / 2, 640);
+  x.font = '900 96px Vazirmatn';
+  x.fillStyle = '#3b2a10';
+  x.fillText(groom, W / 2, 750);
+  x.font = '500 36px Vazirmatn';
+  x.fillStyle = '#5c4a2a';
+  const city = CITIES.find((c) => c.id === L.city)?.name;
+  x.fillText(`سال ${fa(L.year)}${L.country === 'ir' && city ? `، ${city}` : ''}`, W / 2, 840);
+  const mehr = L.mehr ?? L.flags.mehrMax ?? 0;
+  if (mehr > 0) {
+    x.font = '700 38px Vazirmatn';
+    x.fillStyle = '#7a5a1c';
+    x.fillText(`مهریه: ${fa(mehr)} سکه‌ی بهار آزادی`, W / 2, 930);
+    x.font = '400 32px Vazirmatn';
+    x.fillStyle = '#8a7650';
+    x.fillText(mehr >= 1000 ? '(خدا به داماد رحم کنه!)' : mehr <= 14 ? '(ساده و صمیمی)' : '(مبارکه!)', W / 2, 985);
+  }
+  x.font = '500 32px Vazirmatn';
+  x.fillStyle = '#8a7650';
+  x.fillText('شام: چلوکباب و زرشک‌پلو با مرغ', W / 2, 1075);
+  x.fillText('ورود کودکان ممنوع!', W / 2, 1125);
+  x.fillStyle = '#1F6F6B';
+  x.font = '800 42px Vazirmatn';
+  x.fillText('زندگی ایرونی', W / 2, 1215);
+  x.font = '400 26px Vazirmatn';
+  x.fillStyle = '#5c4a2a';
+  x.fillText('شبیه‌ساز زندگی ایرانی، دانلود از کافه‌بازار', W / 2, 1258);
+  return cv;
+}
+
+export async function shareWedding(L: Life) {
+  const cv = await drawWedding(L);
+  if (!cv) return;
+  const mehr = L.mehr ?? L.flags.mehrMax ?? 0;
+  await shareCanvas(cv, `عروسی‌مون تو «زندگی ایرونی»!${mehr ? ` مهریه ${fa(mehr)} سکه 😅` : ''} تو هم بیا زندگیت رو بساز!`, `wedding-${L.id}`);
 }

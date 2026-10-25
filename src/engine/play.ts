@@ -29,6 +29,8 @@ export interface EventView {
 }
 
 export interface Outcome {
+  /** The event this answered, if any. */
+  event?: string;
   emoji?: string;
   title?: string;
   text: string;
@@ -118,7 +120,7 @@ export function choose(L: Life, idx: number): Outcome {
   checkAchievements(c);
   c.commit();
   if (L.dead) finishDeath(L);
-  return { emoji, title: txt(e.title, c), text, deltas: c.deltas, died: !!L.dead };
+  return { event: e.id, emoji, title: txt(e.title, c), text, deltas: c.deltas, died: !!L.dead };
 }
 
 export interface ActionView {
