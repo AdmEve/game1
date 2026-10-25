@@ -51,6 +51,7 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
 - First-run tutorial; incremental life-log rendering for budget phones.
 - `scripts/story.ts <seed>` prints a whole life to proof-read.
+- `scripts/ui-smoke.cjs` plays three lives through the real UI, mini-games included, and reports page errors.
 - Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
 - Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
   «کارنامه» card (and a «کارت عروسی» card after the wedding, `drawWedding` in `src/ui/share.ts`), and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
