@@ -10,5 +10,10 @@ import './events/teen';
 import './events/adult';
 import './events/later';
 import './events/world';
+import './events/school2';
+import './events/young';
+import './events/jobs';
+import './events/middle';
+import './events/news';
 
 export { GROUPS } from './actions/core';

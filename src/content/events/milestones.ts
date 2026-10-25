@@ -298,7 +298,7 @@ defEvents([
         when: (c) => { const d = c.L.edu.degrees[c.L.edu.degrees.length - 1]; return d?.kind === 'karshenasi'; },
         do: (c) => {
           const d = c.L.edu.degrees[c.L.edu.degrees.length - 1];
-          const chance = clamp((c.s('smarts') - 40) / 60 + (d.gpa - 15) / 10, 0.05, 0.9);
+          const chance = clamp((c.s('smarts') - 40) / 60 + (d.gpa - 15) / 10 + (c.has('arshadPrep') ? 0.15 : 0), 0.05, 0.92);
           if (c.lucky(chance)) {
             const tier = d.gpa > 17.5 && c.s('smarts') > 70 ? Math.max(0, d.tier - 1) : Math.min(3, d.tier + (c.chance(0.5) ? 1 : 0));
             startUni(c, { major: d.major, tier, uni: tier === 3 ? `دانشگاه آزاد واحد ${cityById(c.L.city).name}` : tier === 0 ? c.pick(TOP_UNIS[majorById(d.major)?.track ?? 'riazi']) : c.pick(GOOD_UNIS), kind: 'arshad', len: 2 });

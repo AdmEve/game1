@@ -9,7 +9,7 @@ import type { Life, StatKey } from '../engine/types';
 import { haptic } from '../haptics';
 import { maybeInterstitial } from '../monetize';
 import { collectAchievements, isVip, meta, persist, syncOwned } from '../save';
-import { clear, h, layers, rt, toast } from './dom';
+import { clear, h, layers, modal, rt, toast } from './dom';
 import { avatarEmoji, emo, rich } from './emoji';
 import { STAT_META, hooks, runQueue } from './flow';
 
@@ -107,6 +107,7 @@ async function ageUp() {
   persist();
   refresh();
   const btnEl = els.nav?.querySelector('.age-btn');
+  if (L.age >= 3) btnEl?.classList.remove('hint');
   btnEl?.classList.remove('pop');
   void (btnEl as HTMLElement | undefined)?.offsetWidth;
   btnEl?.classList.add('pop');
@@ -144,7 +145,24 @@ export function showGame(life: Life) {
   screen.append(els.screen);
   refresh();
   if (L.dead) hooks.afterDeath();
+  else if (!meta.tutorial) tutorial();
   else if (L.queue.length) void runQueue(L);
+}
+
+function tutorial() {
+  const tips = [
+    '👆 هر بار دکمه‌ی طلایی «+۱ سال» رو بزنی، یه سال بزرگ‌تر می‌شی و اتفاق‌های اون سال رو می‌بینی.',
+    '🎯 از «کارها» درس بخون، ورزش کن، سفر برو، دوست پیدا کن یا عاشق شو!',
+    '💼 از «کار و درس» شغل پیدا کن، کنکور و سربازی‌ات رو مدیریت کن.',
+    '💰 تو «دارایی» طلا، دلار، خونه و ماشین بخر؛ حواست به تورم باشه!',
+    '🪦 آخر زندگی یه «اعلامیه» می‌گیری که می‌تونی برای رفقات بفرستی.',
+  ];
+  const m = modal(h('div', { class: 'tutorial' },
+    h('div', { class: 'event-emoji', html: emo('👋', 'emo big') }),
+    rt('div', 'event-title', 'به «زندگی ایرونی» خوش اومدی!'),
+    h('div', { class: 'tips' }, ...tips.map((t) => rt('div', 'tip', t))),
+    h('button', { class: 'btn primary wide', text: 'بزن بریم!', onclick: () => { meta.tutorial = true; persist(); m.close(); } })), { locked: true });
+  els.nav?.querySelector('.age-btn')?.classList.add('hint');
 }
 
 export function isBusy() {

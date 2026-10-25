@@ -182,7 +182,7 @@ function assetRow(L: Life, a: Asset): HTMLElement {
   return h('div', { class: 'asset' },
     h('span', { class: 'act-e', html: emo(KIND_EMOJI[a.kind] ?? '📦', 'emo act-emo') }),
     h('span', { class: 'act-t' }, rt('span', 'act-l', label + (a.rented ? ' (اجاره داده‌شده)' : '')), h('span', { class: 'act-d', text: `خرید: ${money(a.paid)}` })),
-    h('span', { class: 'asset-v' }, h('span', { text: money(v) }), h('span', { class: `gain ${gain >= 0 ? 'up' : 'down'}`, text: `${gain >= 0 ? '▲' : '▼'} ${fa(Math.round(Math.abs(gain) * 100))}٪` })));
+    h('span', { class: 'asset-v' }, h('span', { text: money(v) }), Math.abs(gain) < 0.005 ? h('span', { class: 'gain', text: 'بدون تغییر' }) : h('span', { class: `gain ${gain >= 0 ? 'up' : 'down'}`, text: `${gain >= 0 ? '▲' : '▼'} ${fa(Math.round(Math.abs(gain) * 100))}٪` })));
 }
 
 function assetsTab(body: HTMLElement) {

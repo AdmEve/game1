@@ -41,7 +41,8 @@ export function moneyShort(n: number): string {
   if (a < 1e6) s = `${short(a / 1e3)} هزار`;
   else if (a < 1e9) s = `${short(a / 1e6)} میلیون`;
   else if (a < 1e12) s = `${short(a / 1e9)} میلیارد`;
-  else s = `${short(a / 1e12)} هزار میلیارد`;
+  else if (a < 1e15) s = `${short(a / 1e12)} هزار میلیارد`;
+  else s = `${short(a / 1e15)} میلیون میلیارد`;
   return (neg ? '−' : '') + s;
 }
 

@@ -38,12 +38,12 @@ export function stepEcon(e: Econ, r: Rng): string[] {
   e.price *= 1 + e.infl;
 
   let d = (1 + e.infl) * Math.exp(r.gauss(-0.04, 0.1));
-  if (r.chance(0.09)) d *= r.range(1.2, 1.5);
+  if (r.chance(0.07)) d *= r.range(1.2, 1.45);
   else if (r.chance(0.06)) d *= r.range(0.8, 0.92);
   e.dollar = Math.max(50, e.dollar * d);
 
   // Gold follows the dollar and the world gold price.
-  e.coin = Math.max(20_000, e.coin * (e.dollar / prevDollar) * Math.exp(r.gauss(0.02, 0.09)));
+  e.coin = Math.max(20_000, e.coin * (e.dollar / prevDollar) * Math.exp(r.gauss(-0.005, 0.09)));
 
   let h = (1 + e.infl) * Math.exp(r.gauss(-0.01, 0.08));
   if (r.chance(0.06)) h *= r.range(1.15, 1.35);
