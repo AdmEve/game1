@@ -80,7 +80,7 @@ defEvents([
     id: 'ab_homesick', emoji: '🥺', w: 2, where: 'abroad', age: [18, 110], once: false, cd: 3, title: 'غم غربت',
     text: 'دلت برای ایران، خانواده و قورمه‌سبزی مامان تنگ شده.',
     choices: [
-      { label: 'تماس تصویری با خانواده', do: (c) => { c.happy(3); for (const p of c.parents) c.close(p, 5); return 'با مامان و بابات تماس تصویری گرفتی. مامانت گفت «لاغر شدی!»'; } },
+      { label: 'تماس تصویری با خانواده', do: (c) => { c.happy(3); for (const p of c.parents) c.close(p, 5); return c.parents.length === 2 ? 'با مامان و بابات تماس تصویری گرفتی. مامانت گفت «لاغر شدی!»' : c.parents.length ? `با ${c.relName(c.parents[0])} تماس تصویری گرفتی. گفت «لاغر شدی!»` : 'با خواهر و برادرهات تماس تصویری گرفتی و کلی از بچگی‌ها گفتین.'; } },
       { label: 'می‌رم رستوران ایرانی', cost: (c) => Math.round(40 * c.L.econ.dollar), note: (c) => money(40 * c.L.econ.dollar), do: (c) => { c.happy(6); return 'رفتی یه رستوران ایرانی و چلوکباب خوردی. مزه‌اش شبیه ایران نبود ولی دلت آروم شد.'; } },
       { label: 'به زندگیم می‌رسم', do: (c) => { c.happy(-3); return 'غم رو قورت دادی و رفتی سر کار.'; } },
     ],

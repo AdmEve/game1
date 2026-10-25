@@ -38,12 +38,12 @@ defEvents([
     text: 'دلت برای ایران خیلی تنگ شده. بلیت گرونه ولی…',
     choices: [
       { label: 'می‌رم! سه هفته', cost: (c) => usd(c, 2200), note: (c) => money(usd(c, 2200)), do: (c) => { c.happy(15); for (const p of c.parents) c.close(p, 15); return 'سه هفته ایران بودی؛ هر روز مهمونی، کباب، فامیل! برگشتی و ۵ کیلو اضافه کردی.'; } },
-      { label: 'سال دیگه', do: (c) => { c.happy(-4); return 'گفتی «سال دیگه حتماً». مامانت پشت تلفن گریه کرد.'; } },
+      { label: 'سال دیگه', do: (c) => { c.happy(-4); return `گفتی «سال دیگه حتماً». ${c.parents.length ? `${c.relName(c.parents[0])} پشت تلفن گریه کرد.` : 'خودت هم دلت گرفت.'}`; } },
     ],
   },
   {
     id: 'ab_parents_visa', emoji: '🛂', title: 'ویزای پدر و مادر', where: 'abroad', age: [22, 70], when: (c) => c.parents.length > 0,
-    text: 'می‌خوای مامان و بابات بیان پیشت، ولی سفارت باید ویزا بده.',
+    text: (c) => (c.parents.length === 2 ? 'می‌خوای مامان و بابات بیان پیشت، ولی سفارت باید ویزا بده.' : `می‌خوای ${c.relName(c.parents[0])} بیاد پیشت، ولی سفارت باید ویزا بده.`),
     choices: [
       { label: 'دعوت‌نامه می‌فرستم', cost: (c) => usd(c, 600), note: (c) => money(usd(c, 600)), do: (c) => { if (c.lucky(0.5)) { c.happy(15); for (const p of c.parents) c.close(p, 20); return 'ویزا اومد! سه ماه پیشت بودن و مامانت یخچالت رو پر از غذای خونگی کرد.'; } c.happy(-8); return 'ویزا رد شد. «احتمال بازنگشتن». خیلی دلت شکست.'; } },
       { label: 'بعداً', do: () => 'گذاشتیش برای بعد.' },

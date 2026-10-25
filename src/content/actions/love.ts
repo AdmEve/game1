@@ -53,12 +53,12 @@ defActions([
   {
     id: 'khastegari', group: 'love', emoji: '💐', limit: 1,
     label: (c) => (c.male ? 'رفتن به خواستگاری' : 'خواستگار پذیرفتن'),
-    desc: 'مامانت چند نفر رو در نظر داره!',
+    desc: (c) => `${c.parent()} چند نفر رو در نظر داره!`,
     when: (c) => c.age >= 20 && single(c) && !c.L.prison,
     do: (c) => {
       const list = [makeCandidate(c, 'معرفی مامان'), makeCandidate(c, 'فامیل'), makeCandidate(c, c.L.job ? 'همکار' : 'همسایه')];
       c.queue('pick_candidate', { list: list as unknown as Record<string, unknown> });
-      return c.male ? 'مامانت دفترچه‌ی تلفنش رو درآورد…' : 'چند تا خواستگار در خونه رو زدن…';
+      return c.male ? `${c.parent()} دفترچه‌ی تلفنش رو درآورد…` : 'چند تا خواستگار در خونه رو زدن…';
     },
   },
   {
@@ -181,7 +181,7 @@ defEvents([
           return c2.male ? `با یه دسته گل و جعبه‌ی شیرینی رفتین خونه‌ی ${k.first} اینا.` : `${k.first} و خانواده‌اش اومدن خونه‌تون.`;
         },
       }));
-      out.push({ label: 'هیچ‌کدوم! فعلاً مجردم', do: (c2) => { c2.happy(1); const m = c2.rel('mother'); if (m) c2.close(m, -3); return 'گفتی فعلاً قصد ازدواج نداری. مامانت آه کشید.'; } });
+      out.push({ label: 'هیچ‌کدوم! فعلاً مجردم', do: (c2) => { c2.happy(1); const m = c2.rel('mother'); if (m) c2.close(m, -3); return `گفتی فعلاً قصد ازدواج نداری.${m ? ' مامانت آه کشید.' : ''}`; } });
       return out;
     },
   },

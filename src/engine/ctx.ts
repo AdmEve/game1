@@ -101,6 +101,8 @@ export class Ctx {
   get spouse() { return this.rel('spouse'); }
   get kids() { return this.rels('child'); }
   get parents() { return this.rels('father', 'mother'); }
+  /** «مامانت» or «بابات», whoever is alive (mum first), else the fallback. */
+  parent(fallback = 'خاله‌ات') { return this.rel('mother') ? 'مامانت' : this.rel('father') ? 'بابات' : fallback; }
   ageOf(n: Npc) { return this.L.year - n.born; }
   close(n: Npc, d: number) { n.close = clamp(n.close + d); return this; }
 

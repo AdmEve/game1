@@ -44,7 +44,7 @@ defActions([
       const k = petKind(o!.id);
       if (c.age < 18 && k.id !== 'fish' && c.parents.length && !c.lucky(0.5)) {
         c.happy(-4);
-        return `${c.pick(['بابات', 'مامانت'])} گفت «نخیر! کی می‌خواد تمیزش کنه؟» و قضیه منتفی شد.`;
+        return `${c.relName(c.pick(c.parents))} گفت «نخیر! کی می‌خواد تمیزش کنه؟» و قضیه منتفی شد.`;
       }
       const p = c.addPet(k.id, k.id === 'cat' ? c.int(0, 2) : 0);
       c.happy(8);
@@ -324,7 +324,7 @@ defEvents([
     when: (c) => !!c.spouse && hasPet('cat', 'persian', 'rabbit')(c), prep: withPet('cat', 'persian', 'rabbit'),
     text: (c) => `${c.relName(c.spouse!)} به ${thePet(c).name} حساسیت داره و کل روز عطسه می‌کنه!`,
     choices: [
-      { label: (c) => `${thePet(c).name} رو می‌سپارم به مامانم`, do: (c) => { loseFor(c, thePet(c)); c.close(c.spouse!, 6); return `${thePet(c).name} رفت خونه‌ی مامانت. هر هفته می‌ری بهش سر می‌زنی.`; } },
+      { label: (c) => `${thePet(c).name} رو می‌سپارم به ${c.rel('mother') ? 'مامانم' : c.rel('father') ? 'بابام' : 'یه دوست'}`, do: (c) => { loseFor(c, thePet(c)); c.close(c.spouse!, 6); return `${thePet(c).name} رفت خونه‌ی ${c.rel('mother') ? 'مامانت' : c.rel('father') ? 'بابات' : 'یه دوست'}. هر هفته می‌ری بهش سر می‌زنی.`; } },
       { label: 'براش قرص آنتی‌هیستامین می‌خرم!', do: (c) => { c.close(c.spouse!, -8); return 'همسرت گفت «یعنی گربه‌ات از من مهم‌تره؟!» جواب ندادی.'; } },
     ],
   },
