@@ -70,7 +70,7 @@ export function lifeTitle(L: Life): string {
   if ('divorced' in L.flags) return 'دل‌شکسته';
   if (L.mil.status === 'absent') return 'غایب ابدی';
   if (r >= 20e9) return 'پولدار';
-  if ((L.flags.jobless ?? 0) >= 5) return 'بیکار حرفه‌ای';
+  if ((L.flags.jobless ?? 0) >= 8) return 'بیکار حرفه‌ای';
   if (L.stats.happy >= 85) return 'همیشه‌خندون';
   if (L.age < 30) return 'جوون‌مرگ';
   if (r <= 0) return 'آس‌وپاس';

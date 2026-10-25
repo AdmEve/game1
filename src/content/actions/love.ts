@@ -154,7 +154,6 @@ function mehrOptions(c: Ctx, k: Candidate): ChoiceDef[] {
       const n2 = c2.addPerson({ flags: { since: c2.L.year }, rel: 'fiance', gender: k.gender, born: c2.L.year - k.age, first: k.first, last: k.last, close: 75, job: k.job, rich: k.rich, looks: k.looks, smarts: k.smarts, traits: [k.trait], met: k.via });
       c2.L.mehr = n;
       c2.L.flags.mehrMax = Math.max(c2.L.flags.mehrMax ?? 0, n);
-      if (n === 1404) award(c2, 'mehr1404');
       c2.happy(15).rep(4);
       return `مهریه ${fa(n)} سکه تعیین شد و با ${n2.first} عقد کردین! حالا نامزدین. (از تب «عشق» عروسی بگیرین)`;
     },
@@ -268,6 +267,7 @@ defEvents([
           return `نامزدی با ${f.first} به هم خورد. فامیل تا یه سال درباره‌اش پچ‌پچ کردن.`;
         },
       },
+      { label: 'یه عقد ساده تو محضر', do: (c) => marry(c, 4, -2, 'یه عقد ساده تو محضر گرفتین و با خانواده‌ها رفتین رستوران. ساده ولی دلنشین!') },
       { label: 'فقط ماه عسل (کیش)', cost: (c) => c.price(200e6), note: (c) => money(c.price(200e6)), do: (c) => marry(c, 8, -3, 'عروسی نگرفتین و رفتین کیش. عمه‌ات هنوز ناراحته!') },
     ],
   },
@@ -291,7 +291,13 @@ defEvents([
       {
         label: 'نمی‌دم!',
         do: (c) => {
-          if (c.lucky(0.15)) return 'طرف بی‌خیال شد. شانس آوردی!';
+          if (c.lucky(0.3)) return 'طرف بی‌خیال شد. شانس آوردی!';
+          if (c.chance(0.4)) {
+            const owed = c.p.owed as number;
+            c.L.loans.push({ id: c.L.nextId++, name: 'اقساط مهریه', left: owed, yearly: Math.max(Math.round(owed / 20), Math.round(c.L.econ.wage * 6)), rate: 0 });
+            c.happy(-8);
+            return 'دادگاه حکم داد مهریه رو قسطی بدی. فرار از مهریه نشد!';
+          }
           sendJail(c, 2, 'مهریه');
           award(c, 'mehrprison');
           return 'به خاطر مهریه رفتی زندان!';
@@ -308,6 +314,7 @@ function marry(c: Ctx, happy: number, rep: number, text: string): string {
   f.close = clamp(f.close + 10);
   c.flag('married');
   if (c.L.flags.marriedAge === undefined) c.L.flags.marriedAge = c.age;
+  if ((c.L.mehr ?? 0) >= 1404) award(c, 'mehr1404');
   c.happy(happy).rep(rep);
   if (c.L.home === 'parents' || c.L.home === 'dorm') c.L.home = c.L.assets.some((a) => a.kind === 'house') ? 'own' : 'rent';
   return `${text} حالا ${f.first} ${c.male ? 'خانومت' : 'همسرت'}ه. 💍`;
