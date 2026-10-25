@@ -202,7 +202,7 @@ defActions([
   // ───────── body ─────────
   {
     id: 'gym', group: 'body', emoji: '🏋️',
-    label: 'باشگاه', desc: (c) => `سلامت و ظاهر بهتر · ${money(c.price(4e6))}`,
+    label: 'باشگاه', desc: (c) => `سلامت و ظاهر بهتر، ${money(c.price(4e6))}`,
     cost: (c) => (c.age < 18 ? 0 : c.price(4e6)),
     when: (c) => c.age >= 12 && free(c),
     do: (c) => {
@@ -286,7 +286,7 @@ defActions([
   },
   {
     id: 'nosejob', group: 'body', emoji: '👃',
-    label: 'عمل بینی', desc: (c) => `هزینه: ${money(c.price(150e6))} · ریسک داره`,
+    label: 'عمل بینی', desc: (c) => `هزینه: ${money(c.price(150e6))}، ریسک داره`,
     cost: (c) => c.price(150e6),
     when: (c) => c.age >= 18 && !c.has('nose') && free(c) && !c.abroad,
     do: (c) => {
@@ -460,7 +460,7 @@ defActions([
   },
   {
     id: 'lifestyle', group: 'home', emoji: '🛋️',
-    label: 'سبک زندگی', desc: (c) => `الان: ${LIFESTYLES[c.L.lifestyle].name} · خرج سالانه ${money(livingCost(c.L) + rentCost(c.L))}`,
+    label: 'سبک زندگی', desc: (c) => `الان: ${LIFESTYLES[c.L.lifestyle].name}، خرج سالانه ${money(livingCost(c.L) + rentCost(c.L))}`,
     limit: 3,
     when: (c) => c.age >= 18 && c.L.home !== 'parents' && free(c),
     options: (c) => LIFESTYLES.map((l, i) => ({ id: String(i), label: l.name, emoji: l.emoji, off: i === c.L.lifestyle ? 'همینه' : undefined })),

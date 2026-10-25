@@ -33,7 +33,7 @@ export function statusLine(L: Life): string {
   else if (L.age >= 18) parts.push('بیکار');
   const co = countryById(L.country);
   parts.push(co ? `${co.flag} ${co.name}` : cityName(L));
-  return parts.join(' · ');
+  return parts.join('، ');
 }
 
 function renderHeader() {
@@ -74,7 +74,7 @@ function renderLog(scroll = true) {
   for (let i = start; i < L.log.length; i++) {
     const y = L.log[i];
     const block = h('div', { class: 'year' },
-      h('div', { class: 'year-h', text: `${fa(y.age)} سالگی · ${fa(y.year)}` }));
+      h('div', { class: 'year-h', text: `${fa(y.age)} سالگی، ${fa(y.year)}` }));
     for (const line of y.lines) {
       if (!line.t) continue;
       block.append(h('div', { class: `line ${line.k ?? ''}`, html: rich(line.t) }));

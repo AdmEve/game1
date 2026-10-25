@@ -26,7 +26,7 @@ export interface Product {
 
 /** In-app products. Create the same SKUs in the Bazaar panel (prices are set there). */
 export const PRODUCTS: Product[] = [
-  { sku: 'vip', emoji: '👑', title: 'زندگی VIP', desc: 'بدون تبلیغ اجباری · انتخاب شهر و خانواده · دیدن شانس و پشتکار · روزی ۵ الماس هدیه', fallbackPrice: 149000, consumable: false, badge: 'پرطرفدار' },
+  { sku: 'vip', emoji: '👑', title: 'زندگی VIP', desc: 'بدون تبلیغ اجباری، انتخاب شهر و خانواده، دیدن شانس و پشتکار، روزی ۵ الماس هدیه', fallbackPrice: 149000, consumable: false, badge: 'پرطرفدار' },
   { sku: 'god_mode', emoji: '🔮', title: 'قدرت سرنوشت', desc: 'هر وقت خواستی آمار و ویژگی‌هات رو عوض کن', fallbackPrice: 99000, consumable: false },
   { sku: 'rich_family', emoji: '💰', title: 'تولد در خانواده‌ی پولدار', desc: 'موقع شروع زندگی، خانواده‌ات رو خیلی پولدار انتخاب کن', fallbackPrice: 49000, consumable: false },
   { sku: 'careers', emoji: '🌟', title: 'شغل‌های ویژه', desc: 'فوتبالیست حرفه‌ای، بازیگر، خواننده، خلبان و تاجر بازار', fallbackPrice: 69000, consumable: false },

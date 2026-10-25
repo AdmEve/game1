@@ -122,7 +122,7 @@ function lifeTab(body: HTMLElement) {
     eduBits.push(kv('🏷️ نوع', TIER_NAMES[e.uni.tier]));
   }
   if (e.konkur) eduBits.push(kv('📝 رتبه‌ی کنکور', num(e.konkur.rank)));
-  for (const d of e.degrees) eduBits.push(kv(`📜 ${DEGREE_NAMES[d.kind]}`, d.kind === 'diploma' ? trackName(d.major as never) || 'دیپلم' : `${majorName(d.major)} · ${d.uni}`));
+  for (const d of e.degrees) eduBits.push(kv(`📜 ${DEGREE_NAMES[d.kind]}`, d.kind === 'diploma' ? trackName(d.major as never) || 'دیپلم' : `${majorName(d.major)}، ${d.uni}`));
   body.append(section('📚 تحصیل', ...eduBits));
 
   const jobBits: HTMLElement[] = [];
@@ -146,7 +146,7 @@ function lifeTab(body: HTMLElement) {
   body.append(section('🏠 زندگی',
     kv('📍 شهر', L.country === 'ir' ? cityName(L) : countryById(L.country)?.name ?? ''),
     kv('🏠 محل زندگی', home),
-    L.home !== 'parents' && L.age >= 18 ? kv('🛋️ سبک زندگی', `${LIFESTYLES[L.lifestyle].name} · خرج سالانه ${money(livingCost(L) + rentCost(L))}`) : null,
+    L.home !== 'parents' && L.age >= 18 ? kv('🛋️ سبک زندگی', `${LIFESTYLES[L.lifestyle].name}، خرج سالانه ${money(livingCost(L) + rentCost(L))}`) : null,
     kv('👪 خانواده', CLASS_NAMES[L.flags.rich ?? 2]),
     kv('🧬 ویژگی‌ها', L.traits.map((t) => { const x = TRAITS.find((y) => y.id === t); return x ? `${x.emoji} ${x.name}` : ''; }).join('  '))));
 
@@ -200,7 +200,7 @@ function assetsTab(body: HTMLElement) {
       h('div', { class: 'mk', html: `${emo('🏢')}<b>متری خونه (تهران)</b><span>${money(e.m2)}</span>` }),
       h('div', { class: 'mk', html: `${emo('📈')}<b>تورم امسال</b><span>${fa(Math.round(e.infl * 100))}٪</span>` }))));
   if (L.assets.length) body.append(section('📦 دارایی‌ها', ...L.assets.map((a) => assetRow(L, a))));
-  if (L.loans.length) body.append(section('🏛️ وام‌ها', ...L.loans.map((l) => kv(l.name, `${money(l.left)} مونده · قسط سالانه ${money(l.yearly)}`))));
+  if (L.loans.length) body.append(section('🏛️ وام‌ها', ...L.loans.map((l) => kv(l.name, `${money(l.left)} مونده، قسط سالانه ${money(l.yearly)}`))));
   body.append(section('💰 خرید و فروش', actionList(L, 'money')));
 }
 
@@ -227,14 +227,14 @@ function peopleTab(body: HTMLElement) {
     body.append(section(title, ...list.map((n) => {
       const row = h('button', { class: 'person' },
         h('span', { class: 'p-av', html: emo(npcEmoji(L, n), 'emo p-emo') }),
-        h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: `${n.first} ${n.last}` }), h('span', { class: 'act-d', text: `${relLabel(n)} · ${fa(L.year - n.born)} ساله${n.job && n.rel !== 'child' ? ` · ${n.job}` : ''}` })),
+        h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: `${n.first} ${n.last}` }), h('span', { class: 'act-d', text: `${relLabel(n)}، ${fa(L.year - n.born)} ساله${n.job && n.rel !== 'child' ? `، ${n.job}` : ''}` })),
         meter(n.close, 'small'));
       row.addEventListener('click', () => personSheet(n.id));
       return row;
     })));
   }
   const gone = L.people.filter((p) => !p.alive && p.died);
-  if (gone.length) body.append(section('🕊️ درگذشتگان', ...gone.map((n) => h('div', { class: 'kv', html: `<span class="k">${rich(`${n.first} ${n.last}`)}</span><span class="v">${relLabel(n)} · ${fa(n.died! - n.born)} ساله</span>` }))));
+  if (gone.length) body.append(section('🕊️ درگذشتگان', ...gone.map((n) => h('div', { class: 'kv', html: `<span class="k">${rich(`${n.first} ${n.last}`)}</span><span class="v">${relLabel(n)}، ${fa(n.died! - n.born)} ساله</span>` }))));
   if (!people.length) body.append(h('div', { class: 'empty', text: 'هیچ‌کس رو نداری… تنهایی.' }));
 }
 
@@ -265,7 +265,7 @@ function personSheet(id: number) {
     clear(s.body);
     s.body.append(h('div', { class: 'person-card' },
       h('span', { class: 'p-av big', html: emo(npcEmoji(L, n), 'emo p-emo') }),
-      h('div', {}, h('div', { class: 'act-l', text: relLabel(n) }), h('div', { class: 'act-d', text: `${fa(L.year - n.born)} ساله${n.job ? ` · ${n.job}` : ''}` })),
+      h('div', {}, h('div', { class: 'act-l', text: relLabel(n) }), h('div', { class: 'act-d', text: `${fa(L.year - n.born)} ساله${n.job ? `، ${n.job}` : ''}` })),
     ), h('div', { class: 'kv' }, rt('span', 'k', '❤️ رابطه'), meter(n.close)));
     const acts = personActs(L, id);
     const wrap = h('div', { class: 'acts' });

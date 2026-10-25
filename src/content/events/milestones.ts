@@ -82,7 +82,7 @@ function offerChoice(c: Ctx, o: Offer): ChoiceDef {
   const fam = familyBudget(c.L.flags.rich ?? 2) * c.L.econ.price;
   return {
     label: `${majorName(o.major)} — ${o.uni}`,
-    note: `${TIER_NAMES[o.tier]}${t ? ` · شهریه‌ی سالانه ${money(t)}${fam >= t ? ' (خانواده می‌دن)' : ''}` : ' · رایگان'}`,
+    note: `${TIER_NAMES[o.tier]}${t ? `، شهریه‌ی سالانه ${money(t)}${fam >= t ? ' (خانواده می‌دن)' : ''}` : '، رایگان'}`,
     do: (c2) => {
       startUni(c2, o);
       c2.happy(o.tier <= 1 ? 20 : 8).rep(o.tier === 0 ? 10 : o.tier <= 1 ? 5 : 0);

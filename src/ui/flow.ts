@@ -54,7 +54,7 @@ function eventCard(ev: EventView, onPick: (i: number) => void): HTMLElement {
     const b = h('button', { class: `choice ${c.off ? 'off' : ''}`, disabled: c.off ? 'true' : undefined },
       rt('span', 'choice-label', c.label),
       c.gems ? h('span', { class: 'gem-tag', html: `${fa(c.gems)} ${emo('💎')}` }) : null,
-      c.note || c.off ? rt('span', 'choice-note', c.off ? `${c.note ? c.note + ' · ' : ''}${c.off}` : c.note!) : null);
+      c.note || c.off ? rt('span', 'choice-note', c.off ? `${c.note ? c.note + '، ' : ''}${c.off}` : c.note!) : null);
     b.addEventListener('click', () => {
       if (c.off) return;
       sfx('tap');

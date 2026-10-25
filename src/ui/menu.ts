@@ -38,7 +38,7 @@ export function showHome() {
     h('div', { class: 'row' },
       btn('💎 فروشگاه', () => shop(), 'btn gold'),
       btn('⚙️ تنظیمات', () => settings(), 'btn ghost')));
-  screen.append(h('div', { class: 'home' }, hero, buttons, h('div', { class: 'home-foot', html: `${fa(meta.stats.lives)} زندگی · ${fa(meta.stats.years)} سال زندگی‌شده` })));
+  screen.append(h('div', { class: 'home' }, hero, buttons, h('div', { class: 'home-foot', html: `${fa(meta.stats.lives)} زندگی، ${fa(meta.stats.years)} سال زندگی‌شده` })));
   dailyGift();
 }
 
@@ -142,7 +142,7 @@ function graveyard() {
   for (const g of meta.graves) {
     const row = h('button', { class: 'grave' },
       h('span', { class: 'p-av', html: emo(avatarEmoji(g.age, g.gender, g.skin), 'emo p-emo') }),
-      h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: `${g.first} ${g.last}${g.gen > 1 ? ` (نسل ${fa(g.gen)})` : ''}` }), rt('span', 'act-d', `${fa(g.age)} ساله · ${g.job} · ${g.cause}`)),
+      h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: `${g.first} ${g.last}${g.gen > 1 ? ` (نسل ${fa(g.gen)})` : ''}` }), rt('span', 'act-d', `${fa(g.age)} ساله، ${g.job}، ${g.cause}`)),
       h('span', { class: 'price', text: money(g.net) }));
     row.addEventListener('click', () => void shareObituary(g));
     s.body.append(row);
@@ -226,7 +226,7 @@ function settings() {
       toggle('🔊 صدا', 'sound'),
       toggle('📳 لرزش', 'haptics'),
       btn('⭐ امتیاز به بازی در کافه‌بازار', () => rateApp(), 'btn ghost wide'),
-      rt('div', 'act-d center', 'زندگی ایرونی · ساخته‌شده با ❤️ برای ایرانی‌ها\nایموجی‌ها: Twemoji (CC-BY 4.0) · فونت: وزیرمتن'),
+      rt('div', 'act-d center', 'زندگی ایرونی، ساخته‌شده با ❤️ برای ایرانی‌ها\nایموجی‌ها: Twemoji (CC-BY 4.0)، فونت: وزیرمتن'),
     );
   };
   render();

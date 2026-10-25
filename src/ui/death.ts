@@ -102,40 +102,56 @@ export async function drawObituary(g: Grave): Promise<HTMLCanvasElement> {
   x.clip();
   if (av) x.drawImage(av, W / 2 - 95, 335, 190, 190);
   x.restore();
+  // Black mourning band across the photo's corner.
+  x.save();
+  x.translate(W / 2 + 88, 318);
+  x.rotate(Math.PI / 4);
   x.fillStyle = '#111';
-  x.beginPath();
-  x.moveTo(W / 2 + 70, 300); x.lineTo(W / 2 + 150, 300); x.lineTo(W / 2 + 40, 420); x.closePath();
-  x.fill();
+  x.fillRect(-70, -14, 140, 28);
+  x.restore();
   x.fillStyle = '#111';
   x.font = '800 74px Vazirmatn';
   x.fillText(`${g.first} ${g.last}`, W / 2, 660);
-  x.font = '500 38px Vazirmatn';
+  x.font = '500 36px Vazirmatn';
   x.fillStyle = '#333';
-  x.fillText(`با نهایت تأسف درگذشت ${g.gender === 'm' ? 'مرحوم' : 'مرحومه'} ${g.first} را در سن ${fa(g.age)} سالگی`, W / 2, 740);
-  x.fillText(`بر اثر «${g.cause}» به اطلاع می‌رساند.`, W / 2, 795);
-  x.font = '500 34px Vazirmatn';
+  let y = wrap(x, `با نهایت تأسف درگذشت ${g.gender === 'm' ? 'مرحوم' : 'مرحومه'} ${g.first} را در سن ${fa(g.age)} سالگی بر اثر «${g.cause}» به اطلاع می‌رساند.`, W / 2, 735, 840, 54);
+  x.font = '600 32px Vazirmatn';
   x.fillStyle = '#7a5b1e';
-  x.fillText(`${fa(g.born)} — ${fa(g.died)} · ${g.job}`, W / 2, 860);
-  // Facts.
-  x.font = '400 34px Vazirmatn';
+  x.fillText(`${fa(g.born)} تا ${fa(g.died)}، ${g.job}`, W / 2, y + 12);
+  // Facts as two-per-line rows.
+  x.font = '400 31px Vazirmatn';
   x.fillStyle = '#222';
   const facts = [...g.facts, `دارایی: ${money(g.net)}`].slice(0, 6);
-  let y = 935;
-  for (let i = 0; i < facts.length; i += 2) {
-    const line = facts.slice(i, i + 2).join('  •  ');
-    x.fillText(line, W / 2, y);
-    y += 56;
+  y += 80;
+  for (let i = 0; i < facts.length && y < 1110; i += 2) {
+    y = wrap(x, facts.slice(i, i + 2).join('  ◆  '), W / 2, y, 860, 50) + 4;
   }
-  x.font = '400 30px Vazirmatn';
+  x.font = '400 28px Vazirmatn';
   x.fillStyle = '#555';
-  x.fillText('مراسم ختم: هیچ‌وقت، چون این فقط یه بازیه! 😄', W / 2, 1150);
+  x.fillText('مراسم ختم: هیچ‌وقت، چون این فقط یه بازیه!', W / 2, 1140);
   x.fillStyle = '#1F6F6B';
   x.font = '800 44px Vazirmatn';
-  x.fillText('زندگی ایرونی', W / 2, 1235);
-  x.font = '400 26px Vazirmatn';
+  x.fillText('زندگی ایرونی', W / 2, 1205);
+  x.font = '400 25px Vazirmatn';
   x.fillStyle = '#444';
-  x.fillText('شبیه‌ساز زندگی ایرانی · دانلود از کافه‌بازار', W / 2, 1275);
+  x.fillText('شبیه‌ساز زندگی ایرانی، دانلود از کافه‌بازار', W / 2, 1243);
   return cv;
+}
+
+/** Fill centred text wrapped to a width; returns the y after the last line. */
+function wrap(x: CanvasRenderingContext2D, text: string, cx: number, y: number, max: number, lh: number): number {
+  const words = text.split(' ');
+  let line = '';
+  for (const w of words) {
+    const t = line ? `${line} ${w}` : w;
+    if (x.measureText(t).width > max && line) {
+      x.fillText(line, cx, y);
+      y += lh;
+      line = w;
+    } else line = t;
+  }
+  if (line) { x.fillText(line, cx, y); y += lh; }
+  return y;
 }
 
 export async function shareObituary(g: Grave) {
@@ -176,7 +192,7 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
     h('div', { class: 'obit-poem', html: 'این قافله‌ی عمر عجب می‌گذرد<br>دریاب دمی که با طرب می‌گذرد' }),
     h('div', { class: 'obit-av', html: emo(avatarEmoji(L.age, L.gender, L.skin), 'emo big') }),
     h('div', { class: 'obit-name', text: `${L.first} ${L.last}` }),
-    rt('div', 'obit-line', `${fa(L.born)} — ${fa(L.year)} · ${fa(L.age)} ساله · ${g.job}`),
+    rt('div', 'obit-line', `${fa(L.born)} — ${fa(L.year)}، ${fa(L.age)} ساله، ${g.job}`),
     rt('div', 'obit-cause', `علت فوت: ${g.cause}`),
     h('div', { class: 'obit-facts' }, ...[...g.facts, `دارایی: ${money(g.net)}`].map((f) => rt('span', 'fact', f))),
     L.ach.length ? h('div', { class: 'obit-ach', html: L.ach.map((id) => achById(id)).filter(Boolean).map((a) => `<span class="ach-mini" title="${a!.name}">${emo(a!.emoji)}</span>`).join('') }) : null);
@@ -187,7 +203,7 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
     preview,
     btn('📤 اشتراک‌گذاری اعلامیه', () => void shareObituary(g), 'btn share wide'),
     L.revived < 3 ? h('div', { class: 'row' },
-      btn(`⏳ ماشین زمان · ${fa(GEM_COST.revive)} 💎`, () => {
+      btn(`⏳ ماشین زمان، ${fa(GEM_COST.revive)} 💎`, () => {
         if (!needGems(GEM_COST.revive)) return;
         spendGems(GEM_COST.revive);
         doRevive();

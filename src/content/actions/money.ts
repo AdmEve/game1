@@ -96,7 +96,7 @@ defActions([
     options: (c) => c.L.assets.map((a) => {
       const v = assetValue(c.L, a);
       const gain = v - a.paid;
-      return { id: String(a.id), label: assetLabel(a), desc: `ارزش: ${money(v)} · ${gain >= 0 ? 'سود' : 'ضرر'}: ${money(Math.abs(gain))}`, data: a.id };
+      return { id: String(a.id), label: assetLabel(a), desc: `ارزش: ${money(v)}، ${gain >= 0 ? 'سود' : 'ضرر'}: ${money(Math.abs(gain))}`, data: a.id };
     }),
     do: (c, o) => {
       const a = c.L.assets.find((x) => x.id === o!.data)!;
@@ -182,7 +182,7 @@ defActions([
     id: 'business', group: 'money', emoji: '🏪',
     label: 'راه‌اندازی کسب‌وکار',
     when: (c) => adultFree(c) && c.L.assets.filter((a) => a.kind === 'shop').length < 3,
-    options: (c) => SHOPS.map((s) => ({ id: s.id, label: s.name, emoji: s.emoji, desc: `سرمایه: ${money(s.cost * c.L.econ.price)} · ریسک: ${s.risk > 0.6 ? 'خیلی زیاد' : s.risk > 0.35 ? 'متوسط' : 'کم'}`, cost: Math.round(s.cost * c.L.econ.price) })),
+    options: (c) => SHOPS.map((s) => ({ id: s.id, label: s.name, emoji: s.emoji, desc: `سرمایه: ${money(s.cost * c.L.econ.price)}، ریسک: ${s.risk > 0.6 ? 'خیلی زیاد' : s.risk > 0.35 ? 'متوسط' : 'کم'}`, cost: Math.round(s.cost * c.L.econ.price) })),
     do: (c, o) => {
       const s = SHOPS.find((x) => x.id === o!.id)!;
       addAsset(c, { kind: 'shop', ref: s.id, name: `${s.name} ${c.name}`, qty: 1, paid: o!.cost!, cond: 100 });
