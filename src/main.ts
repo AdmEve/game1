@@ -11,7 +11,7 @@ import { initMonetization } from './monetize';
 import { meta, persist } from './save';
 import { closeTop, h, layers } from './ui/dom';
 import { showDeath } from './ui/death';
-import { hooks } from './ui/flow';
+import { hooks, runQueue } from './ui/flow';
 import { currentLife, refresh, showGame } from './ui/game';
 import { achievements, app, gameMenu, meSheet, shop, showHome } from './ui/menu';
 import { openTab } from './ui/tabs';
@@ -67,6 +67,9 @@ function boot() {
       meta,
       currentLife,
       kill: () => { const L = currentLife(); if (L) { killNow(L, 'سکته‌ی قلبی'); hooks.afterDeath(); } },
+      /** Show a specific event now (store screenshots, testing). */
+      event: (id: string, p?: Record<string, unknown>) => { const L = currentLife(); if (L) { L.queue.unshift({ id, p }); void runQueue(L); } },
+      refresh: () => refresh(),
     };
   }
 }

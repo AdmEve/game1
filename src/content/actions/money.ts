@@ -191,6 +191,16 @@ defActions([
     },
   },
   {
+    id: 'gem_cash', group: 'money', emoji: '💎', gems: 10,
+    label: 'کمک غیبی', desc: (c) => `${money(c.wage * 24)} پول نقد فوری`,
+    when: (c) => c.age >= 16 && !c.L.prison,
+    do: (c) => {
+      c.money(c.wage * 24);
+      c.happy(6);
+      return c.pick(['یه عموی دور از کانادا برات پول فرستاد!', 'یه بلیت بخت‌آزمایی قدیمی تو جیب کتت پیدا کردی که برنده بود!', 'یه حساب بانکی فراموش‌شده‌ی قدیمی پیدا کردی!']);
+    },
+  },
+  {
     id: 'charity', group: 'social', emoji: '🤲',
     label: 'کمک به خیریه', desc: (c) => money(c.price(10e6)),
     cost: (c) => c.price(10e6),

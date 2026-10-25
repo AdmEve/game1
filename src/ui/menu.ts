@@ -1,6 +1,6 @@
 /** Home screen, new-life setup, graveyard, achievements, shop, settings and «قدرت سرنوشت». */
 import { sfx } from '../audio';
-import { PRODUCTS } from '../config';
+import { GEM_COST, PRODUCTS } from '../config';
 import { CITIES } from '../content/cities';
 import { FEMALE, LAST, MALE } from '../content/names';
 import { TRAITS } from '../content/traits';
@@ -9,10 +9,10 @@ import { fa, money } from '../engine/fmt';
 import { CLASS_NAMES, newLife } from '../engine/life';
 import type { Gender, Life, StatKey } from '../engine/types';
 import { buy, iapAvailable, priceLabel, rateApp, rewardedAvailable, showRewarded } from '../monetize';
-import { meta, persist, today } from '../save';
-import { btn, clear, closeAll, h, modal, rt, sheet, toast } from './dom';
+import { meta, persist, spendGems, today } from '../save';
+import { ask, btn, clear, closeAll, h, modal, rt, sheet, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
-import { STAT_META, hooks } from './flow';
+import { STAT_META, hooks, needGems } from './flow';
 import { currentLife } from './game';
 import { shareObituary } from './death';
 
@@ -177,7 +177,7 @@ export function shop() {
     s.body.append(h('div', { class: 'gem-balance', html: `${emo('💎')} ${fa(meta.gems)} الماس` }));
     if (rewardedAvailable()) {
       const left = meta.adGems.day === today() ? 5 - meta.adGems.count : 5;
-      s.body.append(btn(`🎬 دیدن تبلیغ: +۳ 💎 (${fa(Math.max(0, left))} بار دیگه امروز)`, async () => {
+      s.body.append(btn(`🎬 دیدن تبلیغ و گرفتن ۳ الماس، ${fa(Math.max(0, left))} بار دیگه امروز`, async () => {
         if (left <= 0) { toast('امروز دیگه نمی‌شه، فردا بیا!'); return; }
         if (await showRewarded()) {
           if (meta.adGems.day !== today()) meta.adGems = { day: today(), count: 0 };
@@ -236,6 +236,17 @@ function settings() {
 
 export function gameMenu() {
   const s = sheet('🏠 منو');
+  const L = currentLife();
+  if (L && !L.dead && meta.prev) s.body.append(btn(`⏪ برگرد به اول امسال: ${fa(GEM_COST.undoYear)} الماس`, async () => {
+      if (!needGems(GEM_COST.undoYear)) return;
+      if (!(await ask('اتفاق‌های امسال پاک بشه و از اول سال قبل دوباره بازی کنی؟'))) return;
+      spendGems(GEM_COST.undoYear);
+      const prev = JSON.parse(meta.prev!) as Life;
+      meta.prev = null;
+      s.close();
+      app.play(prev);
+      toast('⏪ برگشتی به یه سال قبل!');
+    }, 'btn gold wide'));
   s.body.append(
     btn('🏠 صفحه‌ی اصلی', () => { s.close(); app.home(); }, 'btn ghost wide'),
     btn('💎 فروشگاه', () => { s.close(); shop(); }, 'btn gold wide'),

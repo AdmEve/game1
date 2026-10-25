@@ -13,11 +13,11 @@ import { cityName } from '../engine/life';
 import { continueAs, heirs, revive } from '../engine/play';
 import type { Life } from '../engine/types';
 import { netWorth } from '../engine/wealth';
-import { rewardedAvailable, showRewarded } from '../monetize';
+import { rateApp, rewardedAvailable, showRewarded } from '../monetize';
 import { bury, collectAchievements, meta, persist, spendGems, type Grave } from '../save';
 import { btn, closeAll, h, modal, rt, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
-import { needGems } from './flow';
+import { hooks, needGems } from './flow';
 
 /** Facts for the obituary, most interesting first. */
 export function lifeFacts(L: Life): string[] {
@@ -47,7 +47,10 @@ function lastJob(L: Life): string {
   if (L.job) return jobById(L.job.id)?.levels[L.job.level] ?? '';
   const c = [...L.career].sort((a, b) => b.years - a.years)[0];
   if (L.pension) return `${c?.title ?? 'کارمند'} بازنشسته`;
-  return c?.title ?? (L.age < 18 ? 'کودک' : 'بیکار');
+  if (L.edu.stage === 'uni') return 'دانشجو';
+  if (L.edu.stage === 'school') return L.age < 13 ? 'دانش‌آموز دبستانی' : 'دانش‌آموز';
+  if (L.mil.status === 'serving') return 'سرباز';
+  return c?.title ?? (L.age < 7 ? 'کودک' : 'بیکار');
 }
 
 // ───────── obituary card (canvas, for sharing) ─────────
@@ -202,15 +205,25 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
   const m = modal(h('div', { class: 'death' },
     preview,
     btn('📤 اشتراک‌گذاری اعلامیه', () => void shareObituary(g), 'btn share wide'),
-    L.revived < 3 ? h('div', { class: 'row' },
-      btn(`⏳ ماشین زمان، ${fa(GEM_COST.revive)} 💎`, () => {
+    L.revived < 3 ? h('div', { class: 'death-opts' },
+      btn(`⏳ ماشین زمان: ${fa(GEM_COST.revive)} الماس`, () => {
         if (!needGems(GEM_COST.revive)) return;
         spendGems(GEM_COST.revive);
         doRevive();
-      }, 'btn gold'),
+      }, 'btn gold wide'),
+      meta.prev ? btn(`⏪ برگرد به یه سال قبل: ${fa(GEM_COST.undoYear)} الماس`, () => {
+        if (!needGems(GEM_COST.undoYear)) return;
+        spendGems(GEM_COST.undoYear);
+        const prev = JSON.parse(meta.prev!) as Life;
+        meta.prev = null;
+        m.close();
+        persist();
+        actions.play(prev);
+        toast('⏪ برگشتی به یه سال قبل!');
+      }, 'btn ghost wide') : null,
       freeRevive ? btn('🎬 ماشین زمان رایگان (تبلیغ)', async () => {
         if (await showRewarded()) { L.flags.freeRevive = 1; doRevive(); } else toast('تبلیغی پیدا نشد، بعداً امتحان کن');
-      }, 'btn ghost') : null) : null,
+      }, 'btn ghost wide') : null) : null,
     kids.length ? h('div', { class: 'heirs' }, rt('div', 'section-h', '🌱 ادامه‌ی نسل با یکی از بچه‌ها'), ...kids.map((k) => btn(`${k.gender === 'm' ? '👦' : '👧'} ${k.first} (${fa(L.year - k.born)} ساله)`, () => {
       finish();
       const N = continueAs(L, k.id);
@@ -219,7 +232,9 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
       persist();
       actions.play(N);
     }, 'btn ghost'))) : null,
-    btn('👶 یه زندگی جدید', () => { finish(); actions.newLife(); }, 'btn primary wide')), { locked: true, cls: 'death-modal' });
+    btn('👶 یه زندگی جدید', () => { finish(); actions.newLife(); }, 'btn primary wide'),
+    !meta.owned.vip ? h('button', { class: 'upsell', html: `${emo('👑')} <b>زندگی VIP</b><span>زندگی بعدی رو خودت انتخاب کن: شهر، خانواده و بدون تبلیغ</span>`, onclick: () => hooks.openShop() }) : null,
+    meta.stats.lives >= 1 && !meta.rated ? h('button', { class: 'upsell rate', html: `${emo('⭐')} <b>از بازی خوشت اومده؟</b><span>با پنج ستاره تو کافه‌بازار کمکمون کن!</span>`, onclick: () => rateApp() }) : null), { locked: true, cls: 'death-modal' });
 
   function doRevive() {
     m.close();
