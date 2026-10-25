@@ -1,5 +1,6 @@
 /** Player meta progress and the current life, kept in localStorage (the Android WebView keeps it). */
 import { ACHS } from './engine/achieve';
+import { weekIndex, weeklyChallenges, type Challenge } from './engine/challenges';
 import type { Life } from './engine/types';
 import { netWorth } from './engine/wealth';
 
@@ -23,6 +24,7 @@ export interface Grave {
   ach: string[];
   gen: number;
   facts: string[];
+  title?: string;
 }
 
 export interface Meta {
@@ -42,6 +44,8 @@ export interface Meta {
   firstOpen: number;
   rated: boolean;
   tutorial: boolean;
+  /** Weekly challenges finished this week. */
+  challenges: { week: number; done: string[] };
 }
 
 const KEY = 'zendegi-irooni-v1';
@@ -63,6 +67,7 @@ function fresh(): Meta {
     firstOpen: Date.now(),
     rated: false,
     tutorial: false,
+    challenges: { week: 0, done: [] },
   };
 }
 
@@ -116,6 +121,18 @@ export function collectAchievements(L: Life): { ids: string[]; gems: number } {
   return { ids, gems };
 }
 
+/** Weekly challenges this life just completed. Returns them (gems already added). */
+export function collectChallenges(L: Life): Challenge[] {
+  const w = weekIndex();
+  if (meta.challenges.week !== w) meta.challenges = { week: w, done: [] };
+  const got = weeklyChallenges().filter((ch) => !meta.challenges.done.includes(ch.id) && ch.done(L));
+  for (const ch of got) {
+    meta.challenges.done.push(ch.id);
+    meta.gems += ch.gems;
+  }
+  return got;
+}
+
 export function spendGems(n: number): boolean {
   if (meta.gems < n) return false;
   meta.gems -= n;
@@ -123,8 +140,9 @@ export function spendGems(n: number): boolean {
   return true;
 }
 
-export function bury(L: Life, facts: string[], job: string) {
+export function bury(L: Life, facts: string[], job: string, title?: string) {
   const g: Grave = {
+    title,
     id: L.id,
     first: L.first,
     last: L.last,

@@ -31,13 +31,18 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - About 150 events and actions, 53 achievements, Hafez fortunes on Yalda.
 - UI: all screens, the obituary share card, the shop, the daily gift, god mode, VIP extra stats.
 - Icons and splash are this game's own.
+- Weekly challenges (3 per week from `src/engine/challenges.ts`, gems when done; card on the home screen
+  and in the menu) and a funny life title («سلطان مهریه»، «کنکوری ابدی»…) on the obituary card.
+- Death screen: time machine (20💎), back one year (12💎), free revive by ad, VIP and rate upsells.
+- Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
+- First-run tutorial; incremental life-log rendering for budget phones.
+- `scripts/story.ts <seed>` prints a whole life to proof-read.
 
 ## Next (most valuable first)
 
-1. More events: aim for 300+ with more Iranian humour, job-specific events (doctor, teacher, driver,
-   engineer), more abroad life, more old-age events.
-2. A first-run tutorial (explain «+۱ سال», the tabs and the obituary).
-3. Upsells: VIP card on the death screen, rate prompt after the 3rd life, gem shortcut when broke.
-4. Store listing (`store/listing-fa.md`) and screenshots (`store/*.png`) taken with Playwright.
-5. Local notifications for retention (needs a notification icon drawable).
-6. Balance pass with `scripts/sim.ts` after each content batch.
+1. More events (now ~350 events+actions): more abroad life, old age, kids growing up, siblings' lives,
+   more choices with real consequences; proof-read with `scripts/story.ts`.
+2. Local notifications for retention (daily gift ready) — needs @capacitor/local-notifications and a
+   white notification icon drawable.
+3. Mini-games for big moments (konkur quiz, haggling slider) to make them feel more like a game.
+4. Balance pass with `scripts/sim.ts` after each content batch.

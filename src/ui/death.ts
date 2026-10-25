@@ -14,7 +14,8 @@ import { continueAs, heirs, revive } from '../engine/play';
 import type { Life } from '../engine/types';
 import { netWorth } from '../engine/wealth';
 import { rateApp, rewardedAvailable, showRewarded } from '../monetize';
-import { bury, collectAchievements, meta, persist, spendGems, type Grave } from '../save';
+import { bury, collectAchievements, collectChallenges, meta, persist, spendGems, type Grave } from '../save';
+import { lifeTitle } from '../engine/challenges';
 import { btn, closeAll, h, modal, rt, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
 import { hooks, needGems } from './flow';
@@ -114,10 +115,19 @@ export async function drawObituary(g: Grave): Promise<HTMLCanvasElement> {
   x.restore();
   x.fillStyle = '#111';
   x.font = '800 74px Vazirmatn';
-  x.fillText(`${g.first} ${g.last}`, W / 2, 660);
+  x.fillText(`${g.first} ${g.last}`, W / 2, 655);
+  if (g.title) {
+    x.font = '800 34px Vazirmatn';
+    const tw = x.measureText(`«${g.title}»`).width + 60;
+    x.fillStyle = '#f0a12e';
+    pill(x, W / 2 - tw / 2, 676, tw, 52);
+    x.fillStyle = '#3b2300';
+    x.fillText(`«${g.title}»`, W / 2, 714);
+    x.fillStyle = '#111';
+  }
   x.font = '500 36px Vazirmatn';
   x.fillStyle = '#333';
-  let y = wrap(x, `با نهایت تأسف درگذشت ${g.gender === 'm' ? 'مرحوم' : 'مرحومه'} ${g.first} را در سن ${fa(g.age)} سالگی بر اثر «${g.cause}» به اطلاع می‌رساند.`, W / 2, 735, 840, 54);
+  let y = wrap(x, `با نهایت تأسف درگذشت ${g.gender === 'm' ? 'مرحوم' : 'مرحومه'} ${g.first} را در سن ${fa(g.age)} سالگی بر اثر «${g.cause}» به اطلاع می‌رساند.`, W / 2, g.title ? 790 : 735, 840, 54);
   x.font = '600 32px Vazirmatn';
   x.fillStyle = '#7a5b1e';
   x.fillText(`${fa(g.born)} تا ${fa(g.died)}، ${g.job}`, W / 2, y + 12);
@@ -139,6 +149,19 @@ export async function drawObituary(g: Grave): Promise<HTMLCanvasElement> {
   x.fillStyle = '#444';
   x.fillText('شبیه‌ساز زندگی ایرانی، دانلود از کافه‌بازار', W / 2, 1243);
   return cv;
+}
+
+/** A filled capsule (canvas roundRect is missing on older Android WebViews). */
+function pill(x: CanvasRenderingContext2D, left: number, top: number, w: number, hh: number) {
+  const r = hh / 2;
+  x.beginPath();
+  x.moveTo(left + r, top);
+  x.arcTo(left + w, top, left + w, top + hh, r);
+  x.arcTo(left + w, top + hh, left, top + hh, r);
+  x.arcTo(left, top + hh, left, top, r);
+  x.arcTo(left, top, left + w, top, r);
+  x.closePath();
+  x.fill();
 }
 
 /** Fill centred text wrapped to a width; returns the y after the last line. */
@@ -180,7 +203,7 @@ export async function shareObituary(g: Grave) {
 export function graveOf(L: Life): Grave {
   return {
     id: L.id, first: L.first, last: L.last, gender: L.gender, skin: L.skin, born: L.born, died: L.year, age: L.age,
-    cause: L.dead?.cause ?? '', real: Math.round(netWorth(L) / L.econ.price), net: Math.round(netWorth(L)), job: lastJob(L),
+    cause: L.dead?.cause ?? '', real: Math.round(netWorth(L) / L.econ.price), net: Math.round(netWorth(L)), job: lastJob(L), title: lifeTitle(L),
     city: L.country === 'ir' ? cityName(L) : countryById(L.country)?.name ?? '', country: L.country, ach: [...L.ach], gen: L.gen, facts: lifeFacts(L),
   };
 }
@@ -189,12 +212,15 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
   sfx('death');
   closeAll();
   collectAchievements(L);
+  const challenges = collectChallenges(L);
   persist();
   const g = graveOf(L);
+  if (challenges.length) setTimeout(() => toast(`🎯 چالش «${challenges[0].title}» انجام شد! +${fa(challenges[0].gems)} 💎`), 800);
   const preview = h('div', { class: 'obit' },
     h('div', { class: 'obit-poem', html: 'این قافله‌ی عمر عجب می‌گذرد<br>دریاب دمی که با طرب می‌گذرد' }),
     h('div', { class: 'obit-av', html: emo(avatarEmoji(L.age, L.gender, L.skin), 'emo big') }),
     h('div', { class: 'obit-name', text: `${L.first} ${L.last}` }),
+    h('div', { class: 'obit-title', text: `«${g.title}»` }),
     rt('div', 'obit-line', `${fa(L.born)} — ${fa(L.year)}، ${fa(L.age)} ساله، ${g.job}`),
     rt('div', 'obit-cause', `علت فوت: ${g.cause}`),
     h('div', { class: 'obit-facts' }, ...[...g.facts, `دارایی: ${money(g.net)}`].map((f) => rt('span', 'fact', f))),
@@ -244,7 +270,7 @@ export function showDeath(L: Life, actions: { newLife: () => void; play: (L: Lif
     toast('⏳ برگشتی به زندگی!');
   }
   function finish() {
-    bury(L, g.facts, g.job);
+    bury(L, g.facts, g.job, g.title);
     meta.life = null;
     meta.prev = null;
     persist();

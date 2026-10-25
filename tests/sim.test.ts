@@ -25,3 +25,23 @@ describe('life simulation', () => {
     expect(L.stats.happy).toBe(0);
   });
 });
+
+describe('challenges and titles', () => {
+  it('always offers three different challenges', async () => {
+    const { weeklyChallenges } = await import('../src/engine/challenges');
+    for (let w = 0; w < 60; w++) {
+      const list = weeklyChallenges(Date.UTC(2026, 0, 1) + w * 7 * 86400000);
+      expect(new Set(list.map((c) => c.id)).size).toBe(3);
+    }
+  });
+
+  it('gives every finished life a title', async () => {
+    const { lifeTitle } = await import('../src/engine/challenges');
+    for (let s = 1; s <= 40; s++) {
+      const L = playLife(s * 977);
+      const t = lifeTitle(L);
+      expect(t.length).toBeGreaterThan(2);
+      expect(t).not.toMatch(/undefined|\//);
+    }
+  });
+});

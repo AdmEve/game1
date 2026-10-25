@@ -8,7 +8,7 @@ import { nextYear } from '../engine/play';
 import type { Life, StatKey } from '../engine/types';
 import { haptic } from '../haptics';
 import { maybeInterstitial } from '../monetize';
-import { collectAchievements, isVip, meta, persist, syncOwned } from '../save';
+import { collectAchievements, collectChallenges, isVip, meta, persist, syncOwned } from '../save';
 import { clear, h, layers, modal, rt, toast } from './dom';
 import { avatarEmoji, emo, rich } from './emoji';
 import { STAT_META, hooks, runQueue } from './flow';
@@ -66,22 +66,45 @@ function renderStats() {
   els.stats.style.gridTemplateColumns = `repeat(${els.stats.childElementCount}, 1fr)`;
 }
 
+/** Rendered year blocks, keyed by "age:year:lines" so unchanged years are reused. */
+const blockCache = new Map<HTMLElement, string>();
+
+function yearBlock(y: Life['log'][number]): HTMLElement {
+  const block = h('div', { class: 'year' }, h('div', { class: 'year-h', text: `${fa(y.age)} سالگی، ${fa(y.year)}` }));
+  for (const line of y.lines) {
+    if (!line.t) continue;
+    block.append(h('div', { class: `line ${line.k ?? ''}`, html: rich(line.t) }));
+  }
+  if (block.childElementCount === 1) block.append(h('div', { class: 'line quiet', text: '…یه سال آروم گذشت.' }));
+  return block;
+}
+
+/** Keep the last 60 years on screen; only rebuild blocks whose content changed. */
 function renderLog(scroll = true) {
   if (!L || !els.log) return;
   const log = els.log;
-  clear(log);
-  const start = Math.max(0, L.log.length - 60);
-  for (let i = start; i < L.log.length; i++) {
-    const y = L.log[i];
-    const block = h('div', { class: 'year' },
-      h('div', { class: 'year-h', text: `${fa(y.age)} سالگی، ${fa(y.year)}` }));
-    for (const line of y.lines) {
-      if (!line.t) continue;
-      block.append(h('div', { class: `line ${line.k ?? ''}`, html: rich(line.t) }));
-    }
-    if (block.childElementCount === 1) block.append(h('div', { class: 'line quiet', text: '…یه سال آروم گذشت.' }));
-    log.append(block);
+  const years = L.log.slice(-60);
+  const keys = years.map((y) => `${y.age}:${y.year}:${y.lines.length}:${y.lines[y.lines.length - 1]?.t.length ?? 0}`);
+  const existing = [...log.children] as HTMLElement[];
+  // Drop blocks that are no longer in the window or no longer match.
+  const keep = new Map<string, HTMLElement>();
+  for (const el of existing) {
+    const k = blockCache.get(el);
+    if (k && keys.includes(k) && !keep.has(k)) keep.set(k, el);
+    else { el.remove(); blockCache.delete(el); }
   }
+  let prev: HTMLElement | null = null;
+  years.forEach((y, i) => {
+    let el = keep.get(keys[i]);
+    if (!el) {
+      el = yearBlock(y);
+      blockCache.set(el, keys[i]);
+    }
+    const want: Element | null = prev ? prev.nextElementSibling : log.firstElementChild;
+    if (want !== el) log.insertBefore(el, want);
+    prev = el;
+  });
+  while (prev && (prev as HTMLElement).nextElementSibling) (prev as HTMLElement).nextElementSibling!.remove();
   if (scroll) requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
 }
 
@@ -104,6 +127,7 @@ async function ageUp() {
   meta.stats.years++;
   syncOwned(L);
   const got = collectAchievements(L);
+  for (const ch of collectChallenges(L)) toast(`🎯 چالش «${ch.title}» انجام شد! +${fa(ch.gems)} 💎`);
   persist();
   refresh();
   const btnEl = els.nav?.querySelector('.age-btn');
@@ -126,6 +150,7 @@ export function showGame(life: Life) {
   syncOwned(L);
   const screen = document.getElementById('screen')!;
   clear(screen);
+  blockCache.clear();
   els.header = h('div', { class: 'header' });
   els.log = h('div', { class: 'log' });
   els.stats = h('div', { class: 'stats' });

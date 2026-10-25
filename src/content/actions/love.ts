@@ -307,6 +307,7 @@ function marry(c: Ctx, happy: number, rep: number, text: string): string {
   f.rel = 'spouse';
   f.close = clamp(f.close + 10);
   c.flag('married');
+  if (c.L.flags.marriedAge === undefined) c.L.flags.marriedAge = c.age;
   c.happy(happy).rep(rep);
   if (c.L.home === 'parents' || c.L.home === 'dorm') c.L.home = c.L.assets.some((a) => a.kind === 'house') ? 'own' : 'rent';
   return `${text} حالا ${f.first} ${c.male ? 'خانومت' : 'همسرت'}ه. 💍`;

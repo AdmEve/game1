@@ -5,6 +5,7 @@ import { CITIES } from '../content/cities';
 import { FEMALE, LAST, MALE } from '../content/names';
 import { TRAITS } from '../content/traits';
 import { ACHS } from '../engine/achieve';
+import { weekIndex, weeklyChallenges } from '../engine/challenges';
 import { fa, money } from '../engine/fmt';
 import { CLASS_NAMES, newLife } from '../engine/life';
 import type { Gender, Life, StatKey } from '../engine/types';
@@ -38,8 +39,19 @@ export function showHome() {
     h('div', { class: 'row' },
       btn('💎 فروشگاه', () => shop(), 'btn gold'),
       btn('⚙️ تنظیمات', () => settings(), 'btn ghost')));
-  screen.append(h('div', { class: 'home' }, hero, buttons, h('div', { class: 'home-foot', html: `${fa(meta.stats.lives)} زندگی، ${fa(meta.stats.years)} سال زندگی‌شده` })));
+  screen.append(h('div', { class: 'home' }, hero, buttons, challengesCard(), h('div', { class: 'home-foot', html: `${fa(meta.stats.lives)} زندگی، ${fa(meta.stats.years)} سال زندگی‌شده` })));
   dailyGift();
+}
+
+export function challengesCard(): HTMLElement {
+  const w = weekIndex();
+  const done = meta.challenges.week === w ? meta.challenges.done : [];
+  return h('div', { class: 'challenges' },
+    rt('div', 'section-h', '🎯 چالش‌های این هفته'),
+    ...weeklyChallenges().map((ch) => h('div', { class: `chal ${done.includes(ch.id) ? 'done' : ''}` },
+      h('span', { class: 'act-e', html: emo(done.includes(ch.id) ? '✅' : ch.emoji, 'emo act-emo') }),
+      h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: ch.title }), h('span', { class: 'act-d', text: ch.desc })),
+      h('span', { class: 'chal-g', html: `+${fa(ch.gems)} ${emo('💎')}` }))));
 }
 
 function dailyGift() {
@@ -251,6 +263,7 @@ export function gameMenu() {
     btn('🏠 صفحه‌ی اصلی', () => { s.close(); app.home(); }, 'btn ghost wide'),
     btn('💎 فروشگاه', () => { s.close(); shop(); }, 'btn gold wide'),
     btn('🏅 نشان‌ها', () => { s.close(); achievements(); }, 'btn ghost wide'),
+    btn('🎯 چالش‌های هفته', () => { s.close(); const c = sheet('🎯 چالش‌های هفته'); c.body.append(challengesCard()); }, 'btn ghost wide'),
     btn('🪦 بهشت زهرا', () => { s.close(); graveyard(); }, 'btn ghost wide'),
     btn('⚙️ تنظیمات', () => { s.close(); settings(); }, 'btn ghost wide'),
   );
