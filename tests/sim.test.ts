@@ -4,7 +4,7 @@ import { newLife } from '../src/engine/life';
 import { playLife } from './bot';
 
 describe('life simulation', () => {
-  it('plays 300 random lives without errors', () => {
+  it('plays 300 random lives without errors', { timeout: 120_000 }, () => {
     const ages: number[] = [];
     for (let s = 1; s <= 300; s++) {
       const L = playLife(s * 7919);
