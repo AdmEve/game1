@@ -102,7 +102,6 @@ input, select { font: inherit; }
 .age-btn:active { transform: scale(.94); }
 .age-btn.pop { animation: pop .35s ease-out; }
 .age-plus { font-size: 13px; font-weight: 700; }
-.age-plus::before { content: '+۱ '; }
 .age-n { font-size: 26px; font-weight: 900; }
 
 /* ───────── layers ───────── */

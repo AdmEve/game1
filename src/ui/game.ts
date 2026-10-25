@@ -133,7 +133,7 @@ export function showGame(life: Life) {
   els.nav = h('div', { class: 'nav' },
     navBtn('💼', 'کار و درس', 'life'),
     navBtn('🎯', 'کارها', 'acts'),
-    h('button', { class: 'age-btn', onclick: () => void ageUp() }, h('span', { class: 'age-plus', text: 'سال' }), h('span', { class: 'age-n', text: fa(life.age + 1) })),
+    h('button', { class: 'age-btn', onclick: () => void ageUp() }, h('span', { class: 'age-plus', html: '<span dir="ltr">+۱</span> سال' }), h('span', { class: 'age-n', text: fa(life.age + 1) })),
     navBtn('💰', 'دارایی', 'assets'),
     navBtn('👨‍👩‍👧', 'آدم‌ها', 'people'));
   const top = h('div', { class: 'topbar' },
