@@ -1,0 +1,36 @@
+{
+  "name": "zendegi-irooni",
+  "private": true,
+  "version": "1.0.0",
+  "description": "زندگی ایرونی – a Persian life simulator for Android (Cafe Bazaar)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/copy-emoji.mjs && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "sim": "vite-node scripts/sim.ts",
+    "android:sync": "npm run build && cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "vazirmatn": "^33.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@twemoji/svg": "^15.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vite-node": "^3.2.4",
+    "vitest": "^3.2.7"
+  }
+}

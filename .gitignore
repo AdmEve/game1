@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+android/app/build/
+android/build/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/
+android/.idea/
+# Signing keys never go in the repo (it is public).
+*.keystore
+*.jks
