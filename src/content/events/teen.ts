@@ -4,7 +4,7 @@ import { defEvents } from '../../engine/registry';
 
 defEvents([
   {
-    id: 't_phone', age: [11, 15], emoji: '📱', title: 'گوشی',
+    id: 't_phone', age: [11, 15], emoji: '📱', title: 'گوشی', when: (c) => !!c.rel('father'),
     text: 'همه‌ی هم‌کلاسی‌هات گوشی دارن جز تو. بابات می‌گه «گوشی برای بچه ضرر داره».',
     choices: [
       { label: 'اصرار و التماس', do: (c) => { if (c.lucky(0.5)) { c.flag('phone'); c.happy(10); c.L.edu.effort -= 0.5; return 'بابات یه گوشی دست دوم برات خرید. دیگه از دستت نمی‌افته!'; } c.happy(-5); return 'بابات گفت «تا دیپلم نگرفتی خبری از گوشی نیست!»'; } },
@@ -102,7 +102,7 @@ defEvents([
     ],
   },
   {
-    id: 't_hair', age: [13, 18], emoji: '💈', title: 'مدل مو',
+    id: 't_hair', age: [13, 18], emoji: '💈', title: 'مدل مو', when: (c) => c.male || !!c.rel('mother'),
     text: (c) => (c.male ? 'می‌خوای موهات رو مدل «فشن» بزنی ولی مدرسه گیر می‌ده.' : 'می‌خوای موهات رو رنگ کنی ولی مامانت مخالفه.'),
     choices: [
       { label: 'می‌زنم! هر چی بشه', do: (c) => { c.looks(3).happy(5); if (c.chance(0.4)) { c.rep(-3); return c.male ? 'ناظم با ماشین اصلاح نصف موهات رو زد!' : 'مامانت سه روز باهات حرف نزد!'; } return 'خیلی بهت میاد! همه تحویلت گرفتن.'; } },

@@ -23,5 +23,6 @@ import './events/pets';
 import './events/interview';
 import './events/prison';
 import './events/calendar';
+import './events/everyday';
 
 export { GROUPS } from './actions/core';
