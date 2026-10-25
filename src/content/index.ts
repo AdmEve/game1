@@ -22,5 +22,6 @@ import './events/driving';
 import './events/pets';
 import './events/interview';
 import './events/prison';
+import './events/calendar';
 
 export { GROUPS } from './actions/core';
