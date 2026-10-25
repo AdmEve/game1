@@ -307,7 +307,7 @@ defEvents([
   {
     id: 'pt_rabbit_cable', age: [6, 100], once: false, cd: 5, emoji: '🔌', text: '',
     when: hasPet('rabbit'), prep: withPet('rabbit'),
-    auto: (c) => { c.money(-c.price(1e6)); return `🔌 ${thePet(c).name} سیم شارژر گوشیت رو جویده! باز هم!`; },
+    auto: (c) => { c.money(-c.price(1e6)); return `🔌 ${thePet(c).name} سیم ${c.age < 13 ? 'شارژر گوشی بابات' : 'شارژر گوشیت'} رو جویده! باز هم!`; },
   },
   {
     id: 'pt_canary_song', age: [6, 100], once: false, cd: 4, emoji: '🐤', text: '',

@@ -2,6 +2,7 @@ import { award } from '../../engine/achieve';
 import { clamp, type Ctx } from '../../engine/ctx';
 import { fa, money } from '../../engine/fmt';
 import { defEvents } from '../../engine/registry';
+import { rentCost } from '../../engine/year';
 import { jobById } from '../jobs';
 import { sendJail } from './milestones';
 
@@ -9,6 +10,11 @@ const serving = (c: Ctx) => c.L.mil.status === 'serving' && c.L.mil.place !== '�
 const working = (c: Ctx) => !!c.L.job && !c.L.job.part;
 const married = (c: Ctx) => !!c.spouse;
 const jobTitle = (c: Ctx) => jobById(c.L.job!.id)?.title ?? 'کار';
+
+/** What the landlord's rise costs this year (on top of the usual rent). */
+function landlordExtra(c: Ctx) {
+  return Math.round(rentCost(c.L) * ((c.p.pct as number) / 100) * 0.5);
+}
 
 defEvents([
   // ───────── military service ─────────
@@ -52,7 +58,7 @@ defEvents([
     ],
   },
   {
-    id: 'a_coworker_credit', emoji: '🐍', w: 1, when: working, age: [20, 65],
+    id: 'a_coworker_credit', emoji: '🐍', title: 'دزد ایده', w: 1, when: working, age: [20, 65],
     text: 'همکارت ایده‌ی تو رو به اسم خودش به مدیرعامل ارائه داد!',
     choices: [
       { label: 'جلوی همه افشاش می‌کنم', do: (c) => { if (c.lucky(0.5)) { c.L.job!.perf = clamp(c.L.job!.perf + 15); c.rep(4); return 'ایمیل‌های قدیمیت رو نشون دادی و مدیرعامل فهمید! همکارت اخطار گرفت.'; } c.rep(-4); return 'کسی حرفت رو باور نکرد و شدی آدم حسود شرکت!'; } },
@@ -60,7 +66,7 @@ defEvents([
     ],
   },
   {
-    id: 'a_overtime', emoji: '⏰', w: 1, when: working, age: [18, 65], once: false, cd: 4,
+    id: 'a_overtime', emoji: '⏰', title: 'اضافه‌کاری', w: 1, when: working, age: [18, 65], once: false, cd: 4,
     text: 'رئیس می‌گه آخر هفته باید بیای اضافه‌کاری.',
     choices: [
       { label: 'باشه، میام', do: (c) => { const m = Math.round(c.L.job!.salary * 0.3); c.money(m); c.L.job!.perf = clamp(c.L.job!.perf + 6); c.happy(-4); return `آخر هفته کار کردی و ${money(m)} اضافه‌کاری گرفتی.`; } },
@@ -99,10 +105,11 @@ defEvents([
   {
     id: 'a_landlord', emoji: '🏚️', title: 'صاحبخونه', w: 2, age: [18, 90], once: false, cd: 3,
     when: (c) => c.L.home === 'rent',
-    text: (c) => `صاحبخونه زنگ زده: «امسال اجاره رو ${fa(c.int(40, 80))}٪ می‌برم بالا، اگه نمی‌خوای تخلیه کن!»`,
+    prep: (c) => ({ pct: c.int(30, 70) }),
+    text: (c) => `صاحبخونه زنگ زده: «امسال اجاره رو ${fa(c.p.pct as number)}٪ می‌برم بالا، اگه نمی‌خوای تخلیه کن!»`,
     choices: [
-      { label: 'قبول می‌کنم', do: (c) => { const extra = c.price(c.int(60, 200) * 1e6); c.money(-extra); c.happy(-5); return `قبول کردی. امسال ${money(extra)} بیشتر اجاره دادی.`; } },
-      { label: 'چونه می‌زنم', do: (c) => { if (c.lucky(0.5)) { c.happy(2); return 'با کلی خواهش، صاحبخونه قبول کرد کمتر ببره بالا.'; } const extra = c.price(c.int(80, 220) * 1e6); c.money(-extra); c.happy(-6); return `صاحبخونه قبول نکرد و مجبور شدی بیشتر بدی (${money(extra)}).`; } },
+      { label: 'قبول می‌کنم', do: (c) => { const extra = landlordExtra(c); c.money(-extra); c.happy(-5); return `قبول کردی. امسال ${money(extra)} بیشتر اجاره دادی.`; } },
+      { label: 'چونه می‌زنم', do: (c) => { if (c.lucky(0.5)) { c.happy(2); return 'با کلی خواهش، صاحبخونه قبول کرد کمتر ببره بالا.'; } const extra = Math.round(landlordExtra(c) * 1.1); c.money(-extra); c.happy(-6); return `صاحبخونه قبول نکرد و لج کرد! امسال ${money(extra)} بیشتر اجاره دادی.`; } },
       { label: 'اسباب‌کشی به محله‌ی ارزون‌تر', do: (c) => { c.L.lifestyle = Math.max(0, c.L.lifestyle - 1); c.happy(-6).health(-2); return 'اسباب‌کشی کردی به یه محله‌ی پایین‌تر. کمرت از جابه‌جایی وسایل درد گرفت!'; } },
     ],
   },
@@ -113,7 +120,7 @@ defEvents([
     kind: 'bad',
   },
   {
-    id: 'a_traffic', emoji: '🚗', w: 1, age: [18, 90], once: false, cd: 5,
+    id: 'a_traffic', emoji: '🚗', title: 'ترافیک', w: 1, age: [18, 90], once: false, cd: 5,
     when: (c) => c.L.city === 'tehran' || c.L.city === 'karaj',
     text: 'تو ترافیک اتوبان سه ساعت گیر کردی. یه نفر داره از لاین خاکی سبقت می‌گیره.',
     choices: [

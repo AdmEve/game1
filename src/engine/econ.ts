@@ -45,13 +45,15 @@ export function stepEcon(e: Econ, r: Rng): string[] {
   // Gold follows the dollar and the world gold price.
   e.coin = Math.max(20_000, e.coin * (e.dollar / prevDollar) * Math.exp(r.gauss(-0.005, 0.09)));
 
-  let h = (1 + e.infl) * Math.exp(r.gauss(-0.01, 0.08));
-  if (r.chance(0.06)) h *= r.range(1.15, 1.35);
+  // Housing booms now and then but otherwise trails inflation a little, so rent keeps pace with wages.
+  let h = (1 + e.infl) * Math.exp(r.gauss(-0.018, 0.07));
+  if (r.chance(0.06)) h *= r.range(1.12, 1.3);
   e.m2 *= h;
 
   e.stock = Math.max(50, e.stock * Math.exp(r.gauss(Math.log(1 + e.infl) + 0.02, 0.28)));
   e.crypto = clamp(e.crypto * Math.exp(r.gauss(0.04, 0.5)), 3_000, 50_000_000);
-  e.wage *= 1 + e.infl - r.range(0, 0.05);
+  // Wages trail inflation, with a catch-up year now and then (a big minimum-wage rise).
+  e.wage *= 1 + e.infl - r.range(0, 0.04) + (r.chance(0.12) ? r.range(0.03, 0.08) : 0);
   e.car *= (1 + e.infl) * Math.exp(r.gauss(0.01, 0.07));
   e.rate = clamp(0.17 + e.infl * 0.15, 0.18, 0.3);
 

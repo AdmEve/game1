@@ -12,12 +12,14 @@ const out: string[] = [];
 let guard = 0;
 while (!L.dead && guard++ < 120) {
   nextYear(L);
+  // This year's questions, printed after the year's log.
+  const asked: string[] = [];
   for (let i = 0; i < 10; i++) {
     const ev = currentEvent(L);
     if (!ev) break;
     const ok = ev.choices.map((c, idx) => ({ c, idx })).filter((x) => !x.c.off && !x.c.gems);
     const idx = ok.length ? r.pick(ok).idx : 0;
-    out.push(`   ❓ [${ev.title || ev.id}] ${ev.text.replace(/\n/g, ' ')} → «${ev.choices[idx]?.label}»`);
+    asked.push(`   ❓ [${ev.title || ev.id}] ${ev.text.replace(/\n/g, ' ')} → «${ev.choices[idx]?.label}»`);
     choose(L, idx);
   }
   for (let i = 0; i < acts && !L.dead; i++) {
@@ -32,6 +34,7 @@ while (!L.dead && guard++ < 120) {
   const y = L.log[L.log.length - 1];
   out.push(`— ${y.age} (${y.year}) —`);
   for (const l of y.lines) out.push('  ' + l.t.replace(/\n/g, ' '));
+  out.push(...asked);
 }
 console.log(`${L.first} ${L.last} (${L.gender}) born ${L.city}`);
 console.log(out.join('\n'));

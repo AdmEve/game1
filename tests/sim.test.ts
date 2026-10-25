@@ -26,6 +26,14 @@ describe('life simulation', () => {
   });
 });
 
+describe('content', () => {
+  it('gives every event with choices a title', async () => {
+    const { EVENTS } = await import('../src/engine/registry');
+    const untitled = [...EVENTS.values()].filter((e) => !e.auto && !e.title).map((e) => e.id);
+    expect(untitled).toEqual([]);
+  });
+});
+
 describe('challenges and titles', () => {
   it('always offers three different challenges', async () => {
     const { weeklyChallenges } = await import('../src/engine/challenges');
