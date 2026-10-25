@@ -1,8 +1,9 @@
 /** «مصاحبه‌ی کاری»: three questions for skilled jobs; the last one is about the salary. */
+import { GEM_COST } from '../../config';
 import { clamp, type Ctx } from '../../engine/ctx';
 import { fa, money } from '../../engine/fmt';
 import { hire, jobBlock } from '../../engine/hire';
-import { defEvents } from '../../engine/registry';
+import { defEvents, type ChoiceDef } from '../../engine/registry';
 import { jobById, type JobDef } from '../jobs';
 import { answerChoices, askable, type Question } from '../talk';
 
@@ -108,24 +109,34 @@ defEvents([
     when: (c) => !!jobById(c.p.job as string) && !jobBlock(c.L, job(c)) && c.L.job?.id !== c.p.job,
     prep: (c) => {
       const asked = (c.p.asked as string[] | undefined) ?? [];
-      return { asked, qid: pick(c, asked) };
+      return { asked, qid: c.p.keep ? c.p.qid : pick(c, asked), keep: undefined };
     },
     text: (c) => {
-      const asked = c.p.asked as string[];
       const q = QUESTIONS.find((x) => x.id === c.p.qid)!;
       const j = job(c);
       const intro = `رفتی ${j.gov ? 'اداره' : 'شرکت'} برای مصاحبه${c.L.country !== 'ir' ? '، اون هم به انگلیسی' : ''}. مصاحبه‌گر با یه پوشه نشسته روبه‌روت.`;
-      return `${asked.length ? c.p.react : intro}\nمصاحبه‌گر: «${q.q(c, j)}»`;
+      return `${c.p.react ?? intro}\nمصاحبه‌گر: «${q.q(c, j)}»`;
     },
     meter: (c) => ({ label: 'نظر مصاحبه‌گر', v: Math.round(c.p.A as number), d: c.p.dA as number | undefined }),
     dyn: (c) => {
       const j = job(c);
       const q = QUESTIONS.find((x) => x.id === c.p.qid)!;
-      return answerChoices(c, j, q, 'lied_cv', (c2, d, react, set) => {
+      const help: ChoiceDef[] = c.p.helped ? [] : [{
+        label: 'معرفی‌نامه‌ی یه آشنا رو رو کن',
+        note: 'نظر مصاحبه‌گر کلی بهتر می‌شه',
+        gems: GEM_COST.reference,
+        do: (c2) => {
+          const A = clamp((c2.p.A as number) + 22, 0, 100);
+          const { _prep, ...p } = c2.p;
+          c2.next('job_interview', { ...p, A, dA: Math.round(A - (c2.p.A as number)), keep: 1, helped: 1, react: 'مصاحبه‌گر معرفی‌نامه رو خوند: «آهان! پس از آشناهای آقای مهندس هستی!» لحنش عوض شد.' });
+          return '';
+        },
+      }];
+      return [...answerChoices(c, j, q, 'lied_cv', (c2, d, react, set) => {
         const A = clamp((c2.p.A as number) + d, 0, 100);
         const asked = [...(c2.p.asked as string[]), c2.p.qid as string];
         if (asked.length < ROUNDS) {
-          c2.next('job_interview', { job: j.id, A, dA: Math.round(A - (c2.p.A as number)), asked, react });
+          c2.next('job_interview', { job: j.id, A, dA: Math.round(A - (c2.p.A as number)), asked, react, helped: c2.p.helped });
           return '';
         }
         if (c2.lucky(clamp((A - 20) / 65, 0.05, 0.95))) {
@@ -134,7 +145,7 @@ defEvents([
         }
         c2.happy(-4);
         return `${react}\nگفتن «باهاتون تماس می‌گیریم»… و هیچ‌وقت نگرفتن.`;
-      });
+      }), ...help];
     },
   },
 ]);

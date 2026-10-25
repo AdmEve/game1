@@ -34,6 +34,8 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - Weekly challenges (3 per week from `src/engine/challenges.ts`, gems when done; card on the home screen
   and in the menu) and a funny life title («سلطان مهریه»، «کنکوری ابدی»…) on the obituary card.
 - Death screen: time machine (20💎), back one year (12💎), free revive by ad, VIP and rate upsells.
+- 💎 boosts at big moments: an aunt vouches for you at the khastegari (8💎), a reference letter at a job
+  interview (6💎); each lifts the meter without using up a question.
 - Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
 - First-run tutorial; incremental life-log rendering for budget phones.
 - `scripts/story.ts <seed>` prints a whole life to proof-read.

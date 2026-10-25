@@ -42,4 +42,8 @@ export const GEM_COST = {
   revive: 20,
   undoYear: 12,
   cash: 10,
+  /** A well-spoken aunt vouches for you at the khastegari. */
+  matchmaker: 8,
+  /** A reference letter at a job interview. */
+  reference: 6,
 };

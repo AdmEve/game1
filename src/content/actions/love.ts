@@ -1,3 +1,4 @@
+import { GEM_COST } from '../../config';
 import { award } from '../../engine/achieve';
 import { clamp, type Ctx } from '../../engine/ctx';
 import { fa, money } from '../../engine/fmt';
@@ -193,22 +194,33 @@ defEvents([
     prep: (c) => {
       const k = c.p.k as unknown as Candidate;
       const asked = (c.p.asked as string[] | undefined) ?? [];
-      return { A: c.p.A ?? startApproval(c, k), asked, qid: pickQuestion(c, k, asked) };
+      // After the aunt speaks up, the same question is still waiting.
+      return { A: c.p.A ?? startApproval(c, k), asked, qid: c.p.keep ? c.p.qid : pickQuestion(c, k, asked), keep: undefined };
     },
     text: (c) => {
       const k = c.p.k as unknown as Candidate;
-      const asked = c.p.asked as string[];
       const intro = c.male ? `نشستین تو پذیرایی. ${k.first} با سینی چای اومد.` : `${k.first} و خانواده‌اش با یه دسته گل بزرگ اومدن.`;
-      return `${asked.length ? `${c.p.react}\n` : `${intro}\n`}${questionText(c, k, c.p.qid as string)}`;
+      return `${c.p.react ?? intro}\n${questionText(c, k, c.p.qid as string)}`;
     },
     meter: (c) => ({ label: 'رضایت خانواده', v: Math.round(c.p.A as number), d: c.p.dA as number | undefined }),
     dyn: (c) => {
       const k = c.p.k as unknown as Candidate;
-      return answers(c, k, c.p.qid as string, (c2, d, react) => {
+      const help: ChoiceDef[] = c.p.helped ? [] : [{
+        label: 'خاله‌خانم رو واسطه کن',
+        note: 'رضایت خانواده کلی می‌ره بالا',
+        gems: GEM_COST.matchmaker,
+        do: (c2) => {
+          const A = clamp((c2.p.A as number) + 25, 0, 100);
+          const { _prep, ...p } = c2.p;
+          c2.next('khastegari_session', { ...p, A, dA: Math.round(A - (c2.p.A as number)), keep: 1, helped: 1, react: 'خاله‌خانم شروع کرد: «ماشالله، هزار ماشالله! از بچگی می‌شناسمش، یه دسته گله!» همه نرم شدن.' });
+          return '';
+        },
+      }];
+      return [...answers(c, k, c.p.qid as string, (c2, d, react) => {
         const A = clamp((c2.p.A as number) + d, 0, 100);
         const asked = [...(c2.p.asked as string[]), c2.p.qid as string];
         if (asked.length < ROUNDS) {
-          c2.next('khastegari_session', { k: k as unknown as Record<string, unknown>, A, dA: Math.round(A - (c2.p.A as number)), asked, react });
+          c2.next('khastegari_session', { k: k as unknown as Record<string, unknown>, A, dA: Math.round(A - (c2.p.A as number)), asked, react, helped: c2.p.helped });
           return '';
         }
         if (c2.lucky(clamp((A - 5) / 70, 0.08, 0.97))) {
@@ -217,7 +229,7 @@ defEvents([
         }
         c2.happy(-8);
         return `${react}\nبعد از سه روز زنگ زدن و گفتن «قسمت نیست».`;
-      });
+      }), ...help];
     },
   },
   {
