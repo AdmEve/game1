@@ -9,6 +9,7 @@ import { meta, persist, spendGems } from '../save';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
 import { konkurQuiz } from './quiz';
+import { shareKarname } from './share';
 
 export const STAT_META: Record<StatKey, { name: string; emoji: string }> = {
   happy: { name: 'شادی', emoji: '😊' },
@@ -50,7 +51,7 @@ export function needGems(n: number): boolean {
   return false;
 }
 
-function eventCard(ev: EventView, onPick: (i: number) => void): HTMLElement {
+function eventCard(ev: EventView, onPick: (i: number) => void, L?: Life): HTMLElement {
   const choices = ev.choices.map((c, i) => {
     const b = h('button', { class: `choice ${c.off ? 'off' : ''}`, disabled: c.off ? 'true' : undefined },
       rt('span', 'choice-label', c.label),
@@ -69,6 +70,7 @@ function eventCard(ev: EventView, onPick: (i: number) => void): HTMLElement {
     ev.title ? rt('div', 'event-title', ev.title) : null,
     rt('div', 'event-text', ev.text),
     deltaChips(ev.deltas),
+    ev.id === 'm_konkur' && L?.queue[0]?.p ? btn('📤 اشتراک کارنامه', () => void shareKarname(L, L.queue[0].p!.rank as number, L.queue[0].p!.n as number), 'btn share small') : null,
     h('div', { class: 'choices' }, ...choices));
 }
 
@@ -113,7 +115,7 @@ export async function runQueue(L: Life): Promise<void> {
         if (c.gems) spendGems(c.gems);
         m.close();
         resolve(i);
-      }), { locked: true, cls: 'event-modal' });
+      }, L), { locked: true, cls: 'event-modal' });
     });
     const out = choose(L, idx);
     persist();

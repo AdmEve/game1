@@ -1,7 +1,4 @@
 /** Death screen: the «اعلامیه‌ی ترحیم» card, sharing, time machine and the next life. */
-import { Capacitor } from '@capacitor/core';
-import { Directory, Filesystem } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { sfx } from '../audio';
 import { GEM_COST } from '../config';
 import { achById } from '../engine/achieve';
@@ -20,6 +17,7 @@ import { askNotifyPermission } from '../notify';
 import { btn, closeAll, h, modal, rt, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
 import { hooks, needGems } from './flow';
+import { loadImg, pill, shareCanvas, wrap } from './share';
 
 /** Facts for the obituary, most interesting first. */
 export function lifeFacts(L: Life): string[] {
@@ -57,14 +55,6 @@ function lastJob(L: Life): string {
 
 // ───────── obituary card (canvas, for sharing) ─────────
 
-function loadImg(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((res) => {
-    const i = new Image();
-    i.onload = () => res(i);
-    i.onerror = () => res(null);
-    i.src = src;
-  });
-}
 
 export async function drawObituary(g: Grave): Promise<HTMLCanvasElement> {
   await document.fonts.ready;
@@ -152,51 +142,12 @@ export async function drawObituary(g: Grave): Promise<HTMLCanvasElement> {
   return cv;
 }
 
-/** A filled capsule (canvas roundRect is missing on older Android WebViews). */
-function pill(x: CanvasRenderingContext2D, left: number, top: number, w: number, hh: number) {
-  const r = hh / 2;
-  x.beginPath();
-  x.moveTo(left + r, top);
-  x.arcTo(left + w, top, left + w, top + hh, r);
-  x.arcTo(left + w, top + hh, left, top + hh, r);
-  x.arcTo(left, top + hh, left, top, r);
-  x.arcTo(left, top, left + w, top, r);
-  x.closePath();
-  x.fill();
-}
 
-/** Fill centred text wrapped to a width; returns the y after the last line. */
-function wrap(x: CanvasRenderingContext2D, text: string, cx: number, y: number, max: number, lh: number): number {
-  const words = text.split(' ');
-  let line = '';
-  for (const w of words) {
-    const t = line ? `${line} ${w}` : w;
-    if (x.measureText(t).width > max && line) {
-      x.fillText(line, cx, y);
-      y += lh;
-      line = w;
-    } else line = t;
-  }
-  if (line) { x.fillText(line, cx, y); y += lh; }
-  return y;
-}
 
 export async function shareObituary(g: Grave) {
   sfx('tap');
   const cv = await drawObituary(g);
-  const data = cv.toDataURL('image/png');
-  const text = `${g.first} ${g.last} تو «زندگی ایرونی» در ${fa(g.age)} سالگی درگذشت 😅 تو چند سال عمر می‌کنی؟`;
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const file = await Filesystem.writeFile({ path: `obituary-${g.id}.png`, data: data.split(',')[1], directory: Directory.Cache });
-      await Share.share({ title: 'زندگی ایرونی', text, files: [file.uri], dialogTitle: 'اشتراک‌گذاری اعلامیه' });
-    } catch { toast('اشتراک‌گذاری انجام نشد'); }
-    return;
-  }
-  const a = document.createElement('a');
-  a.href = data;
-  a.download = `obituary-${g.id}.png`;
-  a.click();
+  await shareCanvas(cv, `${g.first} ${g.last} تو «زندگی ایرونی» در ${fa(g.age)} سالگی درگذشت 😅 تو چند سال عمر می‌کنی؟`, `obituary-${g.id}`);
 }
 
 // ───────── death screen ─────────

@@ -162,6 +162,7 @@ input, select { font: inherit; }
 .btn.primary { background: linear-gradient(180deg, var(--teal2), var(--teal)); color: #fff; box-shadow: 0 4px 0 var(--teal-dark); }
 .btn.gold { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #3b2300; box-shadow: 0 4px 0 #c27a10; }
 .btn.ghost { background: #fff; border: 2px solid var(--line); }
+.btn.share.small { min-height: 38px; font-size: 13.5px; margin: 0 auto 10px; padding: 4px 16px; }
 .btn.share { background: linear-gradient(90deg, #f58529, #dd2a7b 50%, #8134af); color: #fff; }
 .btn.buy { min-height: 38px; padding: 4px 12px; font-size: 13px; background: linear-gradient(180deg, var(--teal2), var(--teal)); color: #fff; border-radius: 12px; white-space: nowrap; }
 .btn.big { min-height: 56px; font-size: 17px; }

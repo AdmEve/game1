@@ -208,8 +208,11 @@ function assetsTab(body: HTMLElement) {
 
 const REL_ORDER = ['spouse', 'fiance', 'child', 'father', 'mother', 'brother', 'sister', 'grandpa', 'grandma', 'friend', 'ex'];
 
+const BLOOD = ['father', 'mother', 'brother', 'sister', 'grandpa', 'grandma', 'child'];
+
 function npcEmoji(L: Life, n: Npc) {
-  return avatarEmoji(L.year - n.born, n.gender, (n.id + L.skin) % 4);
+  const skin = BLOOD.includes(n.rel) ? L.skin : n.id % 3;
+  return avatarEmoji(L.year - n.born, n.gender, skin);
 }
 
 function peopleTab(body: HTMLElement) {

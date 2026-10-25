@@ -168,7 +168,8 @@ export function achievements() {
   const s = sheet(`🏅 نشان‌ها (${fa(meta.achs.length)} از ${fa(ACHS.length)})`, { full: true });
   const L = currentLife();
   const grid = h('div', { class: 'ach-grid' });
-  for (const a of ACHS) {
+  const sorted = [...ACHS].sort((a, b) => Number(meta.achs.includes(b.id)) - Number(meta.achs.includes(a.id)));
+  for (const a of sorted) {
     const got = meta.achs.includes(a.id);
     const now = L?.ach.includes(a.id);
     grid.append(h('div', { class: `ach ${got ? 'got' : ''} ${now ? 'now' : ''}` },
