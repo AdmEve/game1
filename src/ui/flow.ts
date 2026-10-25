@@ -10,6 +10,7 @@ import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
 import { haggleWhat } from '../content/actions/money';
 import { drivingTest } from './driving';
+import { fireJump } from './fire';
 import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
 import { shareKarname, shareWedding } from './share';
@@ -102,6 +103,11 @@ export function showOutcome(out: Outcome, extra?: HTMLElement | null): Promise<v
   });
 }
 
+const MINIGAMES: Record<string, (L: Life) => Promise<object>> = {
+  driving_test: drivingTest,
+  fire_jump: fireJump,
+};
+
 /** Show every queued event of this year, one at a time. */
 export async function runQueue(L: Life): Promise<void> {
   for (let guard = 0; guard < 20; guard++) {
@@ -112,8 +118,10 @@ export async function runQueue(L: Life): Promise<void> {
       L.flags.konkurQuiz = await konkurQuiz(L);
       persist();
     }
-    if (head?.id === 'driving_test' && !head.p?.result) {
-      head.p = { ...(head.p ?? {}), ...(await drivingTest(L)) };
+    // Mini-games that settle an event: play, then take its one remaining choice.
+    const game = head && MINIGAMES[head.id];
+    if (head && game && !head.p?.played) {
+      head.p = { ...(head.p ?? {}), ...(await game(L)), played: 1 };
       const out = choose(L, 0);
       persist();
       hooks.refresh();

@@ -161,6 +161,8 @@ input, select { font: inherit; }
 .drive-car .emo { vertical-align: middle; }
 .drive-car.crash { animation: crash .5s; }
 @keyframes crash { 0%, 100% { transform: translateY(-50%); } 20% { transform: translate(-6px, -50%) rotate(-12deg); } 40% { transform: translate(6px, -50%) rotate(10deg); } 60% { transform: translate(-4px, -50%) rotate(-6deg); } }
+.fire-strip { background: linear-gradient(90deg, #ffe3a3, #ff9c4a 55%, #e2483a); box-shadow: inset 0 -6px 0 #b8572a; }
+.fire-ends { display: flex; flex-direction: row-reverse; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin: 0 6px 4px; }
 .drive-msg { min-height: 1.9em; font-weight: 800; margin: 10px 0 0; }
 .haggle { text-align: center; }
 .haggle-head { display: flex; align-items: center; gap: 10px; text-align: right; }

@@ -7,6 +7,36 @@ const parentGift = (c: Ctx) => c.price(c.age < 18 ? 1e6 : 6e6);
 
 defEvents([
   {
+    // Played as a mini-game in the app (src/ui/fire.ts).
+    id: 'fire_jump',
+    milestone: true,
+    emoji: '🔥',
+    title: 'پریدن از روی آتیش',
+    text: 'تو کوچه سه تا آتیش روشن کردن…',
+    choices: [
+      { label: 'عالی بود!', when: (c) => !!c.p.played && !c.p.burnt, do: (c) => { c.happy(8).rep(1); return '«زردی من از تو، سرخی تو از من!» از روی هر سه تا آتیش پریدی. سال نو با انرژی شروع می‌شه!'; } },
+      { label: 'آخ!', when: (c) => !!c.p.burnt, do: (c) => { c.health(-4).happy(-2); return 'پاچه‌ی شلوارت آتیش گرفت و با یه سطل آب خاموشت کردن! سال دیگه احتیاط کن.'; } },
+      {
+        label: 'می‌پرم!',
+        when: (c) => !c.p.played,
+        do: (c) => {
+          if (c.lucky(0.8)) { c.happy(6); return '«زردی من از تو، سرخی تو از من!» از روی آتیش‌ها پریدی. عالی بود.'; }
+          c.health(-4).happy(-2);
+          return 'پاچه‌ی شلوارت آتیش گرفت و با یه سطل آب خاموشت کردن!';
+        },
+      },
+    ],
+  },
+  {
+    id: 'cal_chaharshanbe', emoji: '🔥', title: 'چهارشنبه‌سوری', age: [18, 75], once: false, cd: 3, w: 0.8,
+    text: 'چهارشنبه‌سوریه! همسایه‌ها تو کوچه آتیش روشن کردن و صدای ترقه از همه‌جا میاد.',
+    choices: [
+      { label: 'از روی آتیش می‌پرم!', do: (c) => { c.next('fire_jump'); return ''; } },
+      { label: 'آش و آجیل چهارشنبه‌سوری می‌خورم', do: (c) => { c.happy(3); return 'با همسایه‌ها دور آتیش آش رشته خوردین و آجیل مشکل‌گشا پخش کردین.'; } },
+      { label: 'از پشت پنجره نگاه می‌کنم', do: (c) => { c.happy(1); return 'از پشت پنجره به ترقه‌ها نگاه کردی و هر بار از صداشون پریدی!'; } },
+    ],
+  },
+  {
     id: 'cal_iftar', emoji: '🌙', title: 'افطاری', age: [8, 95], once: false, cd: 4, w: 0.6,
     text: 'ماه رمضونه و خاله‌ات همه‌ی فامیل رو برای افطاری دعوت کرده. سفره پر از شله‌زرد و زولبیا بامیه و آش رشته‌ست!',
     choices: [

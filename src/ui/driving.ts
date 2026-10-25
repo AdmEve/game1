@@ -6,6 +6,7 @@ import type { Life } from '../engine/types';
 import { haptic } from '../haptics';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
+import { timingStrip } from './timing';
 
 export type DrivingResult = { result: 'pass'; faults: number } | { result: 'theory' | 'park' };
 
@@ -94,42 +95,23 @@ export function drivingTest(L: Life): Promise<DrivingResult> {
         return;
       }
       const s = STEPS[step];
-      const center = 0.25 + Math.random() * 0.5;
-      const g0 = center - green / 2;
-      const g1 = center + green / 2;
-      const zone = h('div', { class: 'drive-zone', style: `left:${(g0 - yellow) * 100}%;width:${(green + yellow * 2) * 100}%` },
-        h('div', { class: 'drive-green', style: `left:${(yellow / (green + yellow * 2)) * 100}%;width:${(green / (green + yellow * 2)) * 100}%`, text: 'P' }));
-      const car = h('div', { class: 'drive-car', html: emo('🚙', 'emo') });
-      const road = h('div', { class: 'drive-road', dir: 'ltr' }, zone, car);
-      let pos = 0;
-      let stopped = false;
-      const t0 = performance.now();
-      const tick = (t: number) => {
-        if (stopped) return;
-        // Back and forth along the road.
-        const ph = ((t - t0) / s.period) % 2;
-        pos = ph < 1 ? ph : 2 - ph;
-        car.style.left = `calc(${pos * 100}% - 17px)`;
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+      const strip = timingStrip({ sprite: '🚙', period: s.period, green, yellow, mark: 'P' });
+      let done = false;
       const stop = () => {
-        if (stopped) return;
-        stopped = true;
-        // Judge where the middle of the car is.
-        const at = pos;
-        const res = at >= g0 && at <= g1 ? 'g' : at >= g0 - yellow && at <= g1 + yellow ? 'y' : 'r';
-        if (res === 'r') {
+        if (done) return;
+        done = true;
+        const { hit, early } = strip.stop();
+        if (hit === 'r') {
           sfx('bad');
           haptic('heavy');
-          car.classList.add('crash');
-          setTimeout(() => end({ result: 'park' }, '💥', 'بوووم!', at < g0 ? 'زدی به ماشین عقبی! افسر فقط سرش رو تکون داد و نوشت «مردود».' : 'زدی به میله‌ی پارک! افسر فقط سرش رو تکون داد و نوشت «مردود».'), 700);
+          strip.shake();
+          setTimeout(() => end({ result: 'park' }, '💥', 'بوووم!', early ? 'زدی به ماشین عقبی! افسر فقط سرش رو تکون داد و نوشت «مردود».' : 'زدی به میله‌ی پارک! افسر فقط سرش رو تکون داد و نوشت «مردود».'), 700);
           return;
         }
-        if (res === 'y') faults++;
-        sfx(res === 'g' ? 'good' : 'tap');
+        if (hit === 'y') faults++;
+        sfx(hit === 'g' ? 'good' : 'tap');
         haptic('light');
-        msg.innerHTML = res === 'g' ? `${emo('👌')} عالی!` : `${emo('😬')} یه کم ${at < g0 ? 'زود' : 'دیر'} ترمز کردی… افسر یه چیزی نوشت.`;
+        msg.innerHTML = hit === 'g' ? `${emo('👌')} عالی!` : `${emo('😬')} یه کم ${early ? 'زود' : 'دیر'} ترمز کردی… افسر یه چیزی نوشت.`;
         step++;
         setTimeout(park, 900);
       };
@@ -137,7 +119,7 @@ export function drivingTest(L: Life): Promise<DrivingResult> {
       put(
         h('div', { class: 'quiz-top' }, h('span', { class: 'quiz-n', text: `پارک دوبل، مرحله‌ی ${fa(step + 1)} از ${fa(STEPS.length)}` }), h('span', { class: 'quiz-s', html: `${emo('👮')} ${faults ? emo('😠').repeat(faults) : emo('😐')}` })),
         rt('div', 'drive-text', s.text),
-        road,
+        strip.el,
         msg,
         btn('🛑 ترمز!', stop, 'btn gold wide big'),
       );
