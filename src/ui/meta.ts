@@ -6,6 +6,7 @@ import { buy, iapAvailable, priceLabel, rewardedAvailable, showRewarded } from '
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId } from './hud';
+import { PIGGY_FROM, PIGGY_MAX, PIGGY_MIN, piggyArt, showPiggy } from './piggy';
 
 /** The shop, styled as a Tehran newspaper kiosk. */
 export function showShop(onClose: () => void, onChange: () => void) {
@@ -13,6 +14,14 @@ export function showShop(onClose: () => void, onChange: () => void) {
   const head = h('div', 'kiosk-head', `<div class="awning"></div><h2>${emo('🏪')} دکه‌ی مش‌رحیم</h2><div class="wallet">${emo('🪙')}<b>${faNum(save.coins)}</b></div>`);
   c.append(head);
   const refresh = () => { (head.querySelector('.wallet b') as HTMLElement).textContent = faNum(save.coins); onChange(); };
+
+  // The clay money box, once players have started filling it.
+  if (save.level >= PIGGY_FROM && iapAvailable()) {
+    const ready = save.piggy >= PIGGY_MIN;
+    const pg = h('button', `piggy-row ${ready ? 'ready' : ''}`, `${piggyArt(save.piggy / PIGGY_MAX)}<span><b>قلک سفالی</b><small>${ready ? 'پر شده! بشکنش' : 'با هر برد پرتر می‌شه'}</small></span><span class="pamt">${emo('🪙', 'emo xs')} ${faNum(save.piggy)}</span>`);
+    pg.onclick = () => { close(); showPiggy(onChange, () => showShop(onClose, onChange)); };
+    c.append(pg);
+  }
 
   // Boosters for coins.
   c.append(h('h3', '', 'کمک‌ها'));
@@ -44,7 +53,7 @@ export function showShop(onClose: () => void, onChange: () => void) {
     c.append(h('h3', '', 'سکه و بسته‌ها'));
     const grid = h('div', 'shop-grid');
     for (const p of PRODUCTS) {
-      if (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads']) continue;
+      if (p.sku === 'piggy' || (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads'])) continue;
       const card = h('button', 'pack' + (p.sku === 'starter' ? ' starter' : ''), `${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<span class="ic">${emo(p.icon)}</span><b>${p.title}</b><small>${p.desc}</small><span class="price">${priceLabel(p)}</span>`);
       card.onclick = async () => { if (await buy(p.sku)) { coin(); haptic('success'); refresh(); if (!p.consumable) card.remove(); } };
       grid.append(card);

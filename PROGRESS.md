@@ -72,6 +72,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Lives «جون» (`src/lives.ts`, `src/ui/lives.ts`): 5 hearts, giving up on a lost Journey level from level 13 on
   costs one, one grows back every 30 minutes; out of lives → refill for 900 coins, a rewarded ad for one, or wait.
   The daily challenge and events are free
+- «قلک» clay money box (`src/ui/piggy.ts`): from level 11 each new win drops 40 coins in (up to 4,000); from 1,000
+  it can be broken open with the `piggy` Bazaar product (shown in the shop with its amount)
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
@@ -79,7 +81,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 ### Next
 - Chapter 6+ (Darband / Shiraz / Isfahan), district league (needs a backend)
 - Real-device performance check (owner), real recorded horns and voice lines
-- Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`
+- Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`; create the
+  Bazaar SKUs from `PRODUCTS` (including `piggy`)
 
 ## Gotchas
 - Never `pkill -f` a pattern that also appears in your own command line: it kills your shell.

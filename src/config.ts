@@ -33,5 +33,7 @@ export const PRODUCTS: Product[] = [
   { sku: 'coins_m', icon: '💰', title: '۳٬۰۰۰ سکه', desc: '۲۰٪ بیشتر', fallbackPrice: 49000, consumable: true, coins: 3000, badge: 'محبوب' },
   { sku: 'coins_l', icon: '💰', title: '۸٬۰۰۰ سکه', desc: '۴۰٪ بیشتر', fallbackPrice: 99000, consumable: true, coins: 8000 },
   { sku: 'coins_xl', icon: '🏦', title: '۲۰٬۰۰۰ سکه', desc: 'به‌صرفه‌ترین', fallbackPrice: 199000, consumable: true, coins: 20000, badge: 'به‌صرفه‌ترین' },
+  // «قلک»: breaks open the coins saved up from wins (see src/ui/piggy.ts); not listed with the packs.
+  { sku: 'piggy', icon: '🏺', title: 'قلک', desc: 'سکه‌های جمع‌شده‌ی قلکت', fallbackPrice: 39000, consumable: true },
   { sku: 'no_ads', icon: '🚫', title: 'حذف تبلیغات', desc: 'برای همیشه بدون تبلیغ بین مرحله‌ها', fallbackPrice: 59000, consumable: false },
 ];

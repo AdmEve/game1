@@ -49,6 +49,7 @@ function deliver(p: Product, restoring = false) {
     if (p.coins) save.coins += p.coins;
     if (p.boosters) for (const k of ['crane', 'whistle', 'bay'] as const) save.boosters[k] += p.boosters;
   }
+  if (p.sku === 'piggy' && !restoring) { save.coins += save.piggy; save.piggy = 0; }
   if (p.sku === 'starter') save.owned.starter = true;
   if (p.sku === 'no_ads') save.owned.no_ads = true;
   persist();

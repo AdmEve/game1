@@ -23,6 +23,7 @@ import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
+import { fillPiggy } from './ui/piggy';
 import { yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
@@ -367,6 +368,7 @@ function showWin() {
   const lvl = levels[n];
   const keys = replay ? 0 : (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
   if (keys) addKeys(keys);
+  const piggy = replay ? 0 : fillPiggy(n);
   const stars = replay ? 0 : starsFor(lvl?.tag);
   if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
@@ -378,7 +380,7 @@ function showWin() {
   hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;

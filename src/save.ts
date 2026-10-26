@@ -27,6 +27,8 @@ export interface Save {
   agency: { stars: number; done: string[]; init?: boolean };
   /** Lives «جون»: how many, and when the next one grows back (ms timestamp, 0 when full). */
   lives: { n: number; next: number };
+  /** «قلک»: coins saved up from wins, paid out when it is broken open. */
+  piggy: number;
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -49,6 +51,7 @@ const fresh = (): Save => ({
   yalda: { year: 0, done: 0 },
   agency: { stars: 0, done: [], init: true },
   lives: { n: 5, next: 0 },
+  piggy: 0,
 });
 
 function load(): Save {
