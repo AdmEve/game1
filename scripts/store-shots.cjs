@@ -7,14 +7,16 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'store');
 fs.mkdirSync(out, { recursive: true });
-const seen = "window.__rb.save.seen={cover:true,broken:true,vip:true,oddEven:true,courier:true,ch2:true,ch3:true};";
+const seen = "window.__rb.save.seen={cover:true,broken:true,vip:true,oddEven:true,courier:true,officer:true,cart:true,ch2:true,ch3:true,ch4:true,ch5:true};";
 const shots = [
   { name: '1-gameplay', caption: 'ترافیک تهران، تو دستای تو!', sub: 'ماشین‌ها رو آزاد کن، مسافرها رو برسون', setup: `${seen} window.__rb.save.level=11; window.__rb.startLevel(); (async () => { const s = window.__rb.session(); const { solve } = await import('/src/game/solver.ts'); const sol = solve(s.level).solution; s.tap(sol[0]); await window.__rb.advance(1.4); s.tap(sol[1]); await window.__rb.advance(0.9); s.tap(sol[2]); })()`, ms: 1500 },
   { name: '2-cars', caption: 'ماشین‌های واقعی ایرانی', sub: 'پیکان، پراید، ۴۰۵، سمند، زامیاد و اتوبوس تندرو', setup: `${seen} window.__rb.save.level=29; window.__rb.startLevel();`, ms: 300 },
   { name: '3-valiasr', caption: 'غروب خیابان ولیعصر', sub: 'از تجریش تا میدان آزادی، فصل به فصل', setup: `${seen} window.__rb.save.level=40; window.__rb.startLevel();`, ms: 300 },
-  { name: '4-azadi', caption: 'شب‌های میدان آزادی', sub: '۹۰ مرحله‌ی هیجان‌انگیز و رو به افزایش', setup: `${seen} window.__rb.save.level=66; window.__rb.startLevel();`, ms: 300 },
-  { name: '5-garage', caption: 'گاراژ من', sub: 'ژیان، پیکان جوانان و شورولت رو بازسازی کن', setup: `window.__rb.save.garage={keys:6,restored:['javanan']}; (async () => { const g = await import('/src/ui/garage.ts'); g.showGarage(() => {}); })()`, ms: 100 },
-  { name: '6-home', caption: 'رادیو راه‌بندون و جایزه‌های روزانه', sub: 'هر روز یه هدیه، هر هفته یه سوئیچ', setup: `window.__rb.save.garage={keys:4,restored:[]}`, ms: 300, home: true },
+  { name: '4-azadi', caption: 'شب‌های میدان آزادی', sub: '۱۵۰ مرحله در پنج فصل، با مکانیک‌های تازه', setup: `${seen} window.__rb.save.level=66; window.__rb.startLevel();`, ms: 300 },
+  { name: '5-tochal', caption: 'برف توچال', sub: 'پلیس راهور سر چهارراه وایستاده!', setup: `${seen} window.__rb.save.level=96; window.__rb.startLevel();`, ms: 1200 },
+  { name: '6-bazaar', caption: 'بازار بزرگ تهران', sub: 'گاری‌های میوه، گنبدها و حجره‌ها', setup: `${seen} window.__rb.save.level=125; window.__rb.startLevel();`, ms: 300 },
+  { name: '7-garage', caption: 'گاراژ من', sub: 'ژیان، جیپ ویلیز و اتوبوس بنز دودر رو بازسازی کن', setup: `window.__rb.save.garage={keys:6,restored:['javanan']}; (async () => { const g = await import('/src/ui/garage.ts'); g.showGarage(() => {}); })()`, ms: 100 },
+  { name: '8-home', caption: 'رادیو راه‌بندون و جایزه‌های روزانه', sub: 'هر روز یه هدیه، هر هفته یه سوئیچ', setup: `window.__rb.save.garage={keys:4,restored:[]}`, ms: 300, home: true },
 ];
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
