@@ -62,6 +62,19 @@ export function horn(kind: 'old' | 'new' | 'bus' = 'new', times = 1, delay = 0) 
   }
 }
 
+/** The wedding convoy's honking rhythm (ta-ta, ta-ta-ta), two cars answering each other. */
+export function weddingHorns(delay = 0) {
+  const c = ac(); if (!c) return;
+  const beats = [0, 0.16, 0.48, 0.62, 0.76, 1.1, 1.26, 1.58, 1.72, 1.86];
+  beats.forEach((b, k) => {
+    const t = c.currentTime + delay + b, [f1, f2] = k % 5 < 2 ? [440, 554] : [392, 494];
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 1.4;
+    const g = env(c, t, 0.01, 0.2, 0.11);
+    for (const f of [f1, f2]) osc(c, 'square', f * (1 + (Math.random() - 0.5) * 0.01), t, 0.11).connect(bp);
+    bp.connect(g).connect(master);
+  });
+}
+
 /** Engine pull-away: a rising growl. */
 export function engine(delay = 0, heavy = false) {
   const c = ac(); if (!c) return;

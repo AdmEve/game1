@@ -89,7 +89,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband'; autumn?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -135,11 +135,12 @@ export function cone(): THREE.Group {
 }
 
 /** A Tehran plane tree «چنار»: a pale mottled trunk and a layered canopy. */
-function chenar(s: number, snow = false): THREE.Group {
+function chenar(s: number, snow = false, autumn = false): THREE.Group {
   const t = new THREE.Group();
   const bark = std(0xb9ae94, { roughness: 0.9 });
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.6, 8), bark); trunk.position.y = 0.8; t.add(trunk);
-  const leafA = std(snow ? 0xe3ebe8 : 0x4f8f3a, { roughness: 0.8, flatShading: true }), leafB = std(snow ? 0xc8d6cf : 0x6aa848, { roughness: 0.8, flatShading: true });
+  const fall = [0xd97706, 0xb45309, 0xeab308, 0xb91c1c][Math.floor(s * 97) % 4];
+  const leafA = std(snow ? 0xe3ebe8 : autumn ? fall : 0x4f8f3a, { roughness: 0.8, flatShading: true }), leafB = std(snow ? 0xc8d6cf : autumn ? 0xf59e0b : 0x6aa848, { roughness: 0.8, flatShading: true });
   const puffs: [number, number, number, number][] = [[0, 2.0, 0, 0.85], [0.55, 1.75, 0.2, 0.6], [-0.5, 1.8, -0.15, 0.62], [0.1, 2.45, 0.1, 0.6], [-0.2, 1.7, 0.45, 0.5], [0.3, 2.2, -0.4, 0.55]];
   puffs.forEach(([x, y, z, r], i) => { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), i % 2 ? leafB : leafA); p.position.set(x, y, z); p.rotation.set(i, i * 2, 0); t.add(p); });
   t.traverse((m) => { m.castShadow = true; });
@@ -335,6 +336,88 @@ function bazaarRow(z: number, rnd: () => number): THREE.Group {
   return g;
 }
 
+/**
+ * Darband: a mountain stream in a rocky bed, and terraces climbing the slope with teahouse «تخت»s
+ * (wooden daybeds with red kilims and bolsters), awnings strung with lights, samovars and autumn trees.
+ */
+function darbandSlope(z: number, rnd: () => number, night: boolean): THREE.Group {
+  const g = new THREE.Group();
+  const len = 44;
+  const rockTex = canvasTex(256, 256, (c) => speckle(c, 256, 256, '#8c7f72', ['#6f6458', '#a39586', '#5c524a', '#b3a798'], 5000, 3), 1);
+  rockTex.repeat.set(10, 1);
+  const rock = std(0xffffff, { map: rockTex, roughness: 0.95 });
+  // The stream: water in a stony bed, boulders along both banks.
+  const water = std(0x5fa3c4, { roughness: 0.08, metalness: 0.35, emissive: 0x0b3a52, emissiveIntensity: 0.25 });
+  g.add(box(len, 0.12, 1.3, rock, 0, -0.02, z + 0.2));
+  g.add(plane(len, 0.95, water, 0, 0.05, z + 0.2));
+  const boulder = std(0x9a8f84, { roughness: 0.95, flatShading: true });
+  for (let k = 0; k < 46; k++) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14 + rnd() * 0.22, 0), boulder);
+    b.position.set(-len / 2 + rnd() * len, 0.05, z + 0.2 + (rnd() < 0.5 ? -0.55 : 0.55) + (rnd() - 0.5) * 0.2);
+    b.scale.y = 0.6; b.rotation.set(rnd() * 3, rnd() * 3, 0); b.castShadow = true; g.add(b);
+  }
+  // Wooden footbridges over the stream.
+  const wood = std(0x7c4a21, { roughness: 0.8 }), woodDark = std(0x5a3416, { roughness: 0.85 });
+  for (const x of [-9, 4.5]) {
+    g.add(box(1.0, 0.08, 1.6, wood, x, 0.2, z + 0.2, 0.02));
+    for (const sx of [-0.48, 0.48]) g.add(box(0.05, 0.3, 1.6, woodDark, x + sx, 0.38, z + 0.2));
+  }
+  // Terraces: stone retaining walls stepping up the hill.
+  const tiers = [{ dz: -1.6, h: 0.7 }, { dz: -4.4, h: 1.8 }, { dz: -7.2, h: 3.0 }];
+  const kilim = canvasTex(256, 128, (c) => {
+    c.fillStyle = '#9f1d1d'; c.fillRect(0, 0, 256, 128);
+    c.strokeStyle = '#1e3a8a'; c.lineWidth = 10; c.strokeRect(8, 8, 240, 112);
+    c.fillStyle = '#f5deb3';
+    for (let x = 30; x < 240; x += 40) { c.beginPath(); c.moveTo(x, 64 - 26); c.lineTo(x + 16, 64); c.lineTo(x, 64 + 26); c.lineTo(x - 16, 64); c.fill(); }
+    c.fillStyle = '#d97706'; for (let x = 30; x < 240; x += 40) { c.beginPath(); c.moveTo(x, 64 - 10); c.lineTo(x + 6, 64); c.lineTo(x, 64 + 10); c.lineTo(x - 6, 64); c.fill(); }
+  });
+  const kilimMat = std(0xffffff, { map: kilim, roughness: 0.9 });
+  const bolsters = [0xb91c1c, 0xb45309, 0x7c2d12];
+  const bulbCols = [0xfff1b8, 0xffb4a0, 0xb8f0ff, 0xfff1b8];
+  tiers.forEach((t, ti) => {
+    const tz = z + t.dz;
+    g.add(box(len, t.h, 2.8, rock, 0, t.h / 2, tz - 0.4));
+    // Teahouse daybeds along the terrace edge.
+    for (let x = -len / 2 + 2 + rnd() * 2; x < len / 2 - 2; x += 2.6 + rnd() * 1.4) {
+      if (ti === 0 && Math.abs(x + 9) < 1.3) continue;
+      const tk = new THREE.Group();
+      tk.add(box(1.5, 0.08, 0.95, wood, 0, 0.32, 0, 0.02));
+      for (const lx of [-0.68, 0.68]) for (const lz of [-0.4, 0.4]) tk.add(box(0.07, 0.3, 0.07, woodDark, lx, 0.15, lz));
+      const rug = plane(1.42, 0.88, kilimMat, 0, 0.365, 0); tk.add(rug);
+      for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.3, 4, 8), std(bolsters[(k + ti) % 3])); b.rotation.z = Math.PI / 2; b.position.set(-0.45 + k * 0.45, 0.44, -0.36); tk.add(b); }
+      if (rnd() < 0.5) {
+        // A brass samovar and tea glasses.
+        const brass = std(0xd4a017, { metalness: 0.8, roughness: 0.3 });
+        const sam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.22, 10), brass); sam.position.set(0.5, 0.48, 0.1); tk.add(sam);
+        const lid = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), brass); lid.position.set(0.5, 0.62, 0.1); tk.add(lid);
+        for (let k = 0; k < 3; k++) { const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.015, 0.05, 6), std(0x9a3412, { roughness: 0.2 })); gl.position.set(0.1 + k * 0.08, 0.39, 0.15); tk.add(gl); }
+      }
+      // Awning on four poles with a string of lights.
+      for (const lx of [-0.75, 0.75]) for (const lz of [-0.48, 0.48]) tk.add(box(0.04, 1.4, 0.04, woodDark, lx, 0.7, lz));
+      const roofCol = [0x0f766e, 0xb91c1c, 0x1e3a8a, 0xca8a04][Math.floor(rnd() * 4)];
+      tk.add(box(1.7, 0.05, 1.15, std(roofCol, { roughness: 0.7 }), 0, 1.42, 0, 0.02));
+      for (let k = 0; k < 7; k++) {
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), std(bulbCols[k % 4], { emissive: bulbCols[k % 4], emissiveIntensity: night ? 3 : 0.6 }));
+        bulb.position.set(-0.75 + k * 0.25, 1.33 - Math.sin((k / 6) * Math.PI) * 0.1, 0.5); tk.add(bulb);
+      }
+      tk.position.set(x, t.h, tz + 0.55);
+      tk.rotation.y = (rnd() - 0.5) * 0.1;
+      g.add(tk);
+      if (night) { const p = lightPool(1.3, 0xffd9a0, 0.5); p.position.set(x, t.h + 0.02, tz + 0.55); g.add(p); }
+    }
+    // Autumn trees behind each terrace's teahouses.
+    for (let x = -len / 2 + rnd() * 3; x < len / 2; x += 3 + rnd() * 3) {
+      const tr = chenar(0.8 + rnd() * 0.45, false, true); tr.position.set(x, t.h, tz - 1.0 - rnd() * 0.6); g.add(tr);
+    }
+  });
+  // The «دربند» sign at the foot of the path.
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.08), [wood, wood, wood, wood, std(0xffffff, { map: label('دربند', '#7c2d12', '#fde68a') }), wood]);
+  sign.position.set(-9, 1.5, z + 1.1); g.add(sign);
+  for (const sx of [-1.0, 1.0]) g.add(box(0.08, 1.5, 0.08, woodDark, -9 + sx, 0.75, z + 1.1));
+  g.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh && mm.material !== water) { mm.castShadow = true; mm.receiveShadow = true; } });
+  return g;
+}
+
 /** Pavement trade: a fruit cart, stacked carpets, spice sacks. */
 function streetStall(kind: number): THREE.Group {
   const g = new THREE.Group();
@@ -467,7 +550,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // Plane trees along the sidewalk, apartments behind, landmarks on the horizon.
   for (let x = -16; x <= 16; x += 2.6 + rnd()) {
     if (Math.abs(x - shelter.position.x) < 1.8 || Math.abs(x - kiosk.position.x) < 1.3) continue;
-    const t = chenar(0.85 + rnd() * 0.3, snow); t.position.set(x, 0.18, L.walkZ - 0.85 + rnd() * 0.2); add(t);
+    const t = chenar(0.85 + rnd() * 0.3, snow, !!opts.autumn); t.position.set(x, 0.18, L.walkZ - 0.85 + rnd() * 0.2); add(t);
   }
   const tones = ['#e6dccb', '#d9cbb3', '#efe2c8', '#e2d2bd', '#d8d0c4'];
   const bricks = ['#a8613f', '#b5714d', '#9c5638', '#c07f5a'];
@@ -476,7 +559,9 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     add(bazaarRow(L.walkZ - 3.0, rnd));
     for (let k = 0; k < 4; k++) { const st = streetStall(k % 2); st.position.set(-9 + k * 2.6 + (k > 1 ? 6 : 0), 0.18, L.walkZ - 0.9); add(st); }
   }
-  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar'; i++) {
+  const darband = opts.landmark === 'darband';
+  if (darband) add(darbandSlope(L.walkZ - 1.9, rnd, night));
+  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar' && !darband; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
@@ -485,7 +570,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     x += bw + 0.15;
   }
   // Second row and the skyline.
-  for (let x = -24, i = 0; x < 24; i++) {
+  for (let x = -24, i = 0; x < 24 && !darband; i++) {
     const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
     const [tone, style] = facadeOf(i + 3);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
@@ -494,12 +579,28 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   }
   const lm = opts.landmark ?? 'both';
   const milad = miladTower();
-  if (lm === 'tochal') milad.visible = false;
+  if (lm === 'tochal' || lm === 'darband') milad.visible = false;
   if (lm === 'milad') { milad.scale.setScalar(1.25); milad.position.set(2.5, 0, L.walkZ - 24); } else { milad.scale.setScalar(0.9); milad.position.set(7, 0, L.walkZ - 26); }
   add(milad);
   const azadi = azadiTower();
   if (lm === 'azadi') { azadi.scale.setScalar(2.4); azadi.position.set(0, 0, L.walkZ - 19); azadi.rotation.y = 0; } else { azadi.scale.setScalar(1.1); azadi.position.set(-8, 0, L.walkZ - 22); azadi.rotation.y = 0.35; }
   add(azadi);
+  if (lm === 'darband') {
+    azadi.visible = false;
+    // The valley closes in: steep autumn slopes on both sides, the peaks behind.
+    const slope = [0x8a6a3e, 0x9c6b2f, 0x7a5a35, 0xa57a3c];
+    for (let k = 0; k < 9; k++) {
+      const hh = 9 + rnd() * 8, rr = 7 + rnd() * 4;
+      const m = new THREE.Mesh(new THREE.ConeGeometry(rr, hh, 7), std(slope[k % 4], { roughness: 1, flatShading: true }));
+      m.position.set(-28 + k * 7 + rnd() * 2, hh / 2 - 0.5, L.walkZ - 18 - rnd() * 6); g.add(m);
+      for (let j = 0; j < 5; j++) {
+        const tr = chenar(1.4 + rnd(), false, true);
+        const a = rnd() * Math.PI * 2, d = rr * (0.45 + rnd() * 0.4);
+        tr.position.set(m.position.x + Math.cos(a) * d, (1 - d / rr) * hh - 0.6, m.position.z + Math.abs(Math.sin(a)) * d * 0.9);
+        g.add(tr);
+      }
+    }
+  }
   if (lm === 'tochal') {
     // Tochal: a big snowy peak with the cable car climbing to it.
     const peak = new THREE.Mesh(new THREE.ConeGeometry(18, 26, 9), std(0x9fb3c8, { roughness: 1, flatShading: true }));

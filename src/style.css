@@ -195,6 +195,7 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 body[data-light='sunset'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(255,120,60,.30) 0%, rgba(255,150,80,.10) 40%, rgba(120,60,140,.10) 100%); mix-blend-mode: soft-light; }
 body[data-light='night'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(10,20,60,.45) 0%, rgba(10,20,60,.15) 45%, rgba(5,10,30,.25) 100%); }
 body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70% at 50% 58%, transparent 50%, rgba(2,6,20,.55) 100%); }
+body[data-light='autumn'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(255,150,60,.22) 0%, rgba(255,190,110,.08) 45%, rgba(140,70,30,.10) 100%); mix-blend-mode: soft-light; }
 
 /* ───── Garage ───── */
 .card.garage-card { padding: 18px 14px 14px; }

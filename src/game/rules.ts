@@ -27,6 +27,8 @@ export interface VehicleDef {
   wait?: number;
   /** Last digit of the plate (for «طرح زوج و فرد» levels). */
   plate?: number;
+  /** «ماشین عروس»: a wedding car that must be among the first `wedding` vehicles to leave. */
+  wedding?: number;
 }
 export interface ObstacleDef {
   kind: 'cone' | 'cart'; col: number; row: number;
@@ -52,7 +54,7 @@ export interface Level {
   /** «پلیس راهور»: an officer lets only vertical or only horizontal cars go, switching after each exit. */
   officer?: boolean;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart' | 'wedding';
 }
 
 export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
@@ -79,6 +81,8 @@ export interface State {
   sinceSwitchAxis: number;
   /** Index of the next passenger in the queue. */
   q: number;
+  /** A wedding car missed its deadline (after a continue the game goes on without it). */
+  late: boolean[];
   over: false | 'won' | 'lost';
 }
 
@@ -93,6 +97,7 @@ export type Event =
   | { t: 'cart'; i: number; col: number; row: number }
   | { t: 'board'; bay: number; v: number; color: Color; passenger: number }
   | { t: 'depart'; bay: number; v: number }
+  | { t: 'late'; v: number }
   | { t: 'won' }
   | { t: 'lost' };
 
@@ -120,7 +125,7 @@ export function newState(level: Level): State {
   for (const i of level.vip ?? []) vip[i] = true;
   return {
     level, inLot: level.vehicles.map(() => true), bays: Array(level.bays ?? 5).fill(null), queue: [...level.queue], vip, q: 0, over: false,
-    exits: 0, revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0, axis: 'v', sinceSwitchAxis: 0,
+    exits: 0, late: level.vehicles.map(() => false), revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0, axis: 'v', sinceSwitchAxis: 0,
     carts: (level.obstacles ?? []).filter((o) => o.kind === 'cart').map((o) => ({ col: o.col, row: o.row, dir: o.dir ?? 'right' })),
   };
 }
@@ -166,7 +171,7 @@ export function startState(level: Level): State {
 }
 
 export function cloneState(s: State): State {
-  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis, carts: s.carts.map((c) => ({ ...c })) };
+  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, late: s.late, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis, carts: s.carts.map((c) => ({ ...c })) };
 }
 
 /** «طرح زوج و فرد»: which plate parity may leave now (0 = even, 1 = odd), or null if the rule is off. */
@@ -187,6 +192,12 @@ export function updateParity(s: State, ev?: Event[]) {
   const g = grid(s);
   const movable = (par: number) => s.level.vehicles.some((v, i) => s.inLot[i] && (v.plate ?? 0) % 2 === par && !blocker(s, i, g) && !(v.wait && s.exits < v.wait));
   if (!movable(s.parity) && movable(1 - s.parity)) flip();
+}
+
+/** «ماشین عروس»: exits left before the wedding car is late, or null. */
+export function weddingLeft(s: State, i: number): number | null {
+  const w = s.level.vehicles[i].wedding;
+  return w && s.inLot[i] && !s.late[i] ? w - s.exits : null;
 }
 
 /** Why a vehicle with a clear lane may still not leave. */
@@ -278,6 +289,15 @@ export function tap(s: State, i: number, force = false): Event[] {
   moveCarts(s, ev);
   updateParity(s, ev);
   settle(s, ev);
+  const over = s.over as State['over']; // settle() may have ended the level
+  if (over !== 'won') {
+    // A wedding car still stuck in the lot after its deadline: the bride is late and the level is lost.
+    const k = s.level.vehicles.findIndex((o, j) => o.wedding && s.inLot[j] && !s.late[j] && s.exits >= o.wedding);
+    if (k >= 0) {
+      s.late = s.late.map((x, j) => x || j === k);
+      if (!over) { s.over = 'lost'; ev.push({ t: 'late', v: k }, { t: 'lost' }); }
+    }
+  }
   return ev;
 }
 

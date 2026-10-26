@@ -7,7 +7,7 @@ import * as sfx from '../audio';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, trafficOfficer, vipMarker } from '../render/mechanics';
+import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
@@ -63,6 +63,8 @@ export class Session {
   bestCombo = 0;
   private covers = new Map<number, THREE.Object3D>();
   private broken = new Map<number, { badge: THREE.Sprite; hazard: THREE.Object3D; nextPuff: number }>();
+  /** «ماشین عروس» countdown badges, until the car leaves the lot. */
+  private weddings = new Map<number, THREE.Sprite>();
   private plates = new Map<number, THREE.Sprite>();
 
   private colorblind: boolean;
@@ -102,6 +104,16 @@ export class Session {
         const hz = hazard(); hz.position.set(0, LOT_Y + 0.17, o.length / 2 + 0.28); hz.rotation.x = -0.25;
         o.root.add(hz);
         this.broken.set(i, { badge, hazard: hz, nextPuff: 0 });
+      }
+      if (v.wedding) {
+        // Fit the flowers to this model's real hood: measure the body in its own frame.
+        o.root.updateMatrixWorld(true);
+        const bb = new THREE.Box3().setFromObject(o.body).applyMatrix4(o.body.matrixWorld.clone().invert());
+        // The body's model space faces +x; the decor is built facing −z.
+        const decor = weddingDecor(-bb.max.x, bb.max.y * 0.6, bb.max.y * 0.93); decor.rotation.y = -Math.PI / 2;
+        o.body.add(decor);
+        const wb = weddingBadge(v.wedding); wb.scale.set(1.0, 0.58, 1); wb.position.set(0, 1.5, 0); o.root.add(wb);
+        this.weddings.set(i, wb);
       }
       if (this.colorblind && v.kind !== 'bike' && !v.covered) this.addSymbol(i);
       if (level.oddEven && v.plate !== undefined) {
@@ -205,6 +217,23 @@ export class Session {
     const p = this.level.oddEven ? this.s.parity : null;
     this.hooks.parity(p, this.level.oddEven ? this.level.oddEven - this.s.sinceSwitch : 0);
     for (const [i, s] of this.plates) setPlateBadge(s, this.level.vehicles[i].plate!, this.level.vehicles[i].plate! % 2 === p);
+  }
+
+  /** Wedding cars count down with every exit; the one that just left takes its badge along. */
+  private refreshWeddings(ev: Event[]) {
+    for (const [i, b] of [...this.weddings]) {
+      const o = this.cars[i];
+      if (!this.s.inLot[i]) { this.weddings.delete(i); void tween(0.3, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b)); continue; }
+      const late = ev.some((e) => e.t === 'late' && e.v === i);
+      const left = late ? 0 : (this.level.vehicles[i].wedding ?? 0) - this.s.exits;
+      setWeddingBadge(b, left);
+      void tween(0.3, (k) => b.scale.set(1.0 * (1 + Math.sin(k * Math.PI) * 0.3), 0.58 * (1 + Math.sin(k * Math.PI) * 0.3), 1), ease.out);
+      if (late) {
+        this.weddings.delete(i);
+        this.hooks.float('عروس دیر رسید!', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
+        void this.wiggle(o);
+      } else if (left === 1) this.hooks.float('عجله کن! عروس منتظره', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
+    }
   }
 
   /** Broken cars count down as others leave; at zero they cough back to life. */
@@ -357,8 +386,13 @@ export class Session {
 
   /** Parking booster / continue: unlock the sixth bay. */
   extraBay(): boolean {
-    if (this.s.bays.length >= MAX_BAYS) return false;
     const wasLost = this.s.over === 'lost';
+    if (this.s.bays.length >= MAX_BAYS) {
+      // A late wedding car with bays to spare: the continue just lets the level go on.
+      if (!wasLost || this.isFull()) return false;
+      this.s.over = false; this.ended = false;
+      return true;
+    }
     addBay(this.s);
     this.openGate();
     if (wasLost) this.ended = false;
@@ -417,6 +451,7 @@ export class Session {
     }
     this.refreshPlates();
     this.refreshBroken();
+    this.refreshWeddings(ev);
     const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity' && e.t !== 'axis' && e.t !== 'cart');
     this.chain = this.chain.then(() => arrived).then(() => this.playBoards(rest)).finally(() => { this.pending--; });
   }
@@ -647,6 +682,13 @@ export class Session {
       const extra = 5 * this.combo;
       this.bonus += extra;
       setTimeout(() => { this.hooks.float(`${COMBO[Math.min(this.combo, COMBO.length - 1)]} +${extra}`, at.clone().add(new THREE.Vector3(0, 0.8, 0)), 'combo'); sfx.coin(0); sfx.coin(0.12); }, 250);
+    }
+    if (this.level.vehicles[v].wedding && !this.s.late[v]) {
+      // Just married: the convoy honks, confetti flies and the guests tip.
+      this.bonus += 30;
+      sfx.weddingHorns(0.3);
+      confetti(this.group, o.root.position.clone().setY(1.4), 70);
+      setTimeout(() => this.hooks.float('مبارکه! +۳۰', at.clone().add(new THREE.Vector3(0, 1.2, 0)), 'combo'), 450);
     }
     await tween(0.22, (k) => { o.body.position.y = Math.sin(k * Math.PI) * 0.12; }, ease.out);
     let release!: () => void;

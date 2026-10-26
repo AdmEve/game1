@@ -250,3 +250,82 @@ export function fruitCart(): THREE.Group {
   g.traverse((m) => { m.castShadow = true; });
   return g;
 }
+
+// ───── «ماشین عروس»: flowers on the hood, ribbons to the mirrors, a tulle bow ─────
+/**
+ * Wedding dressing for a sedan of length L facing −z: a heart of roses on the hood, satin ribbons
+ * from the hood to the mirrors and a white bow on the roof, the way Tehran wedding cars are done.
+ */
+export function weddingDecor(front: number, hood = 0.6, roof = 0.82): THREE.Group {
+  const L = -front * 2;
+  const g = new THREE.Group();
+  const petals = [0xe11d48, 0xffffff, 0xf9a8d4, 0xffffff, 0xbe123c];
+  const rose = new THREE.IcosahedronGeometry(0.07, 1);
+  const leaf = new THREE.MeshStandardMaterial({ color: 0x2f7d32, roughness: 0.7 });
+  const flowers = new THREE.InstancedMesh(rose, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 }), 64);
+  const z0 = -L / 2 + 0.42;
+  let n = 0;
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  // A heart outline, then a fill, flat on the hood.
+  for (let k = 0; k < 64; k++) {
+    const t = (k / 40) * Math.PI * 2;
+    let x: number, y: number;
+    if (k < 40) { x = 16 * Math.sin(t) ** 3; y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); }
+    else { const a = (k - 40) * 2.4, r = Math.sqrt((k - 40) / 24) * 9; x = Math.cos(a) * r; y = Math.sin(a) * r + 1; }
+    const s = 0.02;
+    m.makeScale(1, 0.7, 1).setPosition(x * s, hood + 0.03, z0 - y * s);
+    flowers.setMatrixAt(n, m);
+    flowers.setColorAt(n, col.setHex(k < 40 ? (k % 3 ? 0xe11d48 : 0xffffff) : petals[k % petals.length]));
+    n++;
+  }
+  flowers.castShadow = true;
+  g.add(flowers);
+  // Greenery under the heart.
+  const bed = new THREE.Mesh(new THREE.CircleGeometry(0.3, 16), leaf);
+  bed.rotation.x = -Math.PI / 2; bed.scale.set(1.05, 0.9, 1); bed.position.set(0, hood + 0.012, z0 - 0.02);
+  g.add(bed);
+  // Ribbons: from the heart to each front corner and back to the mirrors, gently sagging.
+  const ribbon = new THREE.MeshStandardMaterial({ color: 0xfce7f3, roughness: 0.35, metalness: 0.1, side: THREE.DoubleSide });
+  for (const sx of [-1, 1]) {
+    const pts = [new THREE.Vector3(0, hood + 0.05, z0 - 0.05), new THREE.Vector3(sx * 0.22, hood + 0.03, z0 - 0.02), new THREE.Vector3(sx * 0.4, hood + 0.06, -L / 2 + 0.85)];
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.022, 5), ribbon);
+    g.add(tube);
+    const front = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([pts[0], new THREE.Vector3(sx * 0.18, hood + 0.02, -L / 2 + 0.16), new THREE.Vector3(sx * 0.36, hood - 0.04, -L / 2 + 0.08)]), 10, 0.02, 5), ribbon);
+    g.add(front);
+  }
+  // A tulle bow on the roof.
+  const tulle = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, transparent: true, opacity: 0.92 });
+  const bow = new THREE.Group();
+  for (const sx of [-1, 1]) {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.05, 6, 12), tulle);
+    loop.position.set(sx * 0.13, 0.06, 0); loop.rotation.y = sx * 0.4; loop.scale.set(1, 0.75, 0.6);
+    bow.add(loop);
+  }
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.5 }));
+  knot.position.y = 0.035; bow.add(knot);
+  bow.position.set(0, roof + 0.01, 0.05);
+  g.add(bow);
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+  return g;
+}
+
+/** A pink heart badge: how many more cars may leave (this one included) before the wedding car is late. */
+export function weddingBadge(left: number): THREE.Sprite {
+  const s = badge(() => {});
+  setWeddingBadge(s, left);
+  return s;
+}
+export function setWeddingBadge(s: THREE.Sprite, left: number) {
+  const tex = s.material.map as THREE.CanvasTexture;
+  const g = (tex.image as HTMLCanvasElement).getContext('2d')!;
+  g.clearRect(0, 0, 256, 148);
+  const late = left <= 0, urgent = left === 1;
+  g.fillStyle = late ? '#9ca3af' : urgent ? '#e11d48' : '#fbcfe8'; g.strokeStyle = late ? '#374151' : '#9d174d'; g.lineWidth = 8;
+  g.beginPath(); g.roundRect(14, 14, 228, 120, 40); g.fill(); g.stroke();
+  // A heart, then the count.
+  g.save(); g.translate(76, 78); g.scale(2.3, 2.3); g.fillStyle = late ? '#4b5563' : urgent ? '#fff' : '#e11d48';
+  g.beginPath(); g.moveTo(0, 12); g.bezierCurveTo(-22, -2, -12, -20, 0, -9); g.bezierCurveTo(12, -20, 22, -2, 0, 12); g.fill(); g.restore();
+  g.fillStyle = late ? '#1f2937' : urgent ? '#fff' : '#831843'; g.font = '900 78px Vazirmatn'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(late ? '×' : fa(left), 170, 82);
+  tex.needsUpdate = true;
+}

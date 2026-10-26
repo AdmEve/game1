@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import LEVELS from '../src/game/levels.json';
-import { addBay, newState, startState, tap, validate, type Level } from '../src/game/rules';
+import { addBay, newState, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
 import { solve } from '../src/game/solver';
 
 const levels = LEVELS as Level[];
@@ -130,6 +130,37 @@ describe('fruit cart', () => {
   });
 });
 
+describe('wedding car', () => {
+  const l: Level = {
+    w: 3, h: 2,
+    vehicles: [
+      { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' },
+      { kind: 'pride', color: 'blue', col: 1, row: 0, dir: 'up' },
+      { kind: 'pride', color: 'green', col: 2, row: 0, dir: 'up', wedding: 2 },
+    ],
+    queue: [...Array(4).fill('red'), ...Array(4).fill('blue'), ...Array(4).fill('green')],
+  };
+  it('«ماشین عروس» must be among the first N cars to leave', () => {
+    const s = newState(l);
+    expect(weddingLeft(s, 2)).toBe(2);
+    tap(s, 0);
+    expect(weddingLeft(s, 2)).toBe(1);
+    const ev = tap(s, 1);
+    expect(ev).toContainEqual({ t: 'late', v: 2 });
+    expect(s.over).toBe('lost');
+    // After a continue the game goes on; the car is no longer on the clock.
+    addBay(s);
+    expect(weddingLeft(s, 2)).toBeNull();
+    tap(s, 2);
+    expect(s.over).toBe('won');
+  });
+  it('in time, nothing happens', () => {
+    const s = newState(l);
+    tap(s, 2); tap(s, 0); tap(s, 1);
+    expect(s.over).toBe('won');
+  });
+});
+
 describe('officer', () => {
   it('«پلیس راهور» lets one direction go at a time', () => {
     const l: Level = {
@@ -172,7 +203,7 @@ describe('courier', () => {
 });
 
 describe('journey levels', () => {
-  it('has 150 levels', () => expect(levels.length).toBe(150));
+  it('has 180 levels', () => expect(levels.length).toBe(180));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

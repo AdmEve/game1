@@ -7,6 +7,8 @@ export interface Spec {
   zamyad?: number; bus?: number; cones?: number; tag?: string;
   /** Mechanics: fraction of covered cars, broken Peykans, دربست passengers, odd/even period. */
   cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number; officer?: boolean; carts?: number;
+  /** «ماشین عروس»: how many wedding cars (each with a deadline a little after its place in a natural exit order). */
+  wedding?: number;
   intro?: Level['intro'];
 }
 
@@ -94,6 +96,15 @@ export function generate(spec: Spec, seed: number): Level | null {
   }
   // Car covers on vehicles that do not leave first.
   if (spec.cover) for (const i of seq.slice(2)) if (r() < spec.cover && !keep[i].wait && keep[i].kind !== 'bike') keep[i].covered = true;
+  // «ماشین عروس»: a sedan that leaves early in a natural order gets a deadline with a little slack.
+  for (let k = 0, tries = 0; k < (spec.wedding ?? 0) && tries < 20; tries++) {
+    const p = 1 + Math.floor(r() * Math.max(1, Math.min(seq.length - 2, 6)));
+    const v = keep[seq[p]];
+    if (!v || v.wedding || v.wait || v.covered || KIND[v.kind].cap !== 4) continue;
+    v.wedding = p + 2 + Math.floor(r() * 2);
+    if (v.kind === 'samand') v.kind = 'p405'; // flowers go on the hood, where a taxi wears its arrow
+    k++;
+  }
   // «دربست» passengers: some sedans carry a single VIP instead of four people.
   const vipCars = new Set<number>();
   for (let k = 0; k < (spec.vip ?? 0); k++) {

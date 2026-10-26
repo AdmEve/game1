@@ -9,7 +9,7 @@ export function moves(s: State): number[] {
   const g = grid(s), seen = new Set<string>(), out: number[] = [];
   s.level.vehicles.forEach((v, i) => {
     if (!canExit(s, i, g)) return;
-    const k = v.color + KIND[v.kind].cap;
+    const k = v.color + KIND[v.kind].cap + (v.wedding ? 'w' + i : '');
     if (seen.has(k)) return;
     seen.add(k);
     out.push(i);
@@ -76,6 +76,9 @@ export function playRates(level: Level, runs = 300, seed = 1) {
         const ahead = new Set(s.queue.slice(s.q, s.q + 3));
         const good = free.filter((i) => s.revealed[i] && ahead.has(s.level.vehicles[i].color));
         if (good.length) pick = good;
+        // Anyone notices a wedding car whose countdown is nearly up.
+        const urgent = free.filter((i) => { const w = s.level.vehicles[i].wedding; return w !== undefined && w - s.exits <= 2; });
+        if (urgent.length) pick = urgent;
       }
       tap(s, pick[Math.floor(r() * pick.length)]);
     }
