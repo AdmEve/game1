@@ -38,16 +38,27 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 
 ## Status
 
-### Phase 0: vertical slice (in progress)
-- [x] Rules, solver, 30 solver-verified levels with a sawtooth difficulty curve
-- [x] Real 3D Iranian cars in the game, driving routes around the ring road into bays
-- [x] Passengers board, cars depart with horn and coins; win and lose flow; continue with the 6th bay
-- [x] Boosters: crane, police whistle, parking bay; coins economy
-- [x] Home screen, win and lose screens, settings; icon and splash from a 3D render
-- [ ] Verify the APK on a real phone (performance tiers if needed)
-- [ ] Music (adaptive layers), real recorded horns and voice lines
-- [ ] Polish: car idle animations, passenger walk cycles, a tutorial hand on level 1–3, a hint for blocked taps
-- [ ] Chapter diorama polish: Tajrish square details, time-of-day lighting
+### Done
+- Rules, solver (with locks, reveals, VIP, plate camera), 90 solver-verified levels in 3 chapters
+- Chapters: 1 Tajrish (day), 2 Valiasr (sunset, plane-tree boulevard), 3 Azadi Square (night, lit windows)
+- Mechanics: «چادر ماشین» covers, «پیکان خراب» wait counter, «دربست» VIP passengers, «طرح زوج و فرد» plates
+  with an auto-switching camera (never wedges); Mash Rahim intro cards
+- Real 3D Iranian cars, driving around the ring road into bays, boarding, departure with coins and combos
+- Feel: press squash, honk bubbles, combos, camera shake, idle passengers, waddle, confetti
+- Adaptive music (6/8 tombak, santur in Mahur, tension layer), synthesized SFX
+- Meta: «دکه» shop (boosters for coins, coin packs and starter pack via Poolakey), daily gift calendar,
+  chest every 5 levels, rewarded ads (double coins, continue), capped interstitials, Bazaar rating prompt
+- Adaptive quality tiers (frame-rate probe), tilt-shift + vignette + per-chapter colour grading
+- Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client)
 
-### Next phases
-See the roadmap in `rahbandoon/GDD.md` §12 (alpha: meta, garage, shop, Poolakey, ads, 150 levels).
+### Next
+- My Garage: collect and restore classic Iranian cars (GDD §5)
+- Remaining ★ mechanics: traffic officer, motorcycle courier
+- «رادیو راه‌بندون» bulletins, district league (needs a backend), chapter 4+ (Grand Bazaar, Tochal)
+- Real-device performance check (owner), real recorded horns and voice lines
+- Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`
+
+## Gotchas
+- Never `pkill -f` a pattern that also appears in your own command line: it kills your shell.
+- `scripts/copy-emoji.mjs` wipes `public/emoji`; restart the vite dev server afterwards.
+- In `?shot` mode the render loop is off: call `window.__rb.advance(sec)` to step animations.
