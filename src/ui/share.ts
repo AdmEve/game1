@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { CITIES } from '../content/cities';
+import { CITIES, countryById } from '../content/cities';
 import { trackName } from '../content/edu';
 import { fa, num } from '../engine/fmt';
 import type { Life } from '../engine/types';
@@ -193,4 +193,102 @@ export async function shareWedding(L: Life) {
   if (!cv) return;
   const mehr = L.mehr ?? L.flags.mehrMax ?? 0;
   await shareCanvas(cv, `عروسی‌مون تو «زندگی ایرونی»!${mehr ? ` مهریه ${fa(mehr)} سکه 😅` : ''} تو هم بیا زندگیت رو بساز!`, `wedding-${L.id}`);
+}
+
+/** Destination city and airport for the boarding pass. */
+const DEST: Record<string, [string, string]> = {
+  tr: ['استانبول', 'IST'], ae: ['دبی', 'DXB'], de: ['برلین', 'BER'], it: ['میلان', 'MXP'],
+  ca: ['تورنتو', 'YYZ'], au: ['سیدنی', 'SYD'], us: ['لس‌آنجلس', 'LAX'],
+};
+
+/** «کارت پرواز» card, when you emigrate. */
+export async function drawBoardingPass(L: Life): Promise<HTMLCanvasElement | null> {
+  const co = countryById(L.country);
+  if (!co) return null;
+  const [city, code] = DEST[co.id] ?? [co.name, '✈'];
+  await document.fonts.ready;
+  const W = 1080, H = 1350;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const x = cv.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#16324f');
+  g.addColorStop(1, '#2b5d8a');
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  x.direction = 'rtl';
+  x.textAlign = 'center';
+  x.fillStyle = '#fff';
+  x.font = '800 58px Vazirmatn';
+  x.fillText('کارت پرواز', W / 2, 130);
+  // The ticket.
+  x.fillStyle = '#fdfbf6';
+  pill(x, 80, 190, W - 160, 940, 40);
+  x.fillStyle = '#5b6b7c';
+  x.font = '500 32px Vazirmatn';
+  x.fillText('مسافر', W / 2, 270);
+  x.fillStyle = '#16324f';
+  x.font = '800 60px Vazirmatn';
+  x.fillText(`${L.first} ${L.last}`, W / 2, 345);
+  // Route: Tehran on the right, destination on the left.
+  x.font = '900 92px Vazirmatn';
+  x.textAlign = 'right';
+  x.fillText('IKA', W - 150, 500);
+  x.textAlign = 'left';
+  x.fillText(code, 150, 500);
+  x.textAlign = 'center';
+  const plane = await emojiImg('✈️');
+  if (plane) {
+    // Fly right to left, from Tehran to the destination.
+    x.save();
+    x.translate(W / 2, 475);
+    x.scale(-1, 1);
+    x.drawImage(plane, -50, -50, 100, 100);
+    x.restore();
+  }
+  x.font = '500 34px Vazirmatn';
+  x.fillStyle = '#5b6b7c';
+  x.textAlign = 'right';
+  x.fillText('تهران', W - 150, 560);
+  x.textAlign = 'left';
+  x.fillText(city, 150, 560);
+  x.textAlign = 'center';
+  const flag = await emojiImg(co.flag);
+  if (flag) x.drawImage(flag, W / 2 - 60, 610, 120, 120);
+  x.font = '500 34px Vazirmatn';
+  x.fillStyle = '#16324f';
+  x.fillText(`سال ${fa(L.year)}، صندلی کنار پنجره`, W / 2, 800);
+  x.fillText(`بار همراه: ${['دو چمدون قورمه‌سبزی خشک و زعفران', 'یه چمدون لواشک و پسته', 'سماور مامان‌بزرگ!', 'آلبوم عکس و یه کیسه سبزی خشک'][[...L.id].reduce((n, ch) => n + ch.charCodeAt(0), 0) % 4]}`, W / 2, 860);
+  // Tear line and the one-way stamp.
+  x.strokeStyle = '#c7cfd8';
+  x.setLineDash([18, 14]);
+  x.lineWidth = 4;
+  x.beginPath();
+  x.moveTo(120, 920);
+  x.lineTo(W - 120, 920);
+  x.stroke();
+  x.setLineDash([]);
+  x.save();
+  x.translate(W / 2, 1020);
+  x.rotate(-0.12);
+  x.strokeStyle = '#d2504b';
+  x.fillStyle = '#d2504b';
+  x.lineWidth = 6;
+  x.strokeRect(-230, -60, 460, 110);
+  x.font = '900 54px Vazirmatn';
+  x.fillText('بلیت یک‌طرفه', 0, 16);
+  x.restore();
+  x.fillStyle = '#fff';
+  x.font = '800 46px Vazirmatn';
+  x.fillText('زندگی ایرونی', W / 2, 1230);
+  x.font = '400 26px Vazirmatn';
+  x.fillText('شبیه‌ساز زندگی ایرانی، دانلود از کافه‌بازار', W / 2, 1280);
+  return cv;
+}
+
+export async function shareBoardingPass(L: Life) {
+  const cv = await drawBoardingPass(L);
+  if (!cv) return;
+  await shareCanvas(cv, `تو «زندگی ایرونی» مهاجرت کردم ${countryById(L.country)?.name ?? ''}! ✈️ تو کجا می‌ری؟`, `flight-${L.id}`);
 }

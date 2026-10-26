@@ -14,7 +14,7 @@ import { fireJump } from './fire';
 import { tvQuiz } from './tvquiz';
 import { haggleGame } from './haggle';
 import { konkurQuiz } from './quiz';
-import { shareKarname, shareWedding } from './share';
+import { shareBoardingPass, shareKarname, shareWedding } from './share';
 
 export const STAT_META: Record<StatKey, { name: string; emoji: string }> = {
   happy: { name: 'شادی', emoji: '😊' },
@@ -79,6 +79,12 @@ function eventCard(ev: EventView, onPick: (i: number) => void, L?: Life): HTMLEl
     deltaChips(ev.deltas),
     ev.id === 'm_konkur' && L?.queue[0]?.p ? btn('📤 اشتراک کارنامه', () => void shareKarname(L, L.queue[0].p!.rank as number, L.queue[0].p!.n as number), 'btn share small') : null,
     h('div', { class: 'choices' }, ...choices));
+}
+
+/** A share button for a big moment that just happened (a move abroad), or null. */
+export function momentButton(L: Life, countryBefore: string): HTMLElement | null {
+  if (L.country !== countryBefore && L.country !== 'ir') return btn('📤 اشتراک کارت پرواز', () => void shareBoardingPass(L), 'btn share small');
+  return null;
 }
 
 /** `extra` goes under the text (e.g. a share button). */
@@ -152,12 +158,13 @@ export async function runQueue(L: Life): Promise<void> {
         resolve(i);
       }, L), { locked: true, cls: 'event-modal' });
     });
+    const was = L.country;
     const out = choose(L, idx);
     persist();
     hooks.refresh();
     // Just married: offer the wedding card.
     const married = out.event === 'wedding' && L.people.some((p) => p.rel === 'spouse' && p.alive);
-    if (!ev.notice) await showOutcome(out, married ? btn('📤 اشتراک کارت عروسی', () => void shareWedding(L), 'btn share small') : null);
+    if (!ev.notice) await showOutcome(out, married ? btn('📤 اشتراک کارت عروسی', () => void shareWedding(L), 'btn share small') : momentButton(L, was));
   }
   persist();
   hooks.refresh();

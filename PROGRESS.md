@@ -54,7 +54,8 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
 - `scripts/ui-smoke.cjs` plays three lives through the real UI, mini-games included, and reports page errors.
 - Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
 - Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
-  «کارنامه» card (and a «کارت عروسی» card after the wedding, `drawWedding` in `src/ui/share.ts`), and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
+  «کارنامه» card (and a «کارت عروسی» card after the wedding and a «کارت پرواز» boarding pass when you
+  emigrate, in `src/ui/share.ts`), and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
   slide an offer, the seller counters, loses patience at lowballs and makes a last offer. The driving
   test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. Jumping
   the fire at Chaharshanbe Suri (`src/ui/fire.ts`) uses the same timing strip (`src/ui/timing.ts`).

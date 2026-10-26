@@ -15,7 +15,7 @@ import { LIFESTYLES, livingCost, rentCost, salaryOf } from '../engine/year';
 import { collectAchievements, persist, spendGems } from '../save';
 import { ask, btn, clear, h, rt, sheet, toast } from './dom';
 import { avatarEmoji, emo, rich } from './emoji';
-import { hooks, needGems, runQueue, showOutcome } from './flow';
+import { hooks, momentButton, needGems, runQueue, showOutcome } from './flow';
 import { currentLife } from './game';
 
 let open: { render: () => void; close: () => void } | null = null;
@@ -59,12 +59,13 @@ async function doAction(a: ActionView) {
   if (gems && !needGems(gems)) return;
   if (a.def.confirm && !(await ask(typeof a.def.confirm === 'string' ? a.def.confirm : a.label))) return;
   if (gems) spendGems(gems);
+  const was = L.country;
   const out = runAction(L, a.def.id, opt);
   collectAchievements(L);
   persist();
   hooks.refresh();
   open?.render();
-  await showOutcome(out);
+  await showOutcome(out, momentButton(L, was));
   if (L.queue.length) await runQueue(L);
   open?.render();
   if (L.dead) { open?.close(); hooks.afterDeath(); }
