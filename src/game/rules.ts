@@ -319,10 +319,12 @@ export function tap(s: State, i: number, force = false): Event[] {
   const over = s.over as State['over']; // settle() may have ended the level
   if (over !== 'won') {
     // A wedding car still stuck in the lot after its deadline: the bride is late and the level is lost.
-    const k = s.level.vehicles.findIndex((o, j) => o.wedding && s.inLot[j] && !s.late[j] && s.exits >= o.wedding);
-    if (k >= 0) {
-      s.late = s.late.map((x, j) => x || j === k);
-      if (!over) { s.over = 'lost'; ev.push({ t: 'late', v: k }, { t: 'lost' }); }
+    // Every overdue one is late at once, so one continue covers them all.
+    const due = s.level.vehicles.map((o, j) => (o.wedding && s.inLot[j] && !s.late[j] && s.exits >= o.wedding ? j : -1)).filter((j) => j >= 0);
+    if (due.length) {
+      s.late = s.late.map((x, j) => x || due.includes(j));
+      for (const j of due) ev.push({ t: 'late', v: j });
+      if (!over) { s.over = 'lost'; ev.push({ t: 'lost' }); }
     }
   }
   return ev;
@@ -341,13 +343,13 @@ export function addBay(s: State) {
 export function whistle(s: State, span = 12): Event[] {
   if (s.over) return [];
   const head = s.queue.slice(s.q, s.q + span), headVip = s.vip.slice(s.q, s.q + span), headGran = s.granny.slice(s.q, s.q + span);
-  const rank = (c: Color) => {
+  const rank = (c: Color, seats: number) => {
     let best = -1;
-    for (const b of s.bays) if (b && b.color === c) best = Math.max(best, b.boarded);
+    for (const b of s.bays) if (b && !b.wild && b.color === c && b.cap - b.boarded >= seats) best = Math.max(best, b.boarded);
     return best;
   };
   // Stable sort: colors with a waiting car first (fuller car first), others keep their order.
-  const order = head.map((c, i) => ({ c, i, r: headVip[i] ? -1 : rank(c) })).sort((a, b) => (b.r >= 0 ? 1 : 0) - (a.r >= 0 ? 1 : 0) || b.r - a.r || a.i - b.i);
+  const order = head.map((c, i) => ({ c, i, r: headVip[i] ? -1 : rank(c, headGran[i] ? 2 : 1) })).sort((a, b) => (b.r >= 0 ? 1 : 0) - (a.r >= 0 ? 1 : 0) || b.r - a.r || a.i - b.i);
   s.queue = [...s.queue.slice(0, s.q), ...order.map((x) => x.c), ...s.queue.slice(s.q + span)];
   s.vip = [...s.vip.slice(0, s.q), ...order.map((x) => headVip[x.i]), ...s.vip.slice(s.q + span)];
   s.granny = [...s.granny.slice(0, s.q), ...order.map((x) => headGran[x.i]), ...s.granny.slice(s.q + span)];

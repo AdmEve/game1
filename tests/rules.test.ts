@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import LEVELS from '../src/game/levels.json';
-import { addBay, lane, newState, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
+import { addBay, lane, newState, whistle, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
 import { solve } from '../src/game/solver';
 
 const levels = LEVELS as Level[];
@@ -154,6 +154,15 @@ describe('wedding car', () => {
     tap(s, 2);
     expect(s.over).toBe('won');
   });
+  it('two overdue wedding cars go late together, with an event each', () => {
+    const two: Level = { ...l, vehicles: l.vehicles.map((v, j) => (j > 0 ? { ...v, wedding: 1 } : v)) };
+    const s = newState(two);
+    const ev = tap(s, 0);
+    expect(ev.filter((e) => e.t === 'late').length).toBe(2);
+    addBay(s);
+    tap(s, 1); tap(s, 2);
+    expect(s.over).toBe('won');
+  });
   it('in time, nothing happens', () => {
     const s = newState(l);
     tap(s, 2); tap(s, 0); tap(s, 1);
@@ -204,6 +213,22 @@ describe('tunnel', () => {
     tap(s, 1);
     expect(tap(s, 0)[0]).toMatchObject({ t: 'exit', v: 0 });
     expect(s.over).toBe('won');
+  });
+});
+
+describe('whistle and grandmas', () => {
+  it('does not put a grandma first for a car with one seat left', () => {
+    const l: Level = {
+      w: 2, h: 2,
+      vehicles: [{ kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' }, { kind: 'pride', color: 'blue', col: 1, row: 0, dir: 'up' }],
+      queue: ['red', 'red', 'red', 'blue', 'red', 'red', 'blue', 'blue'], granny: [4, 6],
+    };
+    const s = newState(l);
+    tap(s, 0);
+    whistle(s);
+    // The plain red passenger was called forward and filled the last seat; the grandma still waits.
+    expect(s.bays[0]).toBeNull();
+    expect(s.granny.slice(s.q)).toContain(true);
   });
 });
 

@@ -123,7 +123,7 @@ export class Session {
     (level.obstacles ?? []).forEach((c, k) => {
       if (c.kind !== 'tunnel') return;
       // Both mouths of a pair share a color and a letter.
-      const pairNo = (level.obstacles ?? []).slice(0, Math.min(k, c.pair!) + 1).filter((o) => o.kind === 'tunnel').length - 1;
+      const pairNo = (level.obstacles ?? []).slice(0, Math.min(k, c.pair!)).filter((o) => o.kind === 'tunnel').length / 2;
       const m = tunnelMouth(TUNNEL_COLORS[pairNo % TUNNEL_COLORS.length], `تونل ${'آبپت'[pairNo] ?? ''}`.trim());
       m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y - 0.1);
       this.group.add(m);
@@ -239,6 +239,8 @@ export class Session {
       void tween(0.3, (k) => b.scale.set(1.0 * (1 + Math.sin(k * Math.PI) * 0.3), 0.58 * (1 + Math.sin(k * Math.PI) * 0.3), 1), ease.out);
       if (late) {
         this.weddings.delete(i);
+        this.lastLate = i;
+        void tween(0.6, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b));
         this.hooks.float('عروس دیر رسید!', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
         void this.wiggle(o);
       } else if (left === 1) this.hooks.float('عجله کن! عروس منتظره', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
@@ -366,12 +368,17 @@ export class Session {
   }
 
   taps = 0;
+  private hops = new Map<number, ReturnType<typeof lane>['hops']>();
+  /** The wedding car that was last late (for the lose screen), or -1. */
+  lastLate = -1;
   lastInput = performance.now();
 
   tap(i: number) {
     if (this.ended || !this.hooks.canPlay()) return;
     this.taps++;
     this.lastInput = performance.now();
+    // The tunnel hops of the way out, read before the tap rolls the fruit carts on.
+    this.hops.set(i, lane(this.s, i).hops);
     this.play(ruleTap(this.s, i), i);
   }
 
@@ -546,7 +553,9 @@ export class Session {
   private async animBlocked(i: number, by: { v?: number; cell: [number, number] }) {
     const v = this.level.vehicles[i], o = this.cars[i];
     const [fc, fr] = (() => { const len = KIND[v.kind].len; return v.dir === 'up' ? [v.col, v.row - 1] : v.dir === 'down' ? [v.col, v.row + len] : v.dir === 'left' ? [v.col - 1, v.row] : [v.col + len, v.row]; })();
-    const gap = Math.abs(by.cell[0] - fc) + Math.abs(by.cell[1] - fr);
+    // Blocked beyond a tunnel: the car only nudges up to the mouth.
+    const hop = lane(this.s, i).hops[0], target = hop ? hop[0] : by.cell;
+    const gap = Math.abs(target[0] - fc) + Math.abs(target[1] - fr);
     const [dc, dr] = DELTA[v.dir];
     const dist = gap * CELL + 0.1;
     const start = o.root.position.clone();
@@ -589,7 +598,7 @@ export class Session {
     const heavy = v.kind === 'bus' || v.kind === 'zamyad';
     sfx.engine(0, heavy); sfx.chirp(0.05);
     // «تونل نیایش»: drive into the mouth, drop out of sight, come up out of its twin.
-    for (const [a, b] of lane(this.s, i).hops) {
+    for (const [a, b] of this.hops.get(i) ?? []) {
       const into = this.L.cell(a[0], a[1]).setY(LOT_Y), out = this.L.cell(b[0], b[1]).setY(LOT_Y);
       const from = o.root.position.clone();
       await drive(o.root, o.body, roundedPath([from, into], 0.3), { vmax: 6 });

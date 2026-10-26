@@ -49,7 +49,12 @@ function deliver(p: Product, restoring = false) {
     if (p.coins) save.coins += p.coins;
     if (p.boosters) for (const k of ['crane', 'whistle', 'bay'] as const) save.boosters[k] += p.boosters;
   }
-  if (p.sku === 'pass' && !restoring) save.pass.premium = true;
+  if (p.sku === 'pass' && !restoring) {
+    // A purchase delivered late (on a later start) belongs to the current month's card.
+    const month = new Date().toISOString().slice(0, 7);
+    if (save.pass.month !== month) save.pass = { month, punches: 0, free: [], prem: [], premium: false };
+    save.pass.premium = true;
+  }
   if (p.sku === 'piggy' && !restoring) { save.coins += save.piggy; save.piggy = 0; }
   if (p.sku === 'starter') save.owned.starter = true;
   if (p.sku === 'no_ads') save.owned.no_ads = true;

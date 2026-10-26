@@ -264,9 +264,10 @@ function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
   current = Math.min(pick ?? save.level, levels.length - 1);
   const n = current;
   const level = custom ?? levels[n];
-  // The rush hour rotates through the chapters' places by weekday.
-  // Yalda nights are played at home in Tajrish, after dark.
-  const ch = night >= 0 ? { ...CHAPTERS[0], light: 'night' as const } : custom ? CHAPTERS[new Date().getDay() % CHAPTERS.length] : chapterOf(n);
+  // Yalda nights are played at home in Tajrish, after dark. The rush hour rotates day by day through
+  // the places the player has already unlocked (never spoiling a chapter they haven't reached).
+  const unlocked = CHAPTERS.filter((c) => c.from <= save.level);
+  const ch = night >= 0 ? { ...CHAPTERS[0], light: 'night' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
   applyLight(ch.light);
   setMood(ch.light);
   craneMode = false;
@@ -428,7 +429,7 @@ function showLose() {
   const COLOR_FA: Record<string, string> = { red: 'قرمز', yellow: 'زرد', blue: 'آبی', green: 'سبز', purple: 'بنفش', orange: 'نارنجی', white: 'سفید', pink: 'صورتی' };
   const want = session ? session.s.queue[session.s.q] : undefined;
   // Bays still free means the loss came from a wedding car missing its deadline.
-  const bride = session && !session.isFull() ? session.s.late.findIndex(Boolean) : -1;
+  const bride = session && !session.isFull() ? session.lastLate : -1;
   const culprit = bride >= 0 ? bride : session ? session.culprit() : -1;
   if (culprit >= 0) session!.highlight(culprit);
   const why = bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
