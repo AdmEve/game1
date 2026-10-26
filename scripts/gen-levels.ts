@@ -12,7 +12,7 @@ interface Spec {
   w: number; h: number; fill: number; colors: number; mix: number; target: number;
   zamyad?: number; bus?: number; cones?: number; tag?: string;
   /** Mechanics: fraction of covered cars, broken Peykans, دربست passengers, odd/even period. */
-  cover?: number; broken?: number; vip?: number; oddEven?: number;
+  cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number;
   intro?: Level['intro'];
 }
 
@@ -67,6 +67,9 @@ for (let i = 0; i < 60; i++) {
   if (r() < 0.35) spec.vip = 1 + (r() < 0.3 ? 1 : 0);
   if (r() < (ch3 ? 0.55 : 0.3)) spec.oddEven = 3 + Math.floor(r() * 2);
   if (boss) Object.assign(spec, { cover: 0.3, broken: 1, vip: 1, oddEven: 4 });
+  // Courier bikes from level 41 on (introduced there).
+  if (n === 41) Object.assign(spec, { bikes: 2, intro: 'courier', oddEven: undefined, vip: undefined });
+  else if (n > 41 && r() < 0.35) spec.bikes = 1 + Math.floor(r() * 2);
   if (hard) spec.tag = 'hard';
   if (boss) spec.tag = 'boss';
   SPECS.push(spec);
@@ -100,6 +103,14 @@ function generate(spec: Spec, seed: number): Level | null {
     if (occ.has(rr * w + c)) continue;
     occ.add(rr * w + c); cones.push({ kind: 'cone', col: c, row: rr }); i++;
   }
+  // Courier bikes slot into leftover single cells.
+  for (let b = 0, tries = 0; b < (spec.bikes ?? 0) && tries < 300; tries++) {
+    const c = Math.floor(r() * w), rr = Math.floor(r() * h);
+    if (occ.has(rr * w + c)) continue;
+    occ.add(rr * w + c);
+    vehicles.push({ kind: 'bike', color: 'white', col: c, row: rr, dir: pick(DIRS) });
+    b++;
+  }
   // Drop vehicles that can never leave (facing each other, or walled in by cones).
   const probe: Level = { w, h, vehicles, obstacles: cones, queue: [] };
   const s = newState(probe);
@@ -118,6 +129,7 @@ function generate(spec: Spec, seed: number): Level | null {
   keep.forEach((v, i) => { v.color = palette[i % palette.length]; });
   for (let i = keep.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [keep[i].color, keep[j].color] = [keep[j].color, keep[i].color]; }
   for (const v of keep) if (v.color === 'yellow' && SEDANS.includes(v.kind)) v.kind = 'samand';
+  for (const v of keep) if (v.kind === 'bike') v.color = 'white';
   void remap;
   // Plates for «طرح زوج و فرد», then a fresh exit order that respects them.
   if (spec.oddEven) for (const v of keep) v.plate = Math.floor(r() * 10);
@@ -134,13 +146,13 @@ function generate(spec: Spec, seed: number): Level | null {
   for (let b = 0; b < (spec.broken ?? 0); b++) {
     const p = 3 + Math.floor(r() * Math.max(1, seq.length - 4));
     const v = keep[seq[p]];
-    if (!v || v.wait) continue;
+    if (!v || v.wait || v.kind === 'bike' || KIND[v.kind].len !== 2) continue;
     v.kind = v.kind === 'samand' ? 'samand' : 'peykan';
     if (KIND[v.kind].len !== cellsOf(v).length) continue;
     v.wait = Math.max(2, p - Math.floor(r() * 2));
   }
   // Car covers on vehicles that do not leave first.
-  if (spec.cover) for (const i of seq.slice(2)) if (r() < spec.cover && !keep[i].wait) keep[i].covered = true;
+  if (spec.cover) for (const i of seq.slice(2)) if (r() < spec.cover && !keep[i].wait && keep[i].kind !== 'bike') keep[i].covered = true;
   // «دربست» passengers: some sedans carry a single VIP instead of four people.
   const vipCars = new Set<number>();
   for (let k = 0; k < (spec.vip ?? 0); k++) {
@@ -152,6 +164,7 @@ function generate(spec: Spec, seed: number): Level | null {
   for (const i of seq) {
     const v = keep[i], cap = KIND[v.kind].cap;
     if (vipCars.has(i)) { groups.push({ c: [v.color], vip: true }); continue; }
+    if (v.kind === 'bike') { groups.push({ c: [pick(palette)] }); continue; }
     for (let k = 0; k < cap; k += 2) groups.push({ c: Array(Math.min(2, cap - k)).fill(v.color) });
   }
   for (let m = 0; m < spec.mix * 3; m++) {

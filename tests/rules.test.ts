@@ -108,6 +108,25 @@ describe('mechanics', () => {
   });
 });
 
+describe('courier', () => {
+  it('«پیک موتوری» takes one passenger of any color when no car matches', () => {
+    const l: Level = {
+      w: 3, h: 2,
+      vehicles: [
+        { kind: 'bike', color: 'white', col: 0, row: 0, dir: 'up' },
+        { kind: 'pride', color: 'red', col: 1, row: 0, dir: 'up' },
+      ],
+      queue: ['blue', 'red', 'red', 'red', 'red'],
+    };
+    expect(validate(l)).toEqual([]);
+    const s = newState(l);
+    expect(tap(s, 1).map((e) => e.t)).toEqual(['exit']);
+    const ev = tap(s, 0);
+    expect(ev[1]).toMatchObject({ t: 'board', color: 'blue', v: 0 });
+    expect(ev.at(-1)).toEqual({ t: 'won' });
+  });
+});
+
 describe('journey levels', () => {
   it('has 90 levels', () => expect(levels.length).toBe(90));
   levels.forEach((l, i) => {

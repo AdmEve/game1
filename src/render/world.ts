@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CELL, bake } from './fleet';
+import { motorbike } from './mechanics';
 
 export const ROAD = 1.8; // ring road width
 export const CURB = 0.22;
@@ -283,21 +284,6 @@ function streetLamp(night = false): THREE.Group {
   const arm = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 12, Math.PI / 2), m); arm.position.set(0.3, 2.6, 0); arm.rotation.z = Math.PI / 2; g.add(arm);
   const head = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.12, 10), m); head.position.set(0.6, 2.86, 0); g.add(head);
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), std(0xfff4d0, { emissive: 0xffe8a8, emissiveIntensity: night ? 4 : 0.4 })); bulb.position.set(0.6, 2.79, 0); g.add(bulb);
-  g.traverse((m) => { m.castShadow = true; });
-  return g;
-}
-
-/** A Honda 125 «موتور هوندا», the courier's workhorse. */
-function motorbike(color: number): THREE.Group {
-  const g = new THREE.Group();
-  const tire = std(0x1a1b1d), body = std(color, { roughness: 0.35, metalness: 0.2 }), chrome = std(0xdfe3e8, { metalness: 0.9, roughness: 0.2 });
-  for (const x of [-0.42, 0.42]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 6, 14), tire); w.position.set(x, 0.2, 0); g.add(w); }
-  const tank = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.18, 0.2, 2, 0.06), body); tank.position.set(0.05, 0.52, 0); g.add(tank);
-  const seat = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.08, 0.2, 2, 0.04), std(0x111111)); seat.position.set(-0.28, 0.58, 0); g.add(seat);
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.06), chrome); frame.position.set(0, 0.34, 0); frame.rotation.z = -0.15; g.add(frame);
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), chrome); bar.rotation.x = Math.PI / 2; bar.position.set(0.36, 0.72, 0); g.add(bar);
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), std(0xfff6dc, { emissive: 0xfff0c0, emissiveIntensity: 0.3 })); lamp.position.set(0.46, 0.62, 0); g.add(lamp);
-  const box = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.26, 0.3, 2, 0.03), std(0xf59e0b, { roughness: 0.5 })); box.position.set(-0.5, 0.74, 0); g.add(box); // delivery box
   g.traverse((m) => { m.castShadow = true; });
   return g;
 }

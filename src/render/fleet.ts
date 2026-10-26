@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CARS, buildBus, buildCar, buildZamyad, curve } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
+import { courierBike } from './mechanics';
 
 export const PAINT: Record<Color, number> = {
   red: 0xc8141c, yellow: 0xf5b400, blue: 0x1857c9, green: 0x138a3f, purple: 0x6a2bc2, orange: 0xe85a0c, white: 0xeeeeea, pink: 0xe0508c,
@@ -91,7 +92,8 @@ function template(kind: Kind, color: Color, skin?: string): Template {
   const hit = cache.get(key);
   if (hit) return hit;
   let raw: THREE.Object3D, length: number, width: number, roofX: number, roofY: number, tilt = 0;
-  if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
+  if (kind === 'bike') { raw = courierBike(); length = 1.2; width = 0.45; roofX = -0.55; roofY = 1.2; }
+  else if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
   else if (kind === 'zamyad') { raw = buildZamyad(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.7; }
   else {
     const spec = CARS[skin ?? kind];
@@ -139,7 +141,7 @@ export function makeVehicle(kind: Kind, color: Color, skin?: string): VehicleObj
   arrow.add(e, a);
   arrow.position.set(t.roofX * s, t.roofY * s + 0.02, 0);
   arrow.rotation.z = t.tilt;
-  arrow.scale.setScalar(kind === 'bus' ? 1.25 : 0.88);
+  arrow.scale.setScalar(kind === 'bus' ? 1.25 : kind === 'bike' ? 0.7 : 0.88);
   body.add(arrow);
   // Model space faces +x; the game's "up" is −z.
   const turn = new THREE.Group();

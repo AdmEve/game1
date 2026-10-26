@@ -35,15 +35,15 @@ function fabricMat() {
 export function carCover(L: number, top = 0.95): THREE.Group {
   const g = new THREE.Group();
   // Tall enough to hide the model underneath (`top` = its roof height).
-  const bh = Math.max(0.8, top * 0.82);
+  const bh = Math.max(0.8, top + 0.02);
   const body = new THREE.Mesh(new RoundedBoxGeometry(1.12, bh, L + 0.1, 4, 0.3), fabricMat());
   body.position.y = bh / 2 + 0.02; body.castShadow = true;
   // The cover drapes over the cabin: a second softer hump.
   const hump = new THREE.Mesh(new RoundedBoxGeometry(0.98, 0.42, L * 0.7, 4, 0.2), fabricMat());
-  hump.position.set(0, Math.max(0.78, top - 0.12), L * 0.02); hump.castShadow = true;
+  hump.position.set(0, bh - 0.06, L * 0.02); hump.castShadow = true;
   const strap = new THREE.Mesh(new THREE.BoxGeometry(1.1, bh + 0.04, 0.07), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }));
   strap.position.set(0, bh / 2 + 0.02, -L * 0.2);
-  g.userData.top = Math.max(0.78, top - 0.12) + 0.21;
+  g.userData.top = bh - 0.06 + 0.21;
   g.add(body, hump, strap);
   return g;
 }
@@ -132,5 +132,36 @@ export function vipMarker(): THREE.Group {
   }, 0.62, 0.36);
   label.position.y = 1.55;
   g.add(ring, label);
+  return g;
+}
+
+const mstd = (color: number, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...o });
+
+/** A Honda 125 «موتور هوندا», the courier's workhorse. */
+export function motorbike(color: number): THREE.Group {
+  const g = new THREE.Group();
+  const tire = mstd(0x1a1b1d), body = mstd(color, { roughness: 0.35, metalness: 0.2 }), chrome = mstd(0xdfe3e8, { metalness: 0.9, roughness: 0.2 });
+  for (const x of [-0.42, 0.42]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 6, 14), tire); w.position.set(x, 0.2, 0); g.add(w); }
+  const tank = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.18, 0.2, 2, 0.06), body); tank.position.set(0.05, 0.52, 0); g.add(tank);
+  const seat = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.08, 0.2, 2, 0.04), mstd(0x111111)); seat.position.set(-0.28, 0.58, 0); g.add(seat);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.06), chrome); frame.position.set(0, 0.34, 0); frame.rotation.z = -0.15; g.add(frame);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), chrome); bar.rotation.x = Math.PI / 2; bar.position.set(0.36, 0.72, 0); g.add(bar);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mstd(0xfff6dc, { emissive: 0xfff0c0, emissiveIntensity: 0.3 })); lamp.position.set(0.46, 0.62, 0); g.add(lamp);
+  const box = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.26, 0.3, 2, 0.03), mstd(0xf59e0b, { roughness: 0.5 })); box.position.set(-0.5, 0.74, 0); g.add(box); // delivery box
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
+
+/** The courier: a Honda 125 with its rider (orange jacket, helmet) and a delivery box. Faces +x. */
+export function courierBike(): THREE.Group {
+  const g = motorbike(0xb91c1c);
+  const jacket = mstd(0xf97316, { roughness: 0.6 }), dark = mstd(0x1f2937);
+  const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.3, 4, 8), dark); legs.position.set(-0.12, 0.62, 0); legs.rotation.z = 1.2; g.add(legs);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.22, 6, 12), jacket); torso.position.set(-0.18, 0.92, 0); torso.rotation.z = -0.35; g.add(torso);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), mstd(0xfacc15, { roughness: 0.3, metalness: 0.2 })); helmet.position.set(-0.08, 1.2, 0); g.add(helmet);
+  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.152, 16, 8, -0.6, 1.2, 1.1, 0.6), mstd(0x111827, { roughness: 0.1, metalness: 0.5 })); visor.position.copy(helmet.position); g.add(visor);
+  for (const z of [-0.12, 0.12]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.3, 4, 8), jacket); arm.position.set(0.1, 0.92, z); arm.rotation.z = -1.1; g.add(arm); }
+  g.traverse((m) => { m.castShadow = true; });
   return g;
 }

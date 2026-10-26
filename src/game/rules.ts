@@ -6,7 +6,7 @@
 export type Dir = 'up' | 'down' | 'left' | 'right';
 export const COLORS = ['red', 'yellow', 'blue', 'green', 'purple', 'orange', 'white', 'pink'] as const;
 export type Color = (typeof COLORS)[number];
-export type Kind = 'pride' | 'peykan' | 'p405' | 'samand' | 'zamyad' | 'bus';
+export type Kind = 'pride' | 'peykan' | 'p405' | 'samand' | 'zamyad' | 'bus' | 'bike';
 
 export const KIND: Record<Kind, { len: number; cap: number }> = {
   pride: { len: 2, cap: 4 },
@@ -15,6 +15,8 @@ export const KIND: Record<Kind, { len: number; cap: number }> = {
   samand: { len: 2, cap: 4 },
   zamyad: { len: 3, cap: 6 },
   bus: { len: 3, cap: 8 },
+  // «پیک موتوری»: one cell, one passenger of any color.
+  bike: { len: 1, cap: 1 },
 };
 
 export interface VehicleDef {
@@ -43,10 +45,10 @@ export interface Level {
   /** «طرح زوج و فرد»: only even plates may leave, then odd, switching after this many exits. */
   oddEven?: number;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier';
 }
 
-export interface Bay { v: number; color: Color; cap: number; boarded: number; }
+export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
 
 export interface State {
   level: Level;
@@ -180,10 +182,12 @@ function settle(s: State, ev: Event[]) {
     // A «دربست» passenger needs an empty car of their color; others take the fullest matching car.
     let best = -1;
     s.bays.forEach((b, k) => {
-      if (!b || b.color !== color || b.boarded >= b.cap) return;
+      if (!b || b.wild || b.color !== color || b.boarded >= b.cap) return;
       if (vip && b.boarded > 0) return;
       if (best < 0 || b.boarded > s.bays[best]!.boarded) best = k;
     });
+    // Nobody's car is here: a waiting courier bike takes them (a VIP insists on a whole car).
+    if (best < 0 && !vip) best = s.bays.findIndex((b) => !!b && !!b.wild && b.boarded < b.cap);
     if (best < 0) break;
     const b = s.bays[best]!;
     b.boarded++;
@@ -210,7 +214,7 @@ export function tap(s: State, i: number, force = false): Event[] {
   s.exits++;
   s.sinceSwitch++;
   s.revealed[i] = true;
-  s.bays[free] = { v: i, color: v.color, cap: KIND[v.kind].cap, boarded: 0 };
+  s.bays[free] = { v: i, color: v.color, cap: KIND[v.kind].cap, boarded: 0, ...(v.kind === 'bike' ? { wild: true } : {}) };
   ev.push({ t: 'exit', v: i, bay: free });
   // Covers blow off the cars next to the one that just left.
   const mine = cellsOf(v);
@@ -264,6 +268,13 @@ export function validate(level: Level): string[] {
   });
   for (const o of level.obstacles ?? []) if (seen.has(o.row * level.w + o.col)) errs.push(`obstacle overlaps at ${o.col},${o.row}`);
   const vips = new Set(level.vip ?? []);
+  const bikes = level.vehicles.filter((v) => v.kind === 'bike').length;
+  if (bikes) {
+    // Couriers take anyone, so only the totals must agree (the solver checks the rest).
+    const seats = level.vehicles.reduce((a, v) => a + KIND[v.kind].cap, 0);
+    if (!vips.size && seats !== level.queue.length) errs.push(`${seats} seats vs ${level.queue.length} passengers`);
+    return errs;
+  }
   const colors = new Set<Color>([...level.vehicles.map((v) => v.color), ...level.queue]);
   for (const c of colors) {
     const caps = level.vehicles.filter((v) => v.color === c).map((v) => KIND[v.kind].cap);

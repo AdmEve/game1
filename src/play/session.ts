@@ -81,7 +81,7 @@ export class Session {
       this.cars.push(o);
       const i = this.cars.length - 1;
       if (v.covered) {
-        const roof = v.kind === 'zamyad' ? 1.3 : v.kind === 'bus' ? 1.45 : 0.95;
+        const roof = v.kind === 'zamyad' ? 1.25 : v.kind === 'bus' ? 1.42 : 0.82;
         const cover = carCover(o.length, roof);
         const arrow = makeArrow(); arrow.position.y = cover.userData.top + 0.02; cover.add(arrow);
         o.root.add(cover); this.covers.set(i, cover);
