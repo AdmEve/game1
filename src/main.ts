@@ -102,6 +102,7 @@ function fitCamera() {
     const shift = (have - want) * hi * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.sin(PITCH);
     target = target.clone().add(new THREE.Vector3(0, 0, -shift));
   }
+  camBase.copy(camera.position);
   // Keep the sun's shadow box around the playfield.
   sun.position.copy(target).add(new THREE.Vector3(-9, 22, 11));
   sun.target.position.copy(target);
@@ -110,18 +111,47 @@ function fitCamera() {
   sun.shadow.camera.updateProjectionMatrix();
 }
 
+// ───── Juice: floating texts and camera shake ─────
+let shakeAmp = 0;
+const camBase = new THREE.Vector3();
+function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
+  const p = at.clone().project(camera);
+  const el = h('div', 'float float-' + kind, kind === 'coin' ? `${emo('🧍', 'emo sm')}<b dir="ltr">${fa(text)}</b>` : `<b>${fa(text)}</b>`);
+  el.style.left = `${((p.x + 1) / 2) * window.innerWidth}px`;
+  el.style.top = `${((1 - p.y) / 2) * window.innerHeight}px`;
+  document.body.append(el);
+  setTimeout(() => el.remove(), 1300);
+}
+function applyShake(dt: number) {
+  if (shakeAmp <= 0.001) { if (shakeAmp > 0) { camera.position.copy(camBase); shakeAmp = 0; } return; }
+  camera.position.copy(camBase).add(new THREE.Vector3((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp));
+  shakeAmp *= Math.exp(-dt * 14);
+}
+
 // ───── Input ─────
 const ray = new THREE.Raycaster();
 const groundY = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.45);
-let down: { x: number; y: number } | null = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+let down: { x: number; y: number; i: number } | null = null;
+function pick(x: number, y: number): number {
+  if (!session) return -1;
+  ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
+  const p = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(groundY, p)) return -1;
+  return session.vehicleAt(p);
+}
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (!session || modalOpen) return;
+  const i = pick(e.clientX, e.clientY);
+  down = { x: e.clientX, y: e.clientY, i };
+  if (i >= 0) session.press(i, true);
+});
+renderer.domElement.addEventListener('pointercancel', () => { if (down && down.i >= 0) session?.press(down.i, false); down = null; });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!down || !session || modalOpen) return;
-  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 14) return;
-  ray.setFromCamera(new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1), camera);
-  const p = new THREE.Vector3();
-  if (!ray.ray.intersectPlane(groundY, p)) return;
-  const i = session.vehicleAt(p);
+  const d = down; down = null;
+  if (d.i >= 0) session.press(d.i, false);
+  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 14) return;
+  const i = d.i >= 0 ? d.i : pick(e.clientX, e.clientY);
   if (i < 0) return;
   if (craneMode) {
     if (session.crane(i)) { save.boosters.crane--; persist(); hud.refresh(); }
@@ -158,6 +188,8 @@ function startLevel() {
     canPlay: () => !modalOpen,
     won: () => showWin(),
     lost: () => showLose(),
+    float: floatText,
+    shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
   }, n + 1);
   scene.add(session.group);
   hud.setLevel(save.level + 1, level.tag);
@@ -191,7 +223,7 @@ function reward() {
 }
 
 function showWin() {
-  const coins = reward();
+  const coins = reward() + (session?.bonus ?? 0);
   save.stats.wins++;
   save.coins += coins;
   save.level++;
@@ -266,6 +298,7 @@ async function boot() {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     tick(dt);
     session?.idle(t / 1000);
+    applyShake(dt);
     updateHand();
     renderer.render(scene, camera);
     requestAnimationFrame(loop);

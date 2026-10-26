@@ -23,7 +23,12 @@ export interface SessionHooks {
   lost(): void;
   /** Whether input should currently be accepted (no modal open). */
   canPlay(): boolean;
+  /** Floating text at a world point. */
+  float(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad'): void;
+  shake(amp: number): void;
 }
+
+const COMBO = ['', '', 'دوتایی!', 'سه‌تایی!', 'چهارتایی!', 'محشره!', 'افسانه‌ای!'];
 
 interface Seat { sprite: THREE.Sprite; ctx: CanvasRenderingContext2D; tex: THREE.CanvasTexture; }
 
@@ -42,6 +47,10 @@ export class Session {
   private lockGate: THREE.Group;
   private pending = 0;
   private ended = false;
+  private lastDepart = -10;
+  private combo = 0;
+  /** Coins earned during the level (combos), paid out with the win reward. */
+  bonus = 0;
 
   constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1) {
     this.s = newState(level);
@@ -170,6 +179,14 @@ export class Session {
     this.play(ruleTap(this.s, i), i);
   }
 
+  /** Finger down on a vehicle: it squats a little, like it is about to launch. */
+  press(i: number, down: boolean) {
+    const o = this.cars[i];
+    if (!o || !this.s.inLot[i]) return;
+    const from = o.body.scale.y, to = down ? 0.9 : 1;
+    void tween(down ? 0.08 : 0.25, (k) => { const y = from + (to - from) * k; o.body.scale.set(1 + (1 - y) * 0.5, y, 1 + (1 - y) * 0.5); }, down ? ease.out : ease.elastic);
+  }
+
   /** The next move of a winning line from the current state (for the tutorial hand and idle hints). */
   hint(): number {
     if (this.ended || this.pending > 0) return -1;
@@ -277,6 +294,8 @@ export class Session {
     sfx.bump(); haptic('medium');
     const kindHorn = v.kind === 'bus' ? 'bus' : v.kind === 'peykan' || v.kind === 'zamyad' ? 'old' : 'new';
     sfx.horn(kindHorn, 2, 0.05);
+    this.hooks.shake(0.06);
+    this.hooks.float('بوق!', o.root.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 'bad');
     if (by.v !== undefined) { const b = this.cars[by.v]; void this.wiggle(b); }
     else { const c = this.cones.find((m) => m.position.distanceTo(this.L.cell(...by.cell)) < 0.2); if (c) void tween(0.5, (k) => { c.rotation.z = Math.sin(k * 20) * 0.25 * (1 - k); }, ease.linear); }
     o.body.rotation.z = -0.05;
@@ -351,7 +370,7 @@ export class Session {
       place();
     }, ease.inOut);
     await tween(0.45, (k) => { o.root.position.y = 2.2 * (1 - k); place(); }, ease.in);
-    sfx.bump(); puff(this.group, o.root.position, 0.8); puff(this.group, o.root.position.clone().add(new THREE.Vector3(0.4, 0, 0.3)), 0.8);
+    sfx.bump(); this.hooks.shake(0.12); puff(this.group, o.root.position, 0.8); puff(this.group, o.root.position.clone().add(new THREE.Vector3(0.4, 0, 0.3)), 0.8);
     void settleBody(o.body);
     await tween(0.3, (k) => { cable.position.y += k * 3; hook.position.y += k * 3; }, ease.in);
     this.group.remove(cable, hook);
@@ -397,6 +416,16 @@ export class Session {
     haptic('success');
     coinBurst(this.group, o.root.position.clone().setY(1.2));
     sfx.coin(0.1);
+    const now = performance.now() / 1000;
+    this.combo = now - this.lastDepart < 1.8 ? this.combo + 1 : 1;
+    this.lastDepart = now;
+    const at = o.root.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+    this.hooks.float(`+${KIND[kind].cap}`, at, 'coin');
+    if (this.combo >= 2) {
+      const extra = 5 * this.combo;
+      this.bonus += extra;
+      setTimeout(() => { this.hooks.float(`${COMBO[Math.min(this.combo, COMBO.length - 1)]} +${extra}`, at.clone().add(new THREE.Vector3(0, 0.8, 0)), 'combo'); sfx.coin(0); sfx.coin(0.12); }, 250);
+    }
     await tween(0.22, (k) => { o.body.position.y = Math.sin(k * Math.PI) * 0.12; }, ease.out);
     let release!: () => void;
     this.bayFree[bay] = new Promise((r) => { release = r; });
