@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
-import { CARS, buildCar } from '../render/cars.js';
+import { CARS, buildBenzBus, buildCar, buildJeep, buildVanet } from '../render/cars.js';
 import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
@@ -17,7 +17,20 @@ export const CLASSICS = [
     story: 'رنو ۵، ماشین اولِ خیلی‌ها. کوچیک و زرنگ؛ همیشه یه جای پارک پیدا می‌کرد، حتی جلوی بازار.' },
   { id: 'royale', name: 'شورولت رویال', year: '۱۳۵۶', cost: 8, color: 0x1e3a5f,
     story: 'شورولت رویال، ماشین آدم‌حسابی‌ها! هر کی سوارش می‌شد حس می‌کرد وزیره. عروس‌کشون محل همیشه با این بود.' },
+  { id: 'vanet', name: 'پیکان وانت', year: '۱۳۶۰', cost: 6, color: 0x7fb4d9,
+    story: 'پیکان وانت، رفیق میدون‌دارها. صبح زود جعبه‌های گوجه و پرتقال رو از میدون بار می‌زد. حالا جای زامیادها تو مرحله‌ها می‌بینیش.' },
+  { id: 'jeep', name: 'جیپ ویلیز', year: '۱۳۴۵', cost: 9, color: 0x4d6b3a,
+    story: 'جیپ ویلیز! سقف نداشت ولی از هر کوهی بالا می‌رفت. عمو جونت می‌گه یه بار باهاش تا قله‌ی توچال رفته… شاید هم نرفته!' },
+  { id: 'benz', name: 'اتوبوس بنز دودر', year: '۱۳۵۸', cost: 12, color: 0x1f7a4c,
+    story: 'اتوبوس‌های سبز بنز، خط انقلاب–آزادی. بلیت کاغذی، صندلی‌های چرمی و صدای موتوری که از دو کوچه اون‌ورتر شنیده می‌شد. حالا جای اتوبوس‌ها تو مرحله‌ها!' },
 ] as const;
+
+function buildClassic(id: string, color: number | THREE.Material) {
+  if (id === 'vanet') return buildVanet(color as number, { q: 0.8 });
+  if (id === 'jeep') return buildJeep(color, { q: 0.8 });
+  if (id === 'benz') { const b = buildBenzBus(color as number, { q: 0.6 }); b.scale.setScalar(0.62); return b; }
+  return buildCar(CARS[id], color, { q: 0.8 });
+}
 
 const rust = new THREE.MeshStandardMaterial({ color: 0x7a5236, roughness: 0.95, metalness: 0.15, flatShading: true });
 
@@ -61,8 +74,9 @@ export function showGarage(onClose: () => void) {
     const k = CLASSICS[i], owned = save.garage.restored.includes(k.id);
     (c.querySelector('.keys b') as HTMLElement).textContent = fa(save.garage.keys);
     if (car) scene.remove(car);
-    car = buildCar(CARS[k.id], owned ? k.color : rust, { q: 0.8 });
+    car = buildClassic(k.id, owned ? k.color : rust);
     scene.add(car);
+    renderer.render(scene, cam);
     info.innerHTML = `<b>${k.name}</b><small>مدل ${k.year}</small>`;
     action.innerHTML = '';
     if (owned) action.append(h('p', 'story', `${emo('📜', 'emo sm')} ${k.story}`), h('div', 'owned', `${emo('✅', 'emo sm')} بازسازی شد! حالا تو مرحله‌ها می‌بینیش.`));

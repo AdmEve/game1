@@ -74,10 +74,12 @@ export class Session {
     for (let k = 0; k < MAX_BAYS; k++) { this.bayFree.push(Promise.resolve()); this.bayIsFree.push(true); }
     level.vehicles.forEach((v, idx) => {
       // Restored classics from the garage take the place of some ordinary sedans.
-      const skins = worldOpts.skins ?? [];
+      const owned = worldOpts.skins ?? [];
       const sedan = v.kind === 'pride' || v.kind === 'peykan' || v.kind === 'p405';
+      // Each classic stands in for its own kind of vehicle.
+      const skins = sedan ? owned.filter((k) => k !== 'vanet' && k !== 'benz') : v.kind === 'zamyad' ? owned.filter((k) => k === 'vanet') : v.kind === 'bus' ? owned.filter((k) => k === 'benz') : [];
       const roll = (idx * 2654435761 + seed * 40503) >>> 0;
-      const skin = sedan && skins.length && roll % 4 === 0 ? skins[(roll >>> 4) % skins.length] : undefined;
+      const skin = skins.length && roll % (sedan ? 4 : 2) === 0 ? skins[(roll >>> 4) % skins.length] : undefined;
       const o = makeVehicle(v.kind, v.color, skin);
       const cells = cellsOf(v);
       const a = this.L.cell(...cells[0]), b = this.L.cell(...cells[cells.length - 1]);

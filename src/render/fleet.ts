@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { CARS, buildBus, buildCar, buildZamyad, curve } from './cars.js';
+import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
 import { courierBike } from './mechanics';
 
@@ -93,8 +93,11 @@ function template(kind: Kind, color: Color, skin?: string): Template {
   if (hit) return hit;
   let raw: THREE.Object3D, length: number, width: number, roofX: number, roofY: number, tilt = 0;
   if (kind === 'bike') { raw = courierBike(); length = 1.2; width = 0.45; roofX = -0.55; roofY = 1.2; }
+  else if (kind === 'bus' && skin === 'benz') { raw = buildBenzBus(PAINT[color], { q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.82; }
   else if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
+  else if (kind === 'zamyad' && skin === 'vanet') { raw = buildVanet(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.45; }
   else if (kind === 'zamyad') { raw = buildZamyad(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.7; }
+  else if (skin === 'jeep') { raw = buildJeep(PAINT[color], { q: QUALITY }); length = 3.5; width = 1.57; roofX = 1.05; roofY = 1.12; }
   else {
     const spec = CARS[skin ?? kind];
     raw = buildCar(spec, PAINT[color], { taxi: kind === 'samand', q: QUALITY });

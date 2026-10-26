@@ -9,3 +9,6 @@ export function loft(o: Record<string, unknown>): THREE.BufferGeometry;
 export function paint(color: number, metallic?: boolean): THREE.MeshPhysicalMaterial;
 export function plateTex(o?: Record<string, unknown>): THREE.Texture;
 export const M: Record<string, THREE.Material>;
+export function buildVanet(color: number, opts?: Record<string, unknown>): THREE.Group;
+export function buildBenzBus(color?: number, opts?: Record<string, unknown>): THREE.Group;
+export function buildJeep(color: number | THREE.Material, opts?: Record<string, unknown>): THREE.Group;

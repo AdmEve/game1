@@ -558,7 +558,10 @@ export const CARS = {
 
 // Zamyad pickup: cab + open bed, often loaded with watermelons.
 export function buildZamyad(color, opts = {}) {
-  const spec = {
+  return buildPickup(ZAMYAD, color, opts);
+}
+
+const ZAMYAD = {
     name: 'زامیاد', L: 2.6, W: 1.68, R: 0.34, tireW: 0.19, wheels: [0.35], rim: 'steel', planExp: 6, bodyRt: 0.08, clear: 0.3,
     top: [[-1.3, 1.02], [0.2, 1.02], [1.12, 0.96], [1.28, 0.86], [1.3, 0.62]],
     cab: { xA: 0.25, xRF: -0.12, xRR: -0.95, xC: -1.12, roof: 1.68, half: 0.78, tumble: 0.12, rt: 0.08,
@@ -568,20 +571,38 @@ export function buildZamyad(color, opts = {}) {
     headlights: [{ w: 0.24, h: 0.16, z: 0.6, y: 0.8, r: 0.02, bezel: 'chrome' }],
     grille: { w: 0.78, h: 0.2, y: 0.8, bars: 5 },
     taillights: [], plateF: 0.47, handles: [-0.5], rearSeat: false,
-  };
+};
+
+// Peykan Vanet: the Peykan pickup, a bazaar workhorse loaded with crates.
+const VANET = {
+  name: 'پیکان وانت', L: 2.6, W: 1.6, R: 0.3, tireW: 0.17, wheels: [0.35], rim: 'hubcap', planExp: 8, bodyRt: 0.07, clear: 0.26, chromeTrim: true, beige: true,
+  top: [[-1.3, 0.88], [0.25, 0.875], [1.08, 0.835], [1.26, 0.79], [1.3, 0.6]],
+  cab: { xA: 0.28, xRF: -0.38, xRR: -1.0, xC: -1.15, roof: 1.4, half: 0.75, tumble: 0.15, rt: 0.08,
+    roofPts: [[-1.15, 0.88], [-1.1, 1.38], [-1.0, 1.4], [-0.38, 1.4], [0.28, 0.875]] },
+  windows: [[0.1, -0.85]],
+  bumpers: [{ y0: 0.37, y1: 0.47, mat: 'chrome', depth: 0.3, grow: 0.045, ends: [1] }],
+  headlights: [{ w: 0.3, h: 0.16, z: 0.56, y: 0.67, r: 0.015, bezel: 'chrome' }],
+  grille: { w: 0.66, h: 0.15, y: 0.67, bars: 5 },
+  taillights: [], plateF: 0.42, handles: [-0.5], rearSeat: false,
+  bedTop: 0.7, bedWall: 0.26, cargo: 'crates',
+};
+export function buildVanet(color, opts = {}) { return buildPickup(VANET, color, opts); }
+
+function buildPickup(spec, color, opts = {}) {
   const g = new THREE.Group();
   const cab = buildCar(spec, color, opts);
   const Q = opts.q ?? 1;
   cab.position.x = 1.15;
   g.add(cab);
-  const P = paint(color);
+  const P = typeof color === 'object' && color.isMaterial ? color : paint(color);
   const bedL = 2.35, x0 = 1.15 - 1.32, xb = x0 - bedL / 2;
   const bedBot = (x) => { let y = 0.36; const d = Math.abs(x - (-1.05 - xb)); if (d < 0.4) y = Math.max(y, 0.34 + Math.sqrt(0.4 * 0.4 - d * d)); return y; };
-  const base = new THREE.Mesh(loft({ x0: -bedL / 2, x1: bedL / 2, nx: Math.round(90 * Q), nr: Math.round(48 * Q), planExp: 12, bot: (x) => bedBot(x), top: 0.78, half: 0.84, rt: 0.03, rb: 0.03, classify: (c, n) => (n.y < -0.55 ? 4 : 0) }), [P, M.glass, M.trim, P, M.under]);
+  const bt = spec.bedTop ?? 0.78, bw = spec.bedWall ?? 0.3;
+  const base = new THREE.Mesh(loft({ x0: -bedL / 2, x1: bedL / 2, nx: Math.round(90 * Q), nr: Math.round(48 * Q), planExp: 12, bot: (x) => bedBot(x), top: bt, half: 0.84, rt: 0.03, rb: 0.03, classify: (c, n) => (n.y < -0.55 ? 4 : 0) }), [P, M.glass, M.trim, P, M.under]);
   base.position.x = xb; base.castShadow = true; g.add(base);
   const floor = new THREE.Mesh(new THREE.BoxGeometry(bedL - 0.1, 0.02, 1.58), new THREE.MeshStandardMaterial({ color: 0x3b3f44, roughness: 0.8 }));
-  floor.position.set(xb, 0.79, 0); g.add(floor);
-  const wall = (w, d, x, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, 0.3, d, rseg(), 0.015), P); m.position.set(x, 0.93, z); m.castShadow = true; g.add(m); };
+  floor.position.set(xb, bt + 0.01, 0); g.add(floor);
+  const wall = (w, d, x, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, bw, d, rseg(), 0.015), P); m.position.set(x, bt + bw / 2, z); m.castShadow = true; g.add(m); };
   wall(bedL, 0.05, xb, 0.815); wall(bedL, 0.05, xb, -0.815); wall(0.05, 1.68, xb - bedL / 2 + 0.025, 0); wall(0.05, 1.68, xb + bedL / 2 - 0.025, 0);
   for (const sg of [1, -1]) {
     const w = wheel(0.34, 0.19, 'steel', opts.q ?? 1); w.position.set(-1.05, 0.34, sg * 0.69); if (sg < 0) w.rotation.y = Math.PI; g.add(w);
@@ -589,7 +610,16 @@ export function buildZamyad(color, opts = {}) {
   }
   const pl = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ map: plateTex({ a: 47, letter: 'ع', b: 812, city: 21, yellow: true }), roughness: 0.5 }));
   pl.position.set(xb - bedL / 2 - 0.004, 0.55, 0); pl.rotation.y = -Math.PI / 2; g.add(pl);
-  if (opts.cargo !== false) { // watermelons
+  if (opts.cargo !== false && spec.cargo === 'crates') {
+    // Wooden crates of tomatoes and oranges.
+    const wood = new THREE.MeshStandardMaterial({ color: 0xb98a5a, roughness: 0.85 });
+    const fruit = [new THREE.MeshStandardMaterial({ color: 0xe03a2a, roughness: 0.5 }), new THREE.MeshStandardMaterial({ color: 0xf28a1a, roughness: 0.5 })];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) {
+      const cx = xb - bedL / 2 + 0.32 + i * 0.56, cz = -0.52 + j * 0.52;
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.26, 0.46), wood); crate.position.set(cx, bt + 0.14, cz); crate.castShadow = true; g.add(crate);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.4), fruit[(i + j) % 2]); top.position.set(cx, bt + 0.29, cz); g.add(top);
+    }
+  } else if (opts.cargo !== false) { // watermelons
     const rind = tex(256, 128, (c, w, h) => { c.fillStyle = '#2f7d32'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b4d1f'; for (let i = 0; i < 12; i++) { c.beginPath(); for (let y = 0; y <= h; y += 8) c.lineTo(i * w / 12 + Math.sin(y * 0.15 + i) * 5, y); c.lineTo(i * w / 12 + 8, h); c.lineTo(i * w / 12 + 8, 0); c.fill(); } });
     const wm = new THREE.MeshPhysicalMaterial({ map: rind, roughness: 0.35, clearcoat: 0.6 });
     const geo = new THREE.SphereGeometry(0.17, 14, 10); geo.scale(1.25, 1, 1);
@@ -637,4 +667,71 @@ export function buildBus(color = 0xc4161c, opts = {}) {
   const ac = new THREE.Mesh(new RoundedBoxGeometry(1.6, 0.22, 1.3, rseg(), 0.08), new THREE.MeshStandardMaterial({ color: 0xe9ebee, roughness: 0.5 }));
   ac.position.set(0.4, 2.86, 0); ac.castShadow = true; bus.add(ac);
   return bus;
+}
+
+
+// Mercedes-Benz O302 «بنز دودر»: Tehran's city bus of the 70s–90s. Rounded nose, two-tone, round lamps.
+export function buildBenzBus(color = 0x1f7a4c, opts = {}) {
+  const L = 7.4, W = 2.0;
+  const windows = [];
+  for (let x = 2.55; x > -3.2; x -= 0.95) windows.push([x, x - 0.82]);
+  const spec = {
+    name: 'بنز دودر', L, W, R: 0.45, tireW: 0.26, wheels: [2.25, -2.3], rim: 'hubcap', planExp: 9, bodyRt: 0.2, clear: 0.34, noSeats: true, chromeTrim: true,
+    top: [[-3.7, 0.95], [-3.6, 1.2], [3.5, 1.2], [3.7, 1.0]],
+    cab: { xA: 3.6, xRF: 3.2, xRR: -3.4, xC: -3.66, roof: 2.6, half: 0.97, tumble: 0.06, rt: 0.35,
+      roofPts: [[-3.66, 1.2], [-3.55, 2.45], [-3.4, 2.6], [3.1, 2.6], [3.45, 2.3], [3.6, 1.2]] },
+    windows: [[3.35, 2.75], ...windows],
+    bumpers: [{ y0: 0.32, y1: 0.5, mat: 'chrome', depth: 0.3, grow: 0.04 }],
+    headlights: [{ w: 0.2, h: 0.2, z: 0.78, y: 0.82, r: 0.1, bezel: 'chrome' }],
+    grille: { w: 0.7, h: 0.22, y: 0.78, bars: 6 },
+    taillights: [{ w: 0.16, h: 0.3, z: 0.86, y: 0.95, r: 0.05 }],
+    plateF: 0.42, plateR: 0.45, mirrorX: 3.4, mirrorPaint: true,
+  };
+  const bus = buildCar(spec, color, { roofColor: 0xf1ead8, ...opts, plate: plateTex({ a: 11, letter: 'ع', b: 302, city: 11, yellow: true }) });
+  bus.traverse((m) => { if (m.isMesh && Array.isArray(m.material) && m.material[1] === M.glass) { m.material = m.material.slice(); m.material[1] = M.glassDark; } });
+  // A cream band under the windows, like the old Tehran buses.
+  const band = loft({ x0: -L / 2 + 0.05, x1: L / 2 - 0.05, nx: 40, nr: 24, planExp: 9, bot: 1.02, top: 1.16, half: W / 2 + 0.012, rt: 0.01, rb: 0.01 });
+  bus.add(new THREE.Mesh(band, paint(0xf1ead8)));
+  const sign = tex(512, 96, (g, w, h) => { g.fillStyle = '#111'; g.fillRect(0, 0, w, h); g.fillStyle = '#f5f5f5'; g.font = '900 60px V'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(opts.dest ?? 'میدان انقلاب', w / 2, h / 2 + 2); });
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.24), new THREE.MeshStandardMaterial({ map: sign }));
+  board.position.set(3.62, 2.42, 0); board.rotation.y = Math.PI / 2; bus.add(board);
+  return bus;
+}
+
+// Jeep Willys «جیپ ویلیز»: open top, flat fenders, seven-slot grille, spare wheel on the back.
+export function buildJeep(color, opts = {}) {
+  const Q = opts.q ?? 1;
+  DETAIL = Q;
+  const g = new THREE.Group();
+  const P = typeof color === 'object' && color.isMaterial ? color : paint(color);
+  const L = 3.36, W = 1.57, hl = L / 2;
+  const box = (w, h, d, x, y, z, mat = P, r = 0.04) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, rseg(), r), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  // Tub and hood.
+  box(L - 0.25, 0.42, W - 0.2, -0.1, 0.72, 0, P, 0.06);
+  box(1.05, 0.2, W - 0.42, 1.08, 1.02, 0, P, 0.08);
+  // Flat fenders over the wheels.
+  for (const sg of [1, -1]) {
+    box(0.9, 0.06, 0.32, 1.05, 0.9, sg * (W / 2 - 0.12), P, 0.02);
+    box(0.8, 0.06, 0.3, -1.05, 0.9, sg * (W / 2 - 0.12), P, 0.02);
+  }
+  // Seven-slot grille and round lamps.
+  const gr = box(0.06, 0.42, W - 0.5, hl - 0.06, 0.88, 0, P, 0.02);
+  void gr;
+  for (let k = -3; k <= 3; k++) box(0.02, 0.3, 0.05, hl - 0.02, 0.86, k * 0.11, M.trim, 0.005);
+  for (const sg of [1, -1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 20).rotateZ(Math.PI / 2), M.lens); l.position.set(hl - 0.01, 0.95, sg * 0.5); g.add(l); }
+  // Windscreen frame (open top), seats, steering wheel, roll bar, spare wheel.
+  // Windscreen: a thin frame around the glass.
+  box(0.05, 0.05, W - 0.32, 0.5, 1.56, 0, P, 0.02); box(0.05, 0.05, W - 0.32, 0.5, 1.1, 0, P, 0.02);
+  for (const sg of [1, -1]) box(0.05, 0.5, 0.05, 0.5, 1.33, sg * (W / 2 - 0.18), P, 0.02);
+  const glassPane = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.42, W - 0.4), M.glass); glassPane.position.set(0.5, 1.33, 0); g.add(glassPane);
+  for (const z of [0.35, -0.35]) box(0.42, 0.36, 0.42, -0.1, 1.08, z, M.seatBeige, 0.08);
+  box(0.42, 0.36, W - 0.4, -0.95, 1.08, 0, M.seatBeige, 0.08);
+  const sw = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.022, 6, 16), M.plastic); sw.position.set(0.28, 1.2, 0.35); sw.rotation.y = Math.PI / 2; sw.rotation.x = 0.6; g.add(sw);
+  for (const sg of [1, -1]) box(0.05, 0.62, 0.05, -0.55, 1.25, sg * (W / 2 - 0.12), M.steel, 0.02);
+  box(0.05, 0.05, W - 0.2, -0.55, 1.56, 0, M.steel, 0.02);
+  const spare = wheel(0.34, 0.2, 'steel', Q); spare.rotation.y = Math.PI / 2; spare.position.set(-hl - 0.08, 0.9, 0); g.add(spare);
+  for (const [x, sg] of [[1.05, 1], [1.05, -1], [-1.05, 1], [-1.05, -1]]) { const w = wheel(0.35, 0.22, 'steel', Q); w.position.set(x, 0.35, sg * (W / 2 - 0.16)); if (sg < 0) w.rotation.y = Math.PI; g.add(w); }
+  const pl = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ map: plateTex({ a: 39, letter: 'ج', b: 135, city: 10 }), roughness: 0.5 }));
+  pl.position.set(hl + 0.01, 0.55, 0); pl.rotation.y = Math.PI / 2; pl.scale.setScalar(0.8); g.add(pl);
+  return g;
 }
