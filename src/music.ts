@@ -6,10 +6,22 @@
 import { audioOut, pluckBuffer } from './audio';
 import { save } from './save';
 
-const BPM = 92; // dotted quarters
-const E = 60 / BPM / 3; // one eighth note
-const TONIC = 293.66; // D4
-const SCALE = [0, 2, 4, 5, 7, 9, 11];
+// Per-chapter mood: tempo (dotted quarters per minute), tonic and mode. Persian modes use quarter tones
+// («کرن»), so scale steps may be fractional semitones.
+const MOODS = {
+  day: { bpm: 92, tonic: 293.66, scale: [0, 2, 4, 5, 7, 9, 11], perc: 1 }, // Mahur on D: bright
+  sunset: { bpm: 80, tonic: 329.63, scale: [0, 1.5, 3, 5, 7, 8, 10], perc: 0.8 }, // Shur on E: wistful
+  night: { bpm: 84, tonic: 261.63, scale: [0, 2, 3, 5, 7, 8, 11], perc: 0.6 }, // Bayat-e Esfahan on C: mysterious
+};
+let E = 60 / MOODS.day.bpm / 3; // one eighth note
+let TONIC = MOODS.day.tonic;
+let SCALE = MOODS.day.scale;
+let PERC = 1;
+
+export function setMood(m: keyof typeof MOODS) {
+  const x = MOODS[m];
+  E = 60 / x.bpm / 3; TONIC = x.tonic; SCALE = x.scale; PERC = x.perc;
+}
 const freq = (deg: number, oct = 0) => {
   const o = Math.floor(deg / 7), d = ((deg % 7) + 7) % 7;
   return TONIC * 2 ** ((SCALE[d] + 12 * (o + oct)) / 12);
@@ -127,8 +139,8 @@ function schedule(i: number, t: number) {
   if (pos === 3) bass(freq(root + 4, -2), t, 2);
   if (pos === 5) bass(freq(root + (bar % 2 ? 5 : 2), -2), t, 1);
   // Tombak in 6/8: tom on 1 and 4, bak on 3 and 5, a fill every fourth bar.
-  if (pos === 0 || pos === 3) tom(t, pos === 0 ? 0.5 : 0.36);
-  if (pos === 2 || pos === 4) bak(t);
+  if (pos === 0 || pos === 3) tom(t, (pos === 0 ? 0.5 : 0.36) * PERC);
+  if (pos === 2 || pos === 4) bak(t, 0.18 * PERC);
   if (bar % 4 === 3 && pos >= 4) { bak(t + E / 2, 0.12); bak(t + E / 4, 0.08); }
   // Tension layer: sixteenth shakers and an extra bak roll.
   if (tension > 0.02) {

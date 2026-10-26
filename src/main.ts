@@ -22,7 +22,7 @@ import { radioCard } from './ui/radio';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { click, coin } from './audio';
-import { setTension, startMusic, stopMusic } from './music';
+import { setMood, setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
 const levels = LEVELS as Level[];
@@ -223,6 +223,7 @@ function startLevel() {
   const level = levels[n];
   const ch = chapterOf(n);
   applyLight(ch.light);
+  setMood(ch.light);
   craneMode = false;
   modalOpen = false;
   session = new Session(level, {
