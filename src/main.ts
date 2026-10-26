@@ -6,8 +6,8 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { App as CapApp } from '@capacitor/app';
 import LEVELS from './game/levels.json';
-import type { Level } from './game/rules';
-import { ease, tick, tween } from './render/anim';
+import type { Color, Kind, Level } from './game/rules';
+import { busy, ease, tick, tween } from './render/anim';
 import { outdoorEnv } from './render/env.js';
 import { warmFleet } from './render/fleet';
 import { sky } from './render/world';
@@ -506,6 +506,16 @@ async function boot() {
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);
+  // Build every vehicle template in the background, one per idle frame, so later levels load instantly.
+  const pending: [Kind, Color][] = [];
+  for (const k of ['pride', 'peykan', 'p405', 'samand', 'zamyad', 'bus'] as Kind[]) for (const c of ['red', 'yellow', 'blue', 'green', 'purple', 'orange'] as Color[]) pending.push([k, c]);
+  pending.push(['bike', 'white']);
+  const warm = () => {
+    if (!pending.length) return;
+    if (!busy() && document.visibilityState === 'visible') warmFleet([pending.shift()!]);
+    setTimeout(warm, 120);
+  };
+  setTimeout(warm, 2500);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });

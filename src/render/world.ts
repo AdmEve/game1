@@ -58,20 +58,28 @@ function speckle(g: CanvasRenderingContext2D, w: number, h: number, base: string
   for (let i = 0; i < n; i++) { g.globalAlpha = Math.random() * 0.35; g.fillStyle = spots[i % spots.length]; g.fillRect(Math.random() * w, Math.random() * h, size, size); }
   g.globalAlpha = 1;
 }
-const asphaltTex = () => canvasTex(512, 512, (g) => {
+// Noise textures are the same every level: paint each once, hand out clones (they share the image).
+const texCache = new Map<string, THREE.Texture>();
+function shared(key: string, make: () => THREE.Texture): THREE.Texture {
+  if (!texCache.has(key)) texCache.set(key, make());
+  const t = texCache.get(key)!.clone();
+  t.needsUpdate = true;
+  return t;
+}
+const asphaltTex = () => shared('asphalt', () => canvasTex(512, 512, (g) => {
   speckle(g, 512, 512, '#474d57', ['#3a3f47', '#5a616c', '#636a75', '#2f343b'], 14000);
   // Patches and cracks: Tehran asphalt is never new.
   for (let i = 0; i < 7; i++) { g.globalAlpha = 0.12; g.fillStyle = Math.random() < 0.5 ? '#2a2e34' : '#5d636d'; g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 512, 30 + Math.random() * 60, 20 + Math.random() * 40, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
   g.globalAlpha = 0.35; g.strokeStyle = '#25292e'; g.lineWidth = 1.2;
   for (let i = 0; i < 6; i++) { g.beginPath(); let x = Math.random() * 512, y = Math.random() * 512; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 40; y += (Math.random() - 0.5) * 40; g.lineTo(x, y); } g.stroke(); }
   g.globalAlpha = 1;
-}, 1);
-const pavingTex = () => canvasTex(256, 256, (g) => {
+}, 1));
+const pavingTex = () => shared('paving', () => canvasTex(256, 256, (g) => {
   speckle(g, 256, 256, '#d9cdb5', ['#c9bb9e', '#e6dcc8', '#b8a98b'], 3000);
   g.strokeStyle = 'rgba(120,100,70,.35)'; g.lineWidth = 2;
   for (let y = 0; y <= 256; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); for (let x = (y / 32) % 2 ? 0 : 32; x <= 256; x += 64) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 32); g.stroke(); } }
-}, 1);
-const grassTex = () => canvasTex(256, 256, (g) => speckle(g, 256, 256, '#6aa84f', ['#5a9a42', '#7dbb5c', '#4e8a3a', '#8cc66a'], 9000, 2), 1);
+}, 1));
+const grassTex = () => shared('grass', () => canvasTex(256, 256, (g) => speckle(g, 256, 256, '#6aa84f', ['#5a9a42', '#7dbb5c', '#4e8a3a', '#8cc66a'], 9000, 2), 1));
 
 export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']]): THREE.Texture {
   return canvasTex(4, 512, (g) => {
