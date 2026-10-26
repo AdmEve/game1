@@ -14,6 +14,8 @@ export interface Save {
   rated: boolean;
   /** «گاراژ من»: car keys and the classics restored so far. */
   garage: { keys: number; restored: string[] };
+  /** Testers: every level selectable. */
+  devUnlock?: boolean;
 }
 
 const KEY = 'rahbandoon.save.v1';

@@ -49,11 +49,16 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Meta: «دکه» shop (boosters for coins, coin packs and starter pack via Poolakey), daily gift calendar,
   chest every 5 levels, rewarded ads (double coins, continue), capped interstitials, Bazaar rating prompt
 - Adaptive quality tiers (frame-rate probe), tilt-shift + vignette + per-chapter colour grading
-- Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client)
+- Mechanic: «پیک موتوری» courier bikes (wild card, from level 41); colour-blind mode; garage with 4 classics
+- Level select (settings → «انتخاب مرحله»); tap the version label 7 times to unlock every level (testers)
+- Fair lose screen (names and highlights the car the queue needed), tips on levels 1–3, radio bulletins,
+  per-chapter music moods, street life (pigeons, idling cars, kerb parking)
+- Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
+- Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
+  `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
 
 ### Next
-- My Garage: collect and restore classic Iranian cars (GDD §5)
-- Remaining ★ mechanics: traffic officer, motorcycle courier
+- Traffic officer mechanic; chapter 4+ (Grand Bazaar, Tochal snow)
 - «رادیو راه‌بندون» bulletins, district league (needs a backend), chapter 4+ (Grand Bazaar, Tochal)
 - Real-device performance check (owner), real recorded horns and voice lines
 - Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`

@@ -219,3 +219,14 @@ body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70%
 .radio .live { margin-right: auto; background: #ef4444; font-size: 11px; font-weight: 900; padding: 0 8px; border-radius: 8px; animation: pulse 1.4s infinite; }
 .radio .rtext { font-size: 14px; font-weight: 600; line-height: 1.8; margin-top: 4px; opacity: .95; }
 @keyframes slidein { from { transform: translateY(-20px); opacity: 0; } }
+
+/* Level select */
+.card.levels-card { max-height: 86vh; overflow-y: auto; }
+.levels h3 { text-align: right; margin: 12px 4px 6px; color: #334155; font-size: 16px; }
+.lgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.lv { aspect-ratio: 1; border-radius: 12px; font-weight: 900; font-size: 15px; background: #e2e8f0; color: #475569; box-shadow: 0 3px 0 #94a3b8; }
+.lv.done { background: #bbf7d0; color: #14532d; box-shadow: 0 3px 0 #22c55e; }
+.lv.now { background: #fde68a; color: #78350f; box-shadow: 0 3px 0 #f59e0b; }
+.lv.hard:not(.locked) { outline: 2px solid #f59e0b; } .lv.boss:not(.locked) { outline: 2px solid #ef4444; }
+.lv.locked { opacity: .55; }
+.ver { margin-top: 10px; font-size: 12px; color: #94a3b8; }

@@ -96,7 +96,7 @@ let hintFor = -1, hintAt = 0;
 function updateHand() {
   if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); hintFor = -1; return; }
   const idle = performance.now() - session.lastInput;
-  const want = (save.level < 3 && session.taps === 0) || (save.level < 3 && idle > 3500) || idle > 10000;
+  const want = (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || idle > 10000;
   if (!want) { hand.classList.remove('show'); hintFor = -1; return; }
   if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); hintAt = performance.now(); }
   if (hintFor < 0) { hand.classList.remove('show'); return; }
@@ -217,9 +217,13 @@ function disposeSession() {
   session = null;
 }
 
-function startLevel() {
+/** The level being played (a replay when below save.level). */
+let current = 0;
+
+function startLevel(pick?: number) {
   disposeSession();
-  const n = Math.min(save.level, levels.length - 1);
+  current = Math.min(pick ?? save.level, levels.length - 1);
+  const n = current;
   const level = levels[n];
   const ch = chapterOf(n);
   applyLight(ch.light);
@@ -238,7 +242,7 @@ function startLevel() {
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
   }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
-  hud.setLevel(save.level + 1, level.tag);
+  hud.setLevel(n + 1, level.tag);
   hud.refresh();
   hud.active(null);
   hud.show(true);
@@ -275,20 +279,21 @@ function useBooster(id: BoosterId) {
   save.boosters[id]--; persist(); hud.refresh(); hud.bump(id); haptic('medium');
 }
 
-function reward() {
-  const n = save.level;
+function reward(n: number) {
   return 20 + Math.min(40, n * 2) + (levels[n]?.tag ? 40 : 0);
 }
 
 function showWin() {
-  const n = save.level;
-  const coins = reward() + (session?.bonus ?? 0);
+  const n = current;
+  const replay = n < save.level;
+  // Replays pay a little; keys and progress only come from new levels.
+  const coins = replay ? 10 : reward(n) + (session?.bonus ?? 0);
   const lvl = levels[n];
-  const keys = (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
+  const keys = replay ? 0 : (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
   if (keys) addKeys(keys);
   save.stats.wins++;
   save.coins += coins;
-  save.level++;
+  if (!replay) save.level = Math.min(save.level + 1, levels.length);
   persist();
   modalOpen = true;
   hud.show(false);
@@ -299,7 +304,7 @@ function showWin() {
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;
-    if ((n + 1) % 5 === 0) await showChest(() => hud.refresh());
+    if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
     if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
     await maybeInterstitial(n);
     modalOpen = false; startLevel();
@@ -316,7 +321,7 @@ function showWin() {
     });
     c.append(dbl);
   }
-  c.append(button(`مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
+  c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
 }
 
@@ -380,8 +385,37 @@ function showSettings() {
   row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics'); row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
   let needsRestart = false;
   const close = modal(c, 'pop');
-  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(); }));
-  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) startLevel(); }));
+  c.append(button(`${emo('🗺️', 'emo sm')} انتخاب مرحله`, 'ghost', () => { close(); showLevels(); }));
+  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(current); }));
+  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) startLevel(current); }));
+  // Version label; seven taps unlock every level (for testers).
+  const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)}`);
+  let taps = 0;
+  ver.onclick = () => { if (++taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); } };
+  c.append(ver);
+}
+
+/** Level select: every chapter's levels; unlocked ones can be replayed. */
+function showLevels() {
+  modalOpen = true;
+  const c = h('div', 'levels');
+  c.innerHTML = `<h2>${emo('🗺️')} مرحله‌ها</h2>`;
+  const unlocked = save.devUnlock ? levels.length : save.level;
+  let close = () => {};
+  for (const ch of CHAPTERS) {
+    c.append(h('h3', '', `فصل ${fa(ch.n)}: ${ch.name}`));
+    const grid = h('div', 'lgrid');
+    for (let i = ch.from; i < ch.to && i < levels.length; i++) {
+      const open = i <= unlocked;
+      const tag = levels[i].tag;
+      const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
+      if (open) b.onclick = () => { close(); modalOpen = false; startLevel(i); hud.show(true); };
+      grid.append(b);
+    }
+    c.append(grid);
+  }
+  close = modal(c, 'pop levels-card');
+  c.append(button('بستن', 'ghost', () => { close(); modalOpen = false; }));
 }
 
 function showHome() {
