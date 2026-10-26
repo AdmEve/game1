@@ -14,7 +14,7 @@ import { closeTop, h, layers } from './ui/dom';
 import { showDeath } from './ui/death';
 import { hooks, runQueue } from './ui/flow';
 import { currentLife, refresh, showGame } from './ui/game';
-import { achievements, app, gameMenu, meSheet, shop, showHome } from './ui/menu';
+import { achievements, app, applyTextSize, gameMenu, meSheet, shop, showHome } from './ui/menu';
 import { openTab } from './ui/tabs';
 
 let screen: 'home' | 'game' = 'home';
@@ -31,6 +31,7 @@ function home() {
   showHome();
 }
 
+applyTextSize();
 app.play = play;
 app.home = home;
 hooks.refresh = () => refresh(false);

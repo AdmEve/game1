@@ -17,7 +17,12 @@
   --r: 18px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
+  /* Page zoom; viewport-height sizes divide by it so they still fit. */
+  --z: 1;
 }
+
+/* «متن درشت» setting. */
+html.big-text { --z: 1.15; zoom: 1.15; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overscroll-behavior: none; }
@@ -113,8 +118,8 @@ input, select { font: inherit; }
 .backdrop.in { background: rgba(15, 25, 25, .45); }
 .backdrop.out { background: rgba(15, 25, 25, 0); }
 .backdrop.center { align-items: center; padding: 18px; }
-.sheet { width: 100%; max-width: 560px; max-height: 82vh; background: var(--bg); border-radius: 24px 24px 0 0; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .24s cubic-bezier(.2,.9,.3,1); padding-bottom: var(--safe-b); }
-.sheet-full { height: 90vh; max-height: 90vh; }
+.sheet { width: 100%; max-width: 560px; max-height: calc(82vh / var(--z)); background: var(--bg); border-radius: 24px 24px 0 0; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .24s cubic-bezier(.2,.9,.3,1); padding-bottom: var(--safe-b); }
+.sheet-full { height: calc(90vh / var(--z)); max-height: calc(90vh / var(--z)); }
 .backdrop.in .sheet { transform: translateY(0); }
 .backdrop.out .sheet { transform: translateY(100%); }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; border-bottom: 1px solid var(--line); }
@@ -123,7 +128,7 @@ input, select { font: inherit; }
 .sheet-body { overflow-y: auto; padding: 10px 12px 18px; -webkit-overflow-scrolling: touch; }
 
 .card { background: var(--card); border-radius: 24px; box-shadow: var(--shadow); }
-.modal { width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto; padding: 18px 16px 16px; transform: scale(.9) translateY(10px); opacity: 0; transition: transform .22s cubic-bezier(.2,.9,.3,1.2), opacity .18s; }
+.modal { width: 100%; max-width: 420px; max-height: calc(88vh / var(--z)); overflow-y: auto; padding: 18px 16px 16px; transform: scale(.9) translateY(10px); opacity: 0; transition: transform .22s cubic-bezier(.2,.9,.3,1.2), opacity .18s; }
 .backdrop.in .modal { transform: none; opacity: 1; }
 .backdrop.out .modal { transform: scale(.95); opacity: 0; }
 

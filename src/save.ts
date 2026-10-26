@@ -38,7 +38,7 @@ export interface Meta {
   life: Life | null;
   /** Snapshot of the life at the start of the current year (for «undo year»). */
   prev: string | null;
-  settings: { sound: boolean; music: boolean; haptics: boolean };
+  settings: { sound: boolean; music: boolean; haptics: boolean; bigText?: boolean };
   stats: { lives: number; years: number };
   daily: { last: string; streak: number };
   adGems: { day: string; count: number };

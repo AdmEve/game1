@@ -263,15 +263,20 @@ export function shop() {
 
 // ───────── settings ─────────
 
+export function applyTextSize() {
+  document.documentElement.classList.toggle('big-text', !!meta.settings.bigText);
+}
+
 function settings() {
   const s = sheet('⚙️ تنظیمات');
   const render = () => {
     clear(s.body);
-    const toggle = (label: string, key: 'sound' | 'haptics') =>
-      btn(`${label}: ${meta.settings[key] ? 'روشن' : 'خاموش'}`, () => { meta.settings[key] = !meta.settings[key]; persist(); render(); }, 'btn ghost wide');
+    const toggle = (label: string, key: 'sound' | 'haptics' | 'bigText') =>
+      btn(`${label}: ${meta.settings[key] ? 'روشن' : 'خاموش'}`, () => { meta.settings[key] = !meta.settings[key]; persist(); applyTextSize(); render(); }, 'btn ghost wide');
     s.body.append(
       toggle('🔊 صدا', 'sound'),
       toggle('📳 لرزش', 'haptics'),
+      toggle('🔠 متن درشت', 'bigText'),
       btn('⭐ امتیاز به بازی در کافه‌بازار', () => rateApp(), 'btn ghost wide'),
       rt('div', 'act-d center', 'زندگی ایرونی، ساخته‌شده با ❤️ برای ایرانی‌ها\nایموجی‌ها: Twemoji (CC-BY 4.0)، فونت: وزیرمتن'),
     );
