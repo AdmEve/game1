@@ -7,7 +7,7 @@ import * as sfx from '../audio';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, hazard, plateBadge, setBrokenBadge, setPlateBadge, vipMarker } from '../render/mechanics';
+import { blowOff, brokenBadge, carCover, colorSymbol, hazard, plateBadge, setBrokenBadge, setPlateBadge, vipMarker } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
@@ -60,8 +60,12 @@ export class Session {
   private broken = new Map<number, { badge: THREE.Sprite; hazard: THREE.Object3D; nextPuff: number }>();
   private plates = new Map<number, THREE.Sprite>();
 
+  private colorblind: boolean;
+  private symbols = new Map<number, THREE.Sprite>();
+
   constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1, worldOpts: WorldOpts = {}) {
     this.s = newState(level);
+    this.colorblind = !!worldOpts.colorblind;
     const world = buildWorld(level.w, level.h, MAX_BAYS, seed, worldOpts);
     this.L = world.L;
     this.group.add(world.group);
@@ -92,6 +96,7 @@ export class Session {
         o.root.add(hz);
         this.broken.set(i, { badge, hazard: hz, nextPuff: 0 });
       }
+      if (this.colorblind && v.kind !== 'bike' && !v.covered) this.addSymbol(i);
       if (level.oddEven && v.plate !== undefined) {
         const pb = plateBadge(v.plate); pb.scale.set(0.74, 0.43, 1); pb.position.set(0, 1.25, o.length * 0.32); o.root.add(pb); this.plates.set(i, pb);
       }
@@ -103,6 +108,13 @@ export class Session {
     this.lockGate = this.gate(this.s.bays.length);
     hooks.queueLeft(this.s.queue.length);
     this.refreshPlates();
+  }
+
+  private addSymbol(i: number) {
+    const o = this.cars[i];
+    const sym = colorSymbol(this.level.vehicles[i].color);
+    sym.position.set(0, 1.05, -o.length * 0.3);
+    o.root.add(sym); this.symbols.set(i, sym);
   }
 
   private refreshPlates() {
@@ -135,6 +147,7 @@ export class Session {
     if (idx >= this.s.queue.length) return;
     const p = person(this.s.queue[idx], idx);
     if (this.s.vip[idx]) { const m = vipMarker(); m.scale.setScalar(1 / 1.12); p.root.add(m); }
+    if (this.colorblind) { const sym = colorSymbol(this.s.queue[idx], 0.3); sym.position.y = this.s.vip[idx] ? 1.75 : 1.32; p.root.add(sym); }
     p.root.position.copy(this.slot(k));
     p.root.rotation.y = Math.PI / 2 + (((idx * 37) % 10) - 5) * 0.04;
     this.group.add(p.root);
@@ -341,6 +354,7 @@ export class Session {
     const cover = this.covers.get(i);
     if (!cover) return;
     this.covers.delete(i);
+    if (this.colorblind && this.s.inLot[i]) this.addSymbol(i);
     // Re-parent into the world so it can fly free of the car.
     const at = new THREE.Vector3(); cover.getWorldPosition(at);
     const q = new THREE.Quaternion(); cover.getWorldQuaternion(q);
@@ -411,6 +425,7 @@ export class Session {
   private async animExit(i: number, bay: number) {
     const o = this.cars[i], v = this.level.vehicles[i];
     this.uncover(i);
+    const sy = this.symbols.get(i); if (sy) { o.root.remove(sy); this.symbols.delete(i); }
     const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
     const pts = this.route(i, bay);
     const heavy = v.kind === 'bus' || v.kind === 'zamyad';
@@ -438,6 +453,7 @@ export class Session {
   private async animCrane(i: number, bay: number) {
     const o = this.cars[i];
     this.uncover(i);
+    const sy0 = this.symbols.get(i); if (sy0) { o.root.remove(sy0); this.symbols.delete(i); }
     const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
     const br = this.broken.get(i); if (br) { o.root.remove(br.badge, br.hazard); this.broken.delete(i); }
     sfx.craneSound(); haptic('medium');

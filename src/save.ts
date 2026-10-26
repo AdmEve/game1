@@ -3,7 +3,7 @@ export interface Save {
   level: number;
   coins: number;
   boosters: { crane: number; whistle: number; bay: number };
-  settings: { sound: boolean; music: boolean; haptics: boolean };
+  settings: { sound: boolean; music: boolean; haptics: boolean; colorblind: boolean };
   stats: { wins: number; losses: number };
   owned: { starter: boolean; no_ads: boolean };
   daily: { day: string; streak: number };
@@ -21,7 +21,7 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true },
+  settings: { sound: true, music: true, haptics: true, colorblind: false },
   stats: { wins: 0, losses: 0 },
   owned: { starter: false, no_ads: false },
   daily: { day: '', streak: 0 },

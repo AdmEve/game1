@@ -165,3 +165,32 @@ export function courierBike(): THREE.Group {
   g.traverse((m) => { m.castShadow = true; });
   return g;
 }
+
+// ───── Colour-blind symbols: one distinct shape per colour ─────
+const SHAPES: Record<string, (g: CanvasRenderingContext2D) => void> = {
+  red: (g) => { g.beginPath(); g.moveTo(64, 26); g.lineTo(100, 96); g.lineTo(28, 96); g.closePath(); g.fill(); },
+  yellow: (g) => { g.beginPath(); g.arc(64, 64, 34, 0, Math.PI * 2); g.fill(); },
+  blue: (g) => { g.fillRect(32, 32, 64, 64); },
+  green: (g) => { g.beginPath(); g.moveTo(64, 24); g.lineTo(104, 64); g.lineTo(64, 104); g.lineTo(24, 64); g.closePath(); g.fill(); },
+  purple: (g) => { g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 16 : 40, a = -Math.PI / 2 + (i * Math.PI) / 5; g.lineTo(64 + Math.cos(a) * r, 66 + Math.sin(a) * r); } g.closePath(); g.fill(); },
+  orange: (g) => { g.fillRect(52, 26, 24, 76); g.fillRect(26, 52, 76, 24); },
+  white: (g) => { g.lineWidth = 14; g.beginPath(); g.arc(64, 64, 30, 0, Math.PI * 2); g.stroke(); },
+  pink: (g) => { g.beginPath(); g.moveTo(64, 100); g.bezierCurveTo(10, 64, 30, 20, 64, 46); g.bezierCurveTo(98, 20, 118, 64, 64, 100); g.fill(); },
+};
+const symbolCache = new Map<string, THREE.SpriteMaterial>();
+/** A small badge with the colour's shape, for colour-blind players. */
+export function colorSymbol(color: string, size = 0.42): THREE.Sprite {
+  if (!symbolCache.has(color)) {
+    const tex = canvasTex(128, 128, (g) => {
+      g.fillStyle = 'rgba(15,23,42,.85)'; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#fff'; g.lineWidth = 6; g.stroke();
+      g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+      (SHAPES[color] ?? SHAPES.yellow)(g);
+    });
+    symbolCache.set(color, new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  }
+  const s = new THREE.Sprite(symbolCache.get(color)!);
+  s.renderOrder = 11;
+  s.scale.setScalar(size);
+  return s;
+}

@@ -235,7 +235,7 @@ function startLevel() {
     parity: (p, left) => hud.setParity(p, left),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
   hud.setLevel(save.level + 1, level.tag);
   hud.refresh();
@@ -365,13 +365,15 @@ function showSettings() {
     t.onchange = () => {
       save.settings[key] = t.checked; persist();
       if (key === 'music') { if (t.checked) startMusic(); else stopMusic(); }
+      if (key === 'colorblind') needsRestart = true;
     };
     r.append(t); c.append(r);
   };
-  row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics');
+  row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics'); row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
+  let needsRestart = false;
   const close = modal(c, 'pop');
   c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(); }));
-  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; }));
+  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) startLevel(); }));
 }
 
 function showHome() {
