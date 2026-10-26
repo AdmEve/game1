@@ -7,7 +7,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { App as CapApp } from '@capacitor/app';
 import LEVELS from './game/levels.json';
 import type { Level } from './game/rules';
-import { tick } from './render/anim';
+import { ease, tick, tween } from './render/anim';
 import { outdoorEnv } from './render/env.js';
 import { warmFleet } from './render/fleet';
 import { sky } from './render/world';
@@ -139,6 +139,7 @@ function fitCamera() {
     target = target.clone().add(new THREE.Vector3(0, 0, -shift));
   }
   camBase.copy(camera.position);
+  camTarget.copy(target);
   // Keep the sun's shadow box around the playfield.
   sun.position.copy(target).add(sunOffset);
   sun.target.position.copy(target);
@@ -149,7 +150,22 @@ function fitCamera() {
 
 // ───── Juice: floating texts and camera shake ─────
 let shakeAmp = 0;
-const camBase = new THREE.Vector3();
+const camBase = new THREE.Vector3(), camTarget = new THREE.Vector3();
+
+/** Level opening: the camera swoops down from the skyline onto the lot. */
+function introSwoop() {
+  if (debug.has('shot') || !session) return;
+  const endPos = camBase.clone(), endLook = camTarget.clone();
+  const startLook = new THREE.Vector3(0, 3, session.L.walkZ - 14);
+  const startPos = endPos.clone().add(new THREE.Vector3(0, 6, 10));
+  const look = new THREE.Vector3();
+  void tween(1.5, (k) => {
+    camera.position.lerpVectors(startPos, endPos, k);
+    look.lerpVectors(startLook, endLook, k);
+    camera.lookAt(look);
+    camBase.copy(camera.position);
+  }, ease.inOut).then(() => { camera.position.copy(endPos); camera.lookAt(endLook); camBase.copy(endPos); });
+}
 function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
   const p = at.clone().project(camera);
   const el = h('div', 'float float-' + kind, kind === 'coin' ? `${emo('🧍', 'emo sm')}<b dir="ltr">${fa(text)}</b>` : `<b>${fa(text)}</b>`);
@@ -224,7 +240,7 @@ let current = 0;
 /** Playing today's «ساعت شلوغی» instead of a Journey level. */
 let rush: Level | null = null;
 
-function startLevel(pick?: number, custom?: Level) {
+function startLevel(pick?: number, custom?: Level, swoop = true) {
   disposeSession();
   rush = custom ?? null;
   current = Math.min(pick ?? save.level, levels.length - 1);
@@ -237,7 +253,7 @@ function startLevel(pick?: number, custom?: Level) {
   craneMode = false;
   modalOpen = false;
   session = new Session(level, {
-    queueLeft: (q) => hud.setQueue(q),
+    queueLeft: (q, total) => hud.setQueue(q, total),
     toast: (t) => hud.toast(t),
     canPlay: () => !modalOpen,
     won: () => showWin(),
@@ -254,6 +270,7 @@ function startLevel(pick?: number, custom?: Level) {
   hud.active(null);
   hud.show(true);
   fitCamera();
+  if (swoop) introSwoop();
   if (custom) return;
   const TIPS = ['روی ماشینی بزن که مسافرهای جلوی صف رنگش رو می‌خوان!', 'فلش روی ماشین جهت حرکتشه. اول ماشین‌های جلویی رو رد کن!', 'جای پارک ایستگاه محدوده؛ ماشینی رو بفرست که مسافرش تو صف نزدیکه.'];
   if (n < TIPS.length) hud.toast(TIPS[n], 5500);
@@ -472,6 +489,7 @@ function showHome() {
     close();
     await maybeDaily(() => hud.refresh());
     modalOpen = false; hud.show(true);
+    introSwoop();
   }));
 }
 
@@ -483,7 +501,7 @@ async function boot() {
   hud.onCoins = () => { modalOpen = true; showShop(() => { modalOpen = false; }, () => hud.refresh()); };
   await document.fonts.load('900 40px Vazirmatn').catch(() => {});
   warmFleet([]);
-  startLevel();
+  startLevel(undefined, undefined, debug.has('play'));
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);

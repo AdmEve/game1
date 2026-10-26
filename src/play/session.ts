@@ -18,7 +18,7 @@ const VISIBLE_QUEUE = 16;
 export const MAX_BAYS = 6;
 
 export interface SessionHooks {
-  queueLeft(n: number): void;
+  queueLeft(n: number, total: number): void;
   toast(text: string): void;
   won(): void;
   lost(): void;
@@ -108,7 +108,7 @@ export class Session {
     }
     for (let k = 0; k < Math.min(VISIBLE_QUEUE, this.s.queue.length); k++) this.spawn(k, false);
     this.lockGate = this.gate(this.s.bays.length);
-    hooks.queueLeft(this.s.queue.length);
+    hooks.queueLeft(this.s.queue.length, this.s.queue.length);
     this.refreshPlates();
     this.dressStreets(seed);
     if (level.officer) {
@@ -587,7 +587,7 @@ export class Session {
       }, ease.inOut);
     });
     this.spawn(this.queue.length, true);
-    this.hooks.queueLeft(this.s.queue.length - this.vq);
+    this.hooks.queueLeft(this.s.queue.length - this.vq, this.s.queue.length);
     if (!p) return Promise.resolve();
     const car = this.cars[v];
     const from = p.root.position.clone();

@@ -74,7 +74,10 @@ export class Hud {
     this.plate.className = 'plate plate-rush';
     this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>چالش روزانه</small>${emo('⏰', 'emo')}</span>`;
   }
-  setQueue(n: number) { this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span>`; }
+  setQueue(n: number, total = n) {
+    const pct = total ? Math.round(((total - n) / total) * 100) : 0;
+    this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span><span class="pbar"><i style="width:${pct}%"></i></span>`;
+  }
   refresh() {
     this.coins.innerHTML = `${emo('🪙')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
     for (const b of BOOSTERS) {
