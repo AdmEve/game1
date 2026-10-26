@@ -18,6 +18,7 @@ import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { addKeys, showGarage } from './ui/garage';
+import { radioCard } from './ui/radio';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { click, coin } from './audio';
@@ -382,6 +383,7 @@ function showHome() {
   const map = CHAPTERS.map((k) => `<span class="${save.level >= k.to ? 'done' : k === ch ? 'now' : 'locked'}">${save.level >= k.from ? fa(k.n) : emo('🔒', 'emo xs')}</span>`).join('<i></i>');
   c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
     <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
+  c.prepend(radioCard());
   const close = modal(c, 'home-card');
   const gar = button(`${emo('🔧', 'emo sm')} گاراژ من <span class="kb">${emo('🔑', 'emo xs')} ${fa(save.garage.keys)}</span>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
