@@ -1,6 +1,6 @@
 // Copies the Twemoji SVGs for every emoji used in src/ into public/emoji/, so the game shows
 // the same flat emoji on every phone (old Android versions have outdated or missing emoji).
-import { readdirSync, readFileSync, statSync, mkdirSync, copyFileSync, existsSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,7 +29,7 @@ function walk(dir, files = []) {
 const found = new Set();
 for (const f of walk(src)) for (const m of readFileSync(f, 'utf8').matchAll(RE)) found.add(m[0]);
 
-if (existsSync(out)) rmSync(out, { recursive: true });
+// Add what is missing without wiping the folder (a running dev server keeps serving it).
 mkdirSync(out, { recursive: true });
 let n = 0;
 const missing = [];

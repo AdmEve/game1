@@ -19,6 +19,7 @@ import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
+import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { click, coin } from './audio';
@@ -220,13 +221,17 @@ function disposeSession() {
 
 /** The level being played (a replay when below save.level). */
 let current = 0;
+/** Playing today's «ساعت شلوغی» instead of a Journey level. */
+let rush: Level | null = null;
 
-function startLevel(pick?: number) {
+function startLevel(pick?: number, custom?: Level) {
   disposeSession();
+  rush = custom ?? null;
   current = Math.min(pick ?? save.level, levels.length - 1);
   const n = current;
-  const level = levels[n];
-  const ch = chapterOf(n);
+  const level = custom ?? levels[n];
+  // The rush hour rotates through the chapters' places by weekday.
+  const ch = custom ? CHAPTERS[new Date().getDay() % CHAPTERS.length] : chapterOf(n);
   applyLight(ch.light);
   setMood(ch.light);
   craneMode = false;
@@ -244,11 +249,12 @@ function startLevel(pick?: number) {
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
   }, n + 1, { stop: ch.stop, night: ch.light === 'night', snow: ch.light === 'snow', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
-  hud.setLevel(n + 1, level.tag);
+  if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
   hud.refresh();
   hud.active(null);
   hud.show(true);
   fitCamera();
+  if (custom) return;
   const TIPS = ['روی ماشینی بزن که مسافرهای جلوی صف رنگش رو می‌خوان!', 'فلش روی ماشین جهت حرکتشه. اول ماشین‌های جلویی رو رد کن!', 'جای پارک ایستگاه محدوده؛ ماشینی رو بفرست که مسافرش تو صف نزدیکه.'];
   if (n < TIPS.length) hud.toast(TIPS[n], 5500);
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
@@ -286,7 +292,22 @@ function reward(n: number) {
   return 20 + Math.min(40, n * 2) + (levels[n]?.tag ? 40 : 0);
 }
 
+function showRushWin() {
+  const streak = save.rush.day === new Date(Date.now() - 864e5).toISOString().slice(0, 10) ? save.rush.streak + 1 : 1;
+  save.rush = { day: today(), streak };
+  const coins = 250 + Math.min(6, streak - 1) * 50;
+  save.coins += coins; addKeys(1); save.stats.wins++; persist();
+  modalOpen = true; hud.show(false); hud.refresh();
+  const c = h('div', 'result win');
+  c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>`;
+  const close = modal(c, 'pop');
+  c.append(button('برگرد به خونه', 'primary big', () => { close(); modalOpen = false; startLevel(); showHome(); }));
+  for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
+}
+
 function showWin() {
+  if (rush) { showRushWin(); return; }
   const n = current;
   const replay = n < save.level;
   // Replays pay a little; keys and progress only come from new levels.
@@ -368,7 +389,7 @@ function showLose() {
       c.append(ad);
     }
   }
-  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(); }));
+  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(current, rush ?? undefined); }));
 }
 
 function showSettings() {
@@ -432,10 +453,21 @@ function showHome() {
     <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
   c.prepend(radioCard());
   const close = modal(c, 'home-card');
-  const gar = button(`${emo('🔧', 'emo sm')} گاراژ من <span class="kb">${emo('🔑', 'emo xs')} ${fa(save.garage.keys)}</span>`, 'garage-btn', () => {
+  const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
   });
-  c.append(gar);
+  const rowEl = h('div', 'home-row');
+  rowEl.append(gar);
+  c.append(rowEl);
+  const rushDone = save.rush.day === today();
+  const rushBtn = button(rushDone ? `${emo('✅', 'emo sm')} ساعت شلوغی<small>امروز رد شد!</small>` : `${emo('⏰', 'emo sm')} ساعت شلوغی<small>چالش امروز ${emo('🔑', 'emo xs')}</small>`, rushDone ? 'rush-btn done' : 'rush-btn', () => {
+    if (rushDone) return;
+    const lvl = dailyLevel();
+    if (!lvl) { hud.toast('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
+    close(); modalOpen = false;
+    startLevel(undefined, lvl); hud.show(true);
+  });
+  rowEl.append(rushBtn);
   c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     close();
     await maybeDaily(() => hud.refresh());

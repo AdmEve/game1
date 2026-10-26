@@ -99,7 +99,7 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 /* ───── Home ───── */
 .modal-back:has(.home-card) { place-items: end center; padding-bottom: calc(40px + var(--sab)); background: linear-gradient(180deg, rgba(10,20,40,.0) 30%, rgba(10,20,40,.55)); }
 .card.home-card { background: none; box-shadow: none; padding: 0; }
-.logo { margin-bottom: 26vh; }
+.logo { margin-bottom: 18vh; }
 .logo .sign { display: inline-block; font-size: 58px; font-weight: 900; color: #fff; padding: 2px 30px 10px; border-radius: 22px; background: linear-gradient(180deg, #1f8a4c, #0f5f33);
   border: 5px solid #fff; box-shadow: 0 0 0 4px #0f5f33, 0 18px 40px rgba(0,0,0,.45); text-shadow: 0 4px 0 rgba(0,0,0,.25); transform: rotate(-3deg); }
 .logo small { display: block; margin-top: 26px; color: #fff; font-size: 17px; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -234,3 +234,11 @@ body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70%
 .camsign.cop { border-color: #4d5b3a; top: calc(118px + var(--sat)); right: auto; left: 12px; }
 .camsign.cop b { color: #3f6212; }
 .camsign.pulse { animation: pulse .5s; }
+
+.plate-rush { background: #ede9fe; } .plate-rush .lv small { color: #6d28d9; } .plate-rush .lv .emo { width: 30px; height: 30px; }
+.btn.rush-btn { background: linear-gradient(180deg, #c4b5fd, #7c3aed); box-shadow: 0 5px 0 #4c1d95, 0 10px 20px rgba(0,0,0,.25); font-size: 18px; line-height: 1.4; }
+.btn.rush-btn small { font-size: 12.5px; } .btn.rush-btn.done { background: #e2e8f0; color: #475569; box-shadow: 0 4px 0 #94a3b8; font-size: 15px; }
+
+.home-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-row .btn { margin-top: 10px; font-size: 17px; padding: 10px 8px; line-height: 1.35; }
+.home-row .btn small { display: block; font-size: 12px; font-weight: 800; }

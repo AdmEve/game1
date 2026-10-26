@@ -16,6 +16,8 @@ export interface Save {
   garage: { keys: number; restored: string[] };
   /** Testers: every level selectable. */
   devUnlock?: boolean;
+  /** «ساعت شلوغی»: the last day it was beaten and the streak of days in a row. */
+  rush: { day: string; streak: number };
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -32,6 +34,7 @@ const fresh = (): Save => ({
   seen: {},
   rated: false,
   garage: { keys: 0, restored: [] },
+  rush: { day: '', streak: 0 },
 });
 
 function load(): Save {
@@ -43,7 +46,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, garage: { ...f.garage, ...s.garage },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

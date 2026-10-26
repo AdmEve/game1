@@ -70,6 +70,10 @@ export class Hud {
     this.copSign.innerHTML = `${emo('👮', 'emo sm')}<span>نوبت <b>${axis === 'v' ? 'عمودی‌ها ↕' : 'افقی‌ها ↔'}</b></span>`;
     this.copSign.classList.remove('pulse'); void this.copSign.offsetWidth; this.copSign.classList.add('pulse');
   }
+  setRush() {
+    this.plate.className = 'plate plate-rush';
+    this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>چالش روزانه</small>${emo('⏰', 'emo')}</span>`;
+  }
   setQueue(n: number) { this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span>`; }
   refresh() {
     this.coins.innerHTML = `${emo('🪙')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
