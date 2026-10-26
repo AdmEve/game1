@@ -2,7 +2,7 @@
 import { KIND, canExit, cloneState, grid, startState as newState, tap, type Level, type State } from './rules';
 
 const key = (s: State) =>
-  s.inLot.map((x) => (x ? 1 : 0)).join('') + '|' + s.bays.map((b) => (b ? `${b.color}${b.boarded}/${b.cap}` : '-')).sort().join(',') + '|' + s.parity + s.sinceSwitch + s.axis;
+  s.inLot.map((x) => (x ? 1 : 0)).join('') + '|' + s.bays.map((b) => (b ? `${b.color}${b.boarded}/${b.cap}` : '-')).sort().join(',') + '|' + s.parity + s.sinceSwitch + s.axis + s.carts.map((c) => `${c.col},${c.row}${c.dir[0]}`).join(';');
 
 /** Vehicles that can leave now, with duplicates (same color and seats, both free) collapsed. */
 export function moves(s: State): number[] {

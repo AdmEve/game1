@@ -1,12 +1,12 @@
 /** Level generation shared by the build script (Journey levels) and the game (daily challenge). */
-import { COLORS, KIND, cellsOf, canExit, grid, newState, startState, updateParity, validate, type Color, type Dir, type Kind, type Level, type VehicleDef } from './rules';
+import { COLORS, KIND, cellsOf, canExit, grid, moveCarts, newState, startState, updateParity, validate, type Color, type Dir, type Kind, type Level, type VehicleDef } from './rules';
 import { rng, solve } from './solver';
 
 export interface Spec {
   w: number; h: number; fill: number; colors: number; mix: number; target: number;
   zamyad?: number; bus?: number; cones?: number; tag?: string;
   /** Mechanics: fraction of covered cars, broken Peykans, دربست passengers, odd/even period. */
-  cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number; officer?: boolean;
+  cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number; officer?: boolean; carts?: number;
   intro?: Level['intro'];
 }
 
@@ -18,7 +18,7 @@ export function generate(spec: Spec, seed: number): Level | null {
   const { w, h } = spec;
   const occ = new Set<number>();
   const vehicles: VehicleDef[] = [];
-  const cones: { kind: 'cone'; col: number; row: number }[] = [];
+  const cones: { kind: 'cone' | 'cart'; col: number; row: number; dir?: Dir; every?: number }[] = [];
   const target = spec.fill * w * h;
   let used = 0;
   for (let tries = 0; tries < 4000 && used < target; tries++) {
@@ -37,6 +37,12 @@ export function generate(spec: Spec, seed: number): Level | null {
     const c = Math.floor(r() * w), rr = Math.floor(r() * h);
     if (occ.has(rr * w + c)) continue;
     occ.add(rr * w + c); cones.push({ kind: 'cone', col: c, row: rr }); i++;
+  }
+  // Fruit carts take a free cell and roll along a row or column.
+  for (let i = 0, tries = 0; i < (spec.carts ?? 0) && tries < 200; tries++) {
+    const c = Math.floor(r() * w), rr = Math.floor(r() * h);
+    if (occ.has(rr * w + c)) continue;
+    occ.add(rr * w + c); cones.push({ kind: 'cart', col: c, row: rr, dir: pick(['left', 'right', 'up', 'down'] as Dir[]), every: 2 }); i++;
   }
   // Courier bikes slot into leftover single cells.
   for (let b = 0, tries = 0; b < (spec.bikes ?? 0) && tries < 300; tries++) {
@@ -75,7 +81,7 @@ export function generate(spec: Spec, seed: number): Level | null {
     const g = grid(st);
     const free = keep.map((_, i) => i).filter((i) => canExit(st, i, g));
     if (!free.length) return null;
-    const i = pick(free); st.inLot[i] = false; st.exits++; st.sinceSwitch++; updateParity(st); seq.push(i);
+    const i = pick(free); st.inLot[i] = false; st.exits++; st.sinceSwitch++; moveCarts(st); updateParity(st); seq.push(i);
   }
   // Broken Peykans: a car late in the order that must wait for the ones before it.
   for (let b = 0; b < (spec.broken ?? 0); b++) {

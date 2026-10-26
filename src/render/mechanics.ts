@@ -226,3 +226,27 @@ export function poseOfficer(o: THREE.Group, axis: 'v' | 'h', k = 1) {
   L.rotation.x += (tL.x - L.rotation.x) * k; L.rotation.z += (tL.z - L.rotation.z) * k;
   R.rotation.x += (tR.x - R.rotation.x) * k; R.rotation.z += (tR.z - R.rotation.z) * k;
 }
+
+/** «گاری میوه»: a wooden barrow heaped with pomegranates and oranges, with an umbrella. */
+export function fruitCart(): THREE.Group {
+  const g = new THREE.Group();
+  const wood = mstd(0x9a6b3f, { roughness: 0.8 }), dark = mstd(0x5b3a1e);
+  const tray = new THREE.Mesh(new RoundedBoxGeometry(0.95, 0.16, 0.65, 2, 0.03), wood); tray.position.y = 0.5; g.add(tray);
+  for (const sg of [1, -1]) {
+    const wheelM = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.04, 6, 14), dark); wheelM.position.set(0, 0.22, sg * 0.36); g.add(wheelM);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.42, 0.05), wood); leg.position.set(-0.4, 0.28, sg * 0.25); g.add(leg);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), wood); handle.rotation.z = Math.PI / 2 - 0.3; handle.position.set(-0.68, 0.62, sg * 0.25); g.add(handle);
+  }
+  const fruitG = new THREE.SphereGeometry(0.07, 10, 8);
+  const mats = [mstd(0xb91c1c, { roughness: 0.4 }), mstd(0xf97316, { roughness: 0.45 }), mstd(0xdc2626, { roughness: 0.4 })];
+  for (let i = 0; i < 26; i++) {
+    const f = new THREE.Mesh(fruitG, mats[i % 3]);
+    const a = (i / 26) * Math.PI * 6, r = 0.08 + (i % 7) * 0.035;
+    f.position.set(Math.cos(a) * r * 1.4, 0.64 + (1 - r / 0.3) * 0.12, Math.sin(a) * r);
+    g.add(f);
+  }
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.9, 6), dark); pole.position.set(0.35, 0.95, 0); g.add(pole);
+  const umb = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.25, 8, 1, true), mstd(0xfacc15, { roughness: 0.6, side: THREE.DoubleSide })); umb.position.set(0.35, 1.45, 0); g.add(umb);
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}

@@ -68,6 +68,32 @@ for (let i = 0; i < 60; i++) {
   SPECS.push(spec);
 }
 
+// Chapter 5 (the Grand Bazaar): fruit carts roll through the lot from level 122.
+const ch5: Spec[] = [];
+for (let i = 0; i < 30; i++) {
+  const n = 121 + i, inCh = i;
+  const hard = n % 5 === 0, boss = n === 150;
+  const r = rng(n * 130363);
+  const spec: Spec = {
+    w: 7, h: inCh < 8 ? 8 : inCh < 20 ? 9 : 10, fill: 0.84 + (inCh / 29) * 0.06 + (hard ? 0.02 : 0),
+    colors: 6, mix: Math.round(8 + inCh / 4 + (hard ? 4 : 0)),
+    target: boss ? 0.15 : hard ? 0.3 : Math.max(0.45, 0.78 - 0.25 * (inCh / 29)),
+    zamyad: 0.15, bus: 0.06, cones: Math.floor(r() * 2),
+  };
+  if (r() < 0.35) spec.cover = 0.2 + r() * 0.15;
+  if (r() < 0.3) spec.broken = 1;
+  if (r() < 0.3) spec.vip = 1;
+  if (r() < 0.3) spec.bikes = 1 + Math.floor(r() * 2);
+  const rule = r();
+  if (rule < 0.2) spec.oddEven = 3; else if (rule < 0.4) spec.officer = true;
+  if (n === 122) Object.assign(spec, { carts: 1, intro: 'cart', oddEven: undefined, officer: undefined, vip: undefined, cover: undefined });
+  else if (n > 122 && r() < 0.6) spec.carts = 1 + (r() < 0.35 ? 1 : 0);
+  if (boss) Object.assign(spec, { cover: 0.3, broken: 1, vip: 1, carts: 2, bikes: 1 });
+  if (hard) spec.tag = 'hard';
+  if (boss) spec.tag = 'boss';
+  ch5.push(spec);
+}
+
 // Chapter 4 (Tochal in the snow): the traffic officer arrives at level 93.
 for (let i = 0; i < 30; i++) {
   const n = 91 + i, inCh = i;
@@ -92,6 +118,7 @@ for (let i = 0; i < 30; i++) {
   SPECS.push(spec);
 }
 
+SPECS.push(...ch5);
 const out: Level[] = [];
 SPECS.forEach((spec0, n) => {
   let best: { level: Level; err: number; rates: { random: number; greedy: number }; seed: number } | null = null;

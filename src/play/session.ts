@@ -7,7 +7,7 @@ import * as sfx from '../audio';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, colorSymbol, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, trafficOfficer, vipMarker } from '../render/mechanics';
+import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, trafficOfficer, vipMarker } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
@@ -45,6 +45,7 @@ export class Session {
   readonly L: Layout;
   private cars: VehicleObj[] = [];
   private cones: THREE.Object3D[] = [];
+  private carts: THREE.Object3D[] = [];
   private queue: Person[] = []; // visible people, front first
   private vq = 0; // index (in s.queue) of the person at the front of the visible queue
   private chain: Promise<void> = Promise.resolve();
@@ -106,6 +107,12 @@ export class Session {
       }
     });
     for (const c of level.obstacles ?? []) {
+      if (c.kind === 'cart') {
+        const m = fruitCart(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y);
+        m.rotation.y = c.dir === 'up' || c.dir === 'down' ? Math.PI / 2 : 0;
+        this.group.add(m); this.carts.push(m);
+        continue;
+      }
       const m = cone(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y); m.rotation.y = c.col * 1.3; this.group.add(m); this.cones.push(m);
     }
     for (let k = 0; k < Math.min(VISIBLE_QUEUE, this.s.queue.length); k++) this.spawn(k, false);
@@ -395,11 +402,20 @@ export class Session {
         if (o) void tween(0.35, () => poseOfficer(o, e.axis, 0.3), ease.out);
       }
       if (e.t === 'reveal') this.uncover(e.v);
+      if (e.t === 'cart') {
+        const m = this.carts[e.i];
+        if (m) {
+          const from = m.position.clone(), to = this.L.cell(e.col, e.row).setY(LOT_Y);
+          const yaw = Math.abs(to.x - from.x) > 0.01 ? 0 : Math.PI / 2;
+          sfx.chirp(0.05, 0.03);
+          void tween(0.5, (k) => { m.position.lerpVectors(from, to, k); m.position.y = LOT_Y + Math.abs(Math.sin(k * Math.PI * 3)) * 0.03; m.rotation.y = yaw; }, ease.inOut);
+        }
+      }
       if (e.t === 'parity') { sfx.click(); this.hooks.float(e.parity ? 'نوبت پلاک فرد!' : 'نوبت پلاک زوج!', this.L.cell(Math.floor(this.level.w / 2), 0).add(new THREE.Vector3(0, 1.5, -1)), 'combo'); }
     }
     this.refreshPlates();
     this.refreshBroken();
-    const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity' && e.t !== 'axis');
+    const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity' && e.t !== 'axis' && e.t !== 'cart');
     this.chain = this.chain.then(() => arrived).then(() => this.playBoards(rest)).finally(() => { this.pending--; });
   }
 
@@ -488,7 +504,7 @@ export class Session {
     this.scarePigeons();
     this.hooks.float('بوق!', o.root.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 'bad');
     if (by.v !== undefined) { const b = this.cars[by.v]; void this.wiggle(b); }
-    else { const c = this.cones.find((m) => m.position.distanceTo(this.L.cell(...by.cell)) < 0.2); if (c) void tween(0.5, (k) => { c.rotation.z = Math.sin(k * 20) * 0.25 * (1 - k); }, ease.linear); }
+    else { const c = [...this.cones, ...this.carts].find((m) => Math.hypot(m.position.x - this.L.cell(...by.cell).x, m.position.z - this.L.cell(...by.cell).z) < 0.3); if (c) void tween(0.5, (k) => { c.rotation.z = Math.sin(k * 20) * 0.25 * (1 - k); }, ease.linear); }
     o.body.rotation.z = -0.05;
     await tween(0.32, (k) => { o.root.position.set(start.x + dc * dist * (1 - k), start.y, start.z + dr * dist * (1 - k)); }, ease.out);
     void settleBody(o.body);

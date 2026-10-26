@@ -81,7 +81,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -276,6 +276,71 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
   return g;
 }
 
+/**
+ * The Grand Bazaar of Tehran: a long brick arcade with pointed arches and lit shops, rows of domes
+ * with skylights on the roof, and the tiled entrance portal.
+ */
+function bazaarRow(z: number, rnd: () => number): THREE.Group {
+  const g = new THREE.Group();
+  const len = 40, h = 2.6, d = 2.4;
+  const face = canvasTex(1024, 128, (c) => {
+    c.fillStyle = '#c99a62'; c.fillRect(0, 0, 1024, 128);
+    for (let y = 0; y < 128; y += 4) for (let x = (y / 4) % 2 ? -6 : 0; x < 1024; x += 12) { c.fillStyle = `rgba(${120 + rnd() * 40},${80 + rnd() * 30},${40 + rnd() * 20},.25)`; c.fillRect(x + 1, y + 1, 10, 2); }
+    for (let k = 0; k < 16; k++) {
+      const x = k * 64 + 8, w = 48;
+      // Pointed arch shop front.
+      c.fillStyle = '#5a3a22'; c.beginPath(); c.moveTo(x, 124); c.lineTo(x, 60); c.quadraticCurveTo(x, 34, x + w / 2, 22); c.quadraticCurveTo(x + w, 34, x + w, 60); c.lineTo(x + w, 124); c.fill();
+      const gr = c.createLinearGradient(0, 40, 0, 124); gr.addColorStop(0, '#ffcf7a'); gr.addColorStop(1, '#d98b3a');
+      c.fillStyle = gr; c.beginPath(); c.moveTo(x + 4, 124); c.lineTo(x + 4, 62); c.quadraticCurveTo(x + 4, 40, x + w / 2, 30); c.quadraticCurveTo(x + w - 4, 40, x + w - 4, 62); c.lineTo(x + w - 4, 124); c.fill();
+      // Goods: carpets, spices, copper.
+      const goods = ['#b91c1c', '#1e3a8a', '#d97706', '#065f46', '#7c2d12'];
+      for (let j = 0; j < 4; j++) { c.fillStyle = goods[Math.floor(rnd() * goods.length)]; c.fillRect(x + 8 + j * 9, 84 + (j % 2) * 6, 7, 40 - (j % 2) * 6); }
+      c.strokeStyle = '#e9d5b5'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 2, 124); c.lineTo(x - 2, 60); c.quadraticCurveTo(x - 2, 30, x + w / 2, 18); c.quadraticCurveTo(x + w + 2, 30, x + w + 2, 60); c.lineTo(x + w + 2, 124); c.stroke();
+    }
+    // Turquoise tile frieze.
+    c.fillStyle = '#0e7490'; c.fillRect(0, 4, 1024, 10);
+    for (let x = 0; x < 1024; x += 16) { c.fillStyle = '#fbbf24'; c.beginPath(); c.arc(x + 8, 9, 3, 0, Math.PI * 2); c.fill(); }
+  });
+  face.wrapS = THREE.RepeatWrapping; face.repeat.set(2, 1);
+  const brick = std(0xc99a62, { roughness: 0.9 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(len, h, d), [brick, brick, brick, brick, std(0xffffff, { map: face, roughness: 0.85 }), brick]);
+  body.position.set(0, h / 2, z); body.castShadow = body.receiveShadow = true; g.add(body);
+  // Rows of domes and barrel vaults with skylights.
+  const domeMat = std(0xb98950, { roughness: 0.85 }), sky = std(0xe9e2d0, { roughness: 0.6 });
+  for (let x = -len / 2 + 1; x < len / 2; x += 1.6) {
+    for (const dz of [-0.6, 0.6]) {
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(0.62, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+      dome.position.set(x, h, z + dz); dome.castShadow = true; g.add(dome);
+      const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.16, 8), sky); lantern.position.set(x, h + 0.66, z + dz); g.add(lantern);
+    }
+  }
+  // The entrance portal «سردر» with tilework.
+  const portalTex = canvasTex(256, 320, (c) => {
+    c.fillStyle = '#c99a62'; c.fillRect(0, 0, 256, 320);
+    c.fillStyle = '#0e7490'; c.fillRect(16, 16, 224, 288);
+    for (let i = 0; i < 120; i++) { c.fillStyle = ['#fbbf24', '#f8fafc', '#164e63', '#22d3ee'][i % 4]; const x = 24 + (i % 12) * 18, y = 24 + Math.floor(i / 12) * 18; c.beginPath(); c.moveTo(x + 7, y); c.lineTo(x + 14, y + 7); c.lineTo(x + 7, y + 14); c.lineTo(x, y + 7); c.fill(); }
+    c.fillStyle = '#3b2412'; c.beginPath(); c.moveTo(64, 320); c.lineTo(64, 170); c.quadraticCurveTo(64, 110, 128, 90); c.quadraticCurveTo(192, 110, 192, 170); c.lineTo(192, 320); c.fill();
+    c.fillStyle = '#f8fafc'; c.font = '900 30px Vazirmatn'; c.textAlign = 'center'; c.fillText('بازار بزرگ', 128, 66);
+  });
+  const portal = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.2, 0.6), [brick, brick, brick, brick, std(0xffffff, { map: portalTex, roughness: 0.6 }), brick]);
+  portal.position.set(-2.5, 2.1, z + d / 2 + 0.05); portal.castShadow = true; g.add(portal);
+  return g;
+}
+
+/** Pavement trade: a fruit cart, stacked carpets, spice sacks. */
+function streetStall(kind: number): THREE.Group {
+  const g = new THREE.Group();
+  if (kind === 0) {
+    const sacks = ['#c2410c', '#ca8a04', '#7c2d12', '#15803d'];
+    sacks.forEach((col, i) => { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.36, 10), std(0xd6c3a0)); s.position.set(i * 0.42 - 0.6, 0.18, 0); g.add(s); const top = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), std(parseInt(col.slice(1), 16))); top.position.set(i * 0.42 - 0.6, 0.36, 0); g.add(top); });
+  } else {
+    const cols = [0x991b1b, 0x1e3a8a, 0x92400e, 0x065f46];
+    for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 0.7), std(cols[i])); r.position.set(0, 0.04 + i * 0.08, 0); r.rotation.y = (i - 1.5) * 0.06; g.add(r); }
+  }
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
 /** Tehran's green street lamp. */
 function streetLamp(night = false): THREE.Group {
   const g = new THREE.Group();
@@ -399,7 +464,11 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   const tones = ['#e6dccb', '#d9cbb3', '#efe2c8', '#e2d2bd', '#d8d0c4'];
   const bricks = ['#a8613f', '#b5714d', '#9c5638', '#c07f5a'];
   const facadeOf = (i: number): [string, Style] => (rnd() < 0.4 ? [bricks[i % bricks.length], 'brick'] : [tones[i % tones.length], 'stone']);
-  for (let x = -18, i = 0; x < 18; i++) {
+  if (opts.landmark === 'bazaar') {
+    add(bazaarRow(L.walkZ - 3.0, rnd));
+    for (let k = 0; k < 4; k++) { const st = streetStall(k % 2); st.position.set(-9 + k * 2.6 + (k > 1 ? 6 : 0), 0.18, L.walkZ - 0.9); add(st); }
+  }
+  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar'; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);

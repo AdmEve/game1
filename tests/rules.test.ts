@@ -108,6 +108,28 @@ describe('mechanics', () => {
   });
 });
 
+describe('fruit cart', () => {
+  it('«گاری میوه» rolls one cell every N exits and turns back at walls', () => {
+    const l: Level = {
+      w: 3, h: 3,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' },
+        { kind: 'pride', color: 'blue', col: 2, row: 1, dir: 'up' },
+      ],
+      obstacles: [{ kind: 'cart', col: 1, row: 2, dir: 'right', every: 1 }],
+      queue: ['red', 'red', 'red', 'red', 'blue', 'blue', 'blue', 'blue'],
+    };
+    const s = newState(l);
+    const ev = tap(s, 0);
+    // (2,2) is the blue car's tail: the cart turns back and rolls left instead.
+    expect(ev).toContainEqual({ t: 'cart', i: 0, col: 0, row: 2 });
+    // At the wall it turns again and rolls right.
+    const ev2 = tap(s, 1);
+    expect(ev2).toContainEqual({ t: 'cart', i: 0, col: 1, row: 2 });
+    expect(s.over).toBe('won');
+  });
+});
+
 describe('officer', () => {
   it('«پلیس راهور» lets one direction go at a time', () => {
     const l: Level = {
@@ -150,14 +172,14 @@ describe('courier', () => {
 });
 
 describe('journey levels', () => {
-  it('has 120 levels', () => expect(levels.length).toBe(120));
+  it('has 150 levels', () => expect(levels.length).toBe(150));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);
       const r = solve(l);
       expect(r.solvable).toBe(true);
-      // Replaying the solution wins.
-      const s = newState(l);
+      // Replaying the solution (from the same start the game uses) wins.
+      const s = startState(l);
       for (const m of r.solution) tap(s, m);
       expect(s.over).toBe('won');
     });

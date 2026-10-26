@@ -28,7 +28,12 @@ export interface VehicleDef {
   /** Last digit of the plate (for «طرح زوج و فرد» levels). */
   plate?: number;
 }
-export interface ObstacleDef { kind: 'cone'; col: number; row: number; }
+export interface ObstacleDef {
+  kind: 'cone' | 'cart'; col: number; row: number;
+  /** «گاری میوه»: a fruit cart rolls one cell this way every `every` exits, turning back at walls. */
+  dir?: Dir; every?: number;
+}
+export interface Cart { col: number; row: number; dir: Dir; }
 
 export interface Level {
   w: number;
@@ -47,7 +52,7 @@ export interface Level {
   /** «پلیس راهور»: an officer lets only vertical or only horizontal cars go, switching after each exit. */
   officer?: boolean;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart';
 }
 
 export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
@@ -67,6 +72,8 @@ export interface State {
   /** «طرح زوج و فرد»: which plates may leave now (0 even, 1 odd) and exits since the last switch. */
   parity: 0 | 1;
   sinceSwitch: number;
+  /** Where the fruit carts are now (index matches the cart obstacles in level order). */
+  carts: Cart[];
   /** «پلیس راهور»: which way may leave now, and the exit count when he last turned. */
   axis: 'v' | 'h';
   sinceSwitchAxis: number;
@@ -83,6 +90,7 @@ export type Event =
   | { t: 'reveal'; v: number }
   | { t: 'parity'; parity: 0 | 1 }
   | { t: 'axis'; axis: 'v' | 'h' }
+  | { t: 'cart'; i: number; col: number; row: number }
   | { t: 'board'; bay: number; v: number; color: Color; passenger: number }
   | { t: 'depart'; bay: number; v: number }
   | { t: 'won' }
@@ -113,6 +121,7 @@ export function newState(level: Level): State {
   return {
     level, inLot: level.vehicles.map(() => true), bays: Array(level.bays ?? 5).fill(null), queue: [...level.queue], vip, q: 0, over: false,
     exits: 0, revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0, axis: 'v', sinceSwitchAxis: 0,
+    carts: (level.obstacles ?? []).filter((o) => o.kind === 'cart').map((o) => ({ col: o.col, row: o.row, dir: o.dir ?? 'right' })),
   };
 }
 
@@ -132,6 +141,23 @@ function updateOfficer(s: State, ev?: Event[]) {
   if (next !== s.axis) { s.axis = next; ev?.push({ t: 'axis', axis: next }); }
 }
 
+const OPP: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
+
+/** Fruit carts roll on: one cell every `every` exits, turning back when the way is blocked. */
+export function moveCarts(s: State, ev?: Event[]) {
+  const carts = (s.level.obstacles ?? []).filter((o) => o.kind === 'cart');
+  if (!carts.length) return;
+  carts.forEach((def, i) => {
+    if (s.exits % (def.every ?? 2) !== 0) return;
+    const c = s.carts[i], g = grid(s), { w, h } = s.level;
+    const free = (col: number, row: number) => col >= 0 && row >= 0 && col < w && row < h && g[row * w + col] === -1;
+    for (const d of [c.dir, OPP[c.dir]]) {
+      const [dc, dr] = DELTA[d];
+      if (free(c.col + dc, c.row + dr)) { c.col += dc; c.row += dr; c.dir = d; ev?.push({ t: 'cart', i, col: c.col, row: c.row }); return; }
+    }
+  });
+}
+
 /** A fresh state with the plate camera already pointing at plates that can move. */
 export function startState(level: Level): State {
   const s = newState(level);
@@ -140,7 +166,7 @@ export function startState(level: Level): State {
 }
 
 export function cloneState(s: State): State {
-  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis };
+  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis, carts: s.carts.map((c) => ({ ...c })) };
 }
 
 /** «طرح زوج و فرد»: which plate parity may leave now (0 = even, 1 = odd), or null if the rule is off. */
@@ -181,7 +207,8 @@ export function lock(s: State, i: number): { why: 'broken' | 'plate' | 'officer'
 export function grid(s: State): Int16Array {
   const { w, h } = s.level, g = new Int16Array(w * h).fill(-1);
   s.level.vehicles.forEach((v, i) => { if (s.inLot[i]) for (const [c, r] of cellsOf(v)) g[r * w + c] = i; });
-  for (const o of s.level.obstacles ?? []) g[o.row * s.level.w + o.col] = -2;
+  for (const o of s.level.obstacles ?? []) if (o.kind !== 'cart') g[o.row * s.level.w + o.col] = -2;
+  for (const c of s.carts) g[c.row * s.level.w + c.col] = -2;
   return g;
 }
 
@@ -248,6 +275,7 @@ export function tap(s: State, i: number, force = false): Event[] {
     if (s.revealed[k] || !s.inLot[k]) return;
     if (cellsOf(o).some(([c, r]) => mine.some(([mc, mr]) => Math.abs(mc - c) + Math.abs(mr - r) === 1))) { s.revealed[k] = true; ev.push({ t: 'reveal', v: k }); }
   });
+  moveCarts(s, ev);
   updateParity(s, ev);
   settle(s, ev);
   return ev;
