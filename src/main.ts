@@ -18,6 +18,8 @@ import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
+import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
+import { yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
 import { dailyLevel, today } from './game/daily';
@@ -244,15 +246,19 @@ let current = 0;
 let rush: Level | null = null;
 /** A booster or a continue was used this level (it then doesn't count as a clean win). */
 let helped = false;
+/** «شب یلدا»: which night of the event is being played, or -1. */
+let yaldaNight = -1;
 
-function startLevel(pick?: number, custom?: Level, swoop = true) {
+function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
   disposeSession();
   rush = custom ?? null;
+  yaldaNight = night;
   current = Math.min(pick ?? save.level, levels.length - 1);
   const n = current;
   const level = custom ?? levels[n];
   // The rush hour rotates through the chapters' places by weekday.
-  const ch = custom ? CHAPTERS[new Date().getDay() % CHAPTERS.length] : chapterOf(n);
+  // Yalda nights are played at home in Tajrish, after dark.
+  const ch = night >= 0 ? { ...CHAPTERS[0], light: 'night' as const } : custom ? CHAPTERS[new Date().getDay() % CHAPTERS.length] : chapterOf(n);
   applyLight(ch.light);
   setMood(ch.light);
   craneMode = false;
@@ -269,9 +275,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true) {
     officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night', snow: ch.light === 'snow', landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night', snow: ch.light === 'snow', landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: night >= 0, skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
-  if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
+  if (night >= 0) hud.setEvent(`شب یلدا ${fa(night + 1)}`, POM('hud')); else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
   hud.refresh();
   hud.active(null);
   hud.show(true);
@@ -342,6 +348,12 @@ function showRushWin() {
 }
 
 function showWin() {
+  if (yaldaNight >= 0) {
+    recordWin(false);
+    modalOpen = true; hud.show(false); hud.refresh();
+    showYaldaWin(yaldaNight, () => { hud.refresh(); modalOpen = false; startLevel(); showHome(); });
+    return;
+  }
   if (rush) { showRushWin(); return; }
   const n = current;
   const replay = n < save.level;
@@ -426,7 +438,7 @@ function showLose() {
       c.append(ad);
     }
   }
-  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(current, rush ?? undefined); }));
+  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(current, rush ?? undefined, true, yaldaNight); }));
 }
 
 function showSettings() {
@@ -489,6 +501,13 @@ function showHome() {
   c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
     <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
   c.prepend(radioCard());
+  const yb = yaldaBanner((night) => {
+    const lvl = yaldaLevel(night);
+    if (!lvl) { hud.toast('مرحله‌ی امشب آماده نشد، بعداً سر بزن!'); return; }
+    close(); modalOpen = false;
+    startLevel(undefined, lvl, true, night); hud.show(true);
+  });
+  if (yb) c.querySelector('.chapter')!.before(yb);
   const close = modal(c, 'home-card');
 
   const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {

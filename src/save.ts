@@ -21,6 +21,8 @@ export interface Save {
   devUnlock?: boolean;
   /** «ساعت شلوغی»: the last day it was beaten and the streak of days in a row. */
   rush: { day: string; streak: number };
+  /** «شب یلدا» event: the year it was played and how many of its nights are done. */
+  yalda: { year: number; done: number };
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -40,6 +42,7 @@ const fresh = (): Save => ({
   rated: false,
   garage: { keys: 0, restored: [] },
   rush: { day: '', streak: 0 },
+  yalda: { year: 0, done: 0 },
 });
 
 function load(): Save {
@@ -51,7 +54,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

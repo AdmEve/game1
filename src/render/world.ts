@@ -89,7 +89,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband'; autumn?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -418,6 +418,39 @@ function darbandSlope(z: number, rnd: () => number, night: boolean): THREE.Group
   return g;
 }
 
+/** «شب یلدا» fruit stand: a pyramid of pomegranates, watermelons (one cut open) and a lantern. */
+function yaldaStand(rnd: () => number): THREE.Group {
+  const g = new THREE.Group();
+  const wood = std(0x8b5a2b, { roughness: 0.8 });
+  g.add(box(1.3, 0.3, 0.7, wood, 0, 0.15, 0, 0.02));
+  const skin = std(0xa3122a, { roughness: 0.45 }), crown = std(0x6b0f1a, { roughness: 0.6 });
+  const pom = new THREE.SphereGeometry(0.085, 10, 8), crownGeo = new THREE.ConeGeometry(0.025, 0.04, 5);
+  // Pomegranates stacked in a pyramid on the left half.
+  for (let layer = 0; layer < 3; layer++) {
+    const n = 3 - layer;
+    for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+      const x = -0.5 + (a + layer * 0.5) * 0.16, z = -0.2 + (b + layer * 0.5) * 0.16, y = 0.38 + layer * 0.13;
+      const p = new THREE.Mesh(pom, skin); p.position.set(x, y, z); p.scale.y = 0.92; g.add(p);
+      const c = new THREE.Mesh(crownGeo, crown); c.position.set(x, y + 0.09, z); g.add(c);
+    }
+  }
+  // A split pomegranate showing its seeds.
+  const half = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), skin); half.rotation.x = Math.PI; half.position.set(-0.05, 0.4, 0.22); g.add(half);
+  const seeds = new THREE.Mesh(new THREE.CircleGeometry(0.095, 14), std(0xd61f45, { roughness: 0.2, emissive: 0x5a0010, emissiveIntensity: 0.3 })); seeds.rotation.x = -Math.PI / 2; seeds.position.set(-0.05, 0.401, 0.22); g.add(seeds);
+  // Watermelons on the right, one cut in half.
+  const rind = canvasTex(128, 64, (c) => { c.fillStyle = '#2f6b2a'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#4f9a3c'; for (let x = 0; x < 128; x += 16) { c.beginPath(); c.moveTo(x, 0); for (let y = 0; y <= 64; y += 8) c.lineTo(x + 4 + Math.sin(y * 0.4) * 3, y); c.lineTo(x + 8, 64); c.lineTo(x + 6, 0); c.fill(); } });
+  const melon = std(0xffffff, { map: rind, roughness: 0.5 });
+  for (const [x, z] of [[0.3, -0.12], [0.5, 0.1]]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), melon); m.scale.set(1, 0.85, 1.15); m.position.set(x, 0.44, z); m.rotation.y = rnd() * 3; g.add(m); }
+  const cut = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), melon); cut.rotation.x = Math.PI / 2; cut.position.set(0.18, 0.47, 0.18); g.add(cut);
+  const flesh = new THREE.Mesh(new THREE.CircleGeometry(0.16, 16), std(0xe23b4a, { roughness: 0.4 })); flesh.position.set(0.18, 0.47, 0.181); g.add(flesh);
+  // A hanging lantern.
+  g.add(box(0.04, 1.1, 0.04, wood, 0.62, 0.85, -0.3));
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.18, 8), std(0xffb347, { emissive: 0xff7a1a, emissiveIntensity: 2.5, roughness: 0.3 }));
+  lamp.position.set(0.62, 1.32, -0.3); g.add(lamp);
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
 /** Pavement trade: a fruit cart, stacked carpets, spice sacks. */
 function streetStall(kind: number): THREE.Group {
   const g = new THREE.Group();
@@ -655,6 +688,18 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   [[0xb91c1c, 0], [0x1d4ed8, 0.55], [0x111827, 1.1]].forEach(([c, dx]) => {
     const m = motorbike(c); m.position.set(kiosk.position.x - 1.3 - dx, 0.18, L.walkZ + 0.15); m.rotation.y = Math.PI / 2 + 0.25; add(m);
   });
+  if (opts.yalda) {
+    // Yalda night: fruit stands, a banner and strings of red and amber lights over the sidewalk.
+    for (const x of [-11, -5.5, 6.5, 12]) { const st = yaldaStand(rnd); st.position.set(x, 0.18, L.walkZ - 0.25); st.rotation.y = (rnd() - 0.5) * 0.2; add(st); const p = lightPool(1.6, 0xffa060, 0.6); p.position.set(x, 0.2, L.walkZ + 0.1); g.add(p); }
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 0.8), std(0xffffff, { map: label('شب یلدا مبارک', '#7f1d1d', '#fde68a', 768, 112, 72), emissive: 0x3a0a0a, emissiveIntensity: 0.4, side: THREE.DoubleSide }));
+    banner.position.set(0.5, 3.5, L.walkZ - 0.6); g.add(banner);
+    for (const sx of [-2.8, 2.8]) add(box(0.07, 3.9, 0.07, std(0x3f2a1a), 0.5 + sx, 1.95, L.walkZ - 0.6));
+    const bulbs = [0xff3b3b, 0xffb347, 0xff3b3b, 0xffe08a];
+    for (let x = -16, k = 0; x < 16; x += 0.5, k++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), std(bulbs[k % 4], { emissive: bulbs[k % 4], emissiveIntensity: 3 }));
+      b.position.set(x, 2.55 - Math.abs(Math.sin(((x + 16) / 4.2) * Math.PI)) * 0.35, L.walkZ - 0.7); g.add(b);
+    }
+  }
   const tl = trafficLight(); tl.position.set(L.bayX[0] + 3.0, 0.18, L.walkZ + 0.85); add(tl);
 
   if (opts.boulevard) {

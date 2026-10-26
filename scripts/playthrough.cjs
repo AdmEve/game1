@@ -1,13 +1,13 @@
 // Plays levels in the real client with the solver's moves and checks they end on the win screen.
-//   node scripts/playthrough.cjs 1 7 11 16 21 30
+//   node scripts/playthrough.cjs 1 7 11 16 21 30 y5   (yN = night N of the «شب یلدا» event)
 const { chromium } = require('playwright');
 (async () => {
-  const levels = process.argv.slice(2).map(Number);
+  const levels = process.argv.slice(2);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto('http://127.0.0.1:5173/?shot&play');
+  await p.goto('http://127.0.0.1:5173/?shot&play&yalda');
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 240000 });
   let failed = 0;
   for (const n of levels) {
@@ -15,14 +15,19 @@ const { chromium } = require('playwright');
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true };
-      r.save.level = n - 1; r.startLevel();
+      if (n.startsWith('y')) {
+        const night = Number(n.slice(1)) - 1;
+        const { yaldaLevel } = await import('/src/game/events.ts');
+        r.save.yalda = { year: new Date().getFullYear(), done: night };
+        r.startLevel(undefined, yaldaLevel(night), false, night);
+      } else { r.save.level = Number(n) - 1; r.startLevel(); }
       const s = r.session();
       const { solve } = await import('/src/game/solver.ts');
       const sol = solve(s.level).solution;
       for (const m of sol) { s.tap(m); await r.advance(0.7); }
       for (let k = 0; k < 40 && !document.querySelector('.result'); k++) await r.advance(0.5);
       const won = !!document.querySelector('.result.win');
-      return { n, moves: sol.length, won, over: s.s.over };
+      return { n, moves: sol.length, won, over: s.s.over, yalda: r.save.yalda.done };
     }, n);
     console.log(JSON.stringify(res));
     if (!res.won) failed++;
