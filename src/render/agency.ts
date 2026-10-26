@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { CARS, buildCar } from './cars.js';
+import { CARS, buildCar, buildVanet } from './cars.js';
 
 export interface Renovation { id: string; name: string; icon: string; cost: number; line: string }
 
@@ -23,7 +23,23 @@ export const RENOVATIONS: Renovation[] = [
   { id: 'peykan', name: 'پیکان آقاجون', icon: '🚗', cost: 6, line: 'پیکان سفید آقاجون رو از نو رنگ کردیم. هنوز بوی صندلی‌هاش همونه!' },
   { id: 'lights', name: 'چراغ‌های ریسه', icon: '✨', cost: 4, line: 'ریسه‌ها روشن شدن. حالا آژانس شب‌ها هم شلوغه!' },
   { id: 'pride', name: 'یه پراید نو برای ناوگان', icon: '🚕', cost: 8, line: 'اولین ماشین نوی آژانس! آقای عجول از حسودی ترکید!' },
+  // Phase 2: the neighbourhood around the agency.
+  { id: 'mural', name: 'نقاشی دیواری', icon: '🖼️', cost: 5, line: 'بچه‌های محل رو دیوار همسایه دماوند رو کشیدن، با یه پیکان که داره می‌ره شمال!' },
+  { id: 'bakery', name: 'نونوایی سنگکی', icon: '🥖', cost: 6, line: 'نونوایی کناری دوباره باز شد. صبح‌ها کل محل بوی سنگک تازه می‌ده!' },
+  { id: 'saqqa', name: 'سقاخونه', icon: '🕯️', cost: 6, line: 'سقاخونه‌ی سر کوچه رو کاشی کردیم. شب‌های جمعه همسایه‌ها شمع روشن می‌کنن.' },
+  { id: 'lamps', name: 'چراغ‌های خیابون', icon: '🏮', cost: 5, line: 'دو تا چراغ سبز قدیمی تهرون، درست مثل عکس‌های قدیمی آقاجون.' },
+  { id: 'kiosk', name: 'دکه‌ی روزنامه‌فروشی', icon: '📰', cost: 6, line: 'آقا مهدی دکه‌ش رو آورد جلوی آژانس. راننده‌ها صبح‌ها روزنامه می‌خونن.' },
+  { id: 'juice', name: 'آبمیوه‌فروشی', icon: '🍊', cost: 7, line: 'آب‌پرتقال و آب‌انار تازه! مسافرها تا ماشین برسه یه لیوان می‌زنن.' },
+  { id: 'roof', name: 'باغچه‌ی پشت‌بوم', icon: '🍇', cost: 7, line: 'رو پشت‌بوم داربست انگور زدیم. تابستون‌ها اونجا شام می‌خوریم!' },
+  { id: 'jube', name: 'جوی آب و پل‌چوبی', icon: '💧', cost: 6, line: 'جوی رو لایروبی کردیم و آب زلال راه افتاد. بچه‌ها توش قایق کاغذی می‌ندازن.' },
+  { id: 'pigeons', name: 'کبوترها و آبخوری', icon: '🕊️', cost: 5, line: 'یه آبخوری کوچیک گذاشتیم. حالا کبوترهای تجریش مهمون همیشگی آژانسن.' },
+  { id: 'samand', name: 'سمند زرد تاکسی', icon: '🚖', cost: 9, line: 'یه سمند زرد به ناوگان اضافه شد. مش‌رحیم می‌گه از پیکان بهتر نیست، ولی سوارش می‌شه!' },
+  { id: 'bus', name: 'ایستگاه اتوبوس', icon: '🚏', cost: 7, line: 'شهرداری یه ایستگاه اتوبوس جلوی آژانس زد. مسافر بیشتر، کار بیشتر!' },
+  { id: 'vanet', name: 'پیکان وانت', icon: '🛻', cost: 10, line: 'یه پیکان وانت برای اسباب‌کشی مشتری‌ها. آژانس آقاجون حالا همه‌کاره‌ست!' },
 ];
+
+/** The renovations come in two phases: the agency itself, then its neighbourhood. */
+export const PHASE1 = 12;
 
 const std = (color: number, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...o });
 function tex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void) {
@@ -217,9 +233,111 @@ export function buildAgency(done: Set<string>, night = false): THREE.Group {
     car.position.set(4.0, 0, FRONT + 4.4); pr.add(car);
   }
 
+  buildNeighbourhood(root, has, piece, night);
   root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   return root;
 }
 
 /** Stars earned for winning level `n` (0-based) the first time: more for hard and boss levels. */
 export const starsFor = (tag?: string) => (tag === 'boss' ? 3 : tag === 'hard' ? 2 : 1);
+
+/** Phase 2: the street around the agency. The neighbours stand at x ≈ −6.7 (left) and +6.9 (right). */
+function buildNeighbourhood(root: THREE.Group, has: (id: string) => boolean, piece: (id: string) => THREE.Group, night: boolean) {
+  const LX = -W / 2 - 3.2, RX = W / 2 + 3.4;
+  if (has('mural')) {
+    const m = piece('mural');
+    const art = tex(512, 384, (g) => {
+      const sky = g.createLinearGradient(0, 0, 0, 384); sky.addColorStop(0, '#3b82f6'); sky.addColorStop(1, '#bfdbfe'); g.fillStyle = sky; g.fillRect(0, 0, 512, 384);
+      g.fillStyle = '#64748b'; g.beginPath(); g.moveTo(40, 300); g.lineTo(256, 70); g.lineTo(470, 300); g.fill(); // Damavand
+      g.fillStyle = '#f8fafc'; g.beginPath(); g.moveTo(205, 125); g.lineTo(256, 70); g.lineTo(307, 125); g.lineTo(280, 115); g.lineTo(256, 130); g.lineTo(230, 112); g.fill();
+      g.fillStyle = '#16a34a'; g.fillRect(0, 290, 512, 94);
+      g.fillStyle = '#f4f1ea'; g.beginPath(); g.roundRect(150, 270, 210, 52, 14); g.fill(); g.beginPath(); g.roundRect(195, 240, 110, 40, 12); g.fill(); // a white Peykan
+      g.fillStyle = '#93c5fd'; g.fillRect(205, 248, 40, 24); g.fillRect(255, 248, 40, 24);
+      g.fillStyle = '#111827'; for (const x of [190, 320]) { g.beginPath(); g.arc(x, 322, 18, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#fbbf24'; g.beginPath(); g.arc(430, 60, 30, 0, Math.PI * 2); g.fill();
+    });
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 3.8), std(0xffffff, { map: art, roughness: 0.8 }));
+    wall.position.set(LX, 4.2, FRONT + 0.04); m.add(wall);
+  }
+  if (has('bakery')) {
+    const b = piece('bakery');
+    b.add(box(4.6, 2.4, 0.1, std(0x4a3426), RX, 1.3, FRONT + 0.03));
+    const glow = std(0xffc27a, { emissive: 0xff8a2a, emissiveIntensity: night ? 1.4 : 0.5 });
+    b.add(box(2.4, 1.5, 0.05, glow, RX - 0.7, 1.4, FRONT + 0.09));
+    for (let k = 0; k < 3; k++) { const br = box(0.5, 1.1, 0.04, std(0xc8935a, { roughness: 0.9 }), RX - 1.5 + k * 0.6, 1.4, FRONT + 0.12, 0.02); br.rotation.z = (k - 1) * 0.08; b.add(br); }
+    const signTex = tex(512, 96, (g) => { g.fillStyle = '#7c2d12'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#fde68a'; g.font = '900 60px Vazirmatn'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText('نانوایی سنگکی', 256, 52); });
+    b.add(box(4.2, 0.6, 0.1, [std(0x7c2d12), std(0x7c2d12), std(0x7c2d12), std(0x7c2d12), std(0xffffff, { map: signTex }), std(0x7c2d12)], RX, 2.85, FRONT + 0.12));
+  }
+  if (has('saqqa')) {
+    const q = piece('saqqa');
+    const tile = tex(256, 256, (g) => { g.fillStyle = '#0e7490'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 64; i++) { g.fillStyle = ['#fbbf24', '#f8fafc', '#164e63'][i % 3]; const x = (i % 8) * 32 + 16, y = Math.floor(i / 8) * 32 + 16; g.beginPath(); g.moveTo(x, y - 12); g.lineTo(x + 12, y); g.lineTo(x, y + 12); g.lineTo(x - 12, y); g.fill(); } });
+    q.add(box(1.4, 1.9, 0.5, std(0xffffff, { map: tile, roughness: 0.4 }), LX + 1.6, 1.1, FRONT + 0.25));
+    q.add(box(0.9, 1.1, 0.1, std(0x14532d, { roughness: 0.8 }), LX + 1.6, 1.15, FRONT + 0.5)); // green cloth
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.14, 0.12, 14), std(0xd4a017, { metalness: 0.8, roughness: 0.25 })); bowl.position.set(LX + 1.6, 0.62, FRONT + 0.62); q.add(bowl);
+    for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.16, 6), std(0xfff7ed)); c.position.set(LX + 1.25 + k * 0.23, 0.29, FRONT + 0.72); q.add(c); const f = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 4), std(0xffd27a, { emissive: 0xff9a2a, emissiveIntensity: 3 })); f.position.set(LX + 1.25 + k * 0.23, 0.4, FRONT + 0.72); q.add(f); }
+  }
+  if (has('lamps')) {
+    const l = piece('lamps');
+    const m = std(0x2f5d4a, { metalness: 0.5, roughness: 0.45 });
+    for (const x of [-5.2, 5.6]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 4.2, 8), m); pole.position.set(x, 2.1, FRONT + 2.7); l.add(pole);
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, 0.22, 10), m); head.position.set(x, 4.3, FRONT + 2.7); l.add(head);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 6), std(0xfff4d0, { emissive: 0xffe8a8, emissiveIntensity: night ? 4 : 0.6 })); bulb.position.set(x, 4.15, FRONT + 2.7); l.add(bulb);
+    }
+  }
+  if (has('kiosk')) {
+    const k = piece('kiosk');
+    k.add(box(1.6, 1.8, 1.2, std(0x2e7d4f, { roughness: 0.5 }), LX - 0.9, 1.06, FRONT + 1.4, 0.05));
+    k.add(box(1.9, 0.1, 1.5, std(0x1f5a39), LX - 0.9, 2.0, FRONT + 1.45, 0.03));
+    const mags = tex(256, 96, (g) => { const cols = ['#e11d48', '#f59e0b', '#2563eb', '#16a34a', '#a855f7', '#0ea5e9']; for (let i = 0; i < 12; i++) { g.fillStyle = cols[i % 6]; g.fillRect((i % 6) * 42 + 4, Math.floor(i / 6) * 48 + 4, 36, 42); g.fillStyle = '#fff'; g.fillRect((i % 6) * 42 + 8, Math.floor(i / 6) * 48 + 10, 28, 6); } });
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.55), std(0xffffff, { map: mags })); front.position.set(LX - 0.9, 1.3, FRONT + 2.01); k.add(front);
+  }
+  if (has('juice')) {
+    const j = piece('juice');
+    j.add(box(1.6, 0.9, 0.8, std(0xf8fafc, { roughness: 0.4 }), RX + 2.4, 0.61, FRONT + 1.5, 0.04));
+    j.add(box(1.6, 0.25, 0.8, std(0xf97316), RX + 2.4, 0.29, FRONT + 1.5));
+    for (let i = 0; i < 12; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), std(i % 3 ? 0xf59e0b : 0xa3122a, { roughness: 0.5 })); o.position.set(RX + 1.8 + (i % 6) * 0.22, 1.15 + Math.floor(i / 6) * 0.12, FRONT + 1.4 + (i % 2) * 0.12); j.add(o); }
+    const umb = new THREE.Mesh(new THREE.ConeGeometry(1.2, 0.5, 12), std(0xfbbf24, { side: THREE.DoubleSide })); umb.position.set(RX + 2.4, 2.5, FRONT + 1.5); j.add(umb);
+    j.add(box(0.05, 2.0, 0.05, std(0x6b7280), RX + 2.4, 1.4, FRONT + 1.5));
+  }
+  if (has('roof')) {
+    const r = piece('roof');
+    const wood = std(0x8b5a2b), leaf = std(0x3f8f3a, { flatShading: true }), grape = std(0x6b21a8);
+    for (const x of [-2.8, 2.8]) for (const z of [-1.6, 1.6]) r.add(box(0.1, 1.6, 0.1, wood, x, H + 0.95, z));
+    for (let k = 0; k < 6; k++) r.add(box(5.8, 0.06, 0.08, wood, 0, H + 1.78, -1.6 + k * 0.64));
+    for (let k = 0; k < 14; k++) { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), leaf); p.position.set(-2.6 + (k % 7) * 0.85, H + 1.95, -1.2 + Math.floor(k / 7) * 1.8); p.scale.y = 0.45; r.add(p); }
+    for (let k = 0; k < 5; k++) { const gp = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.25, 6), grape); gp.rotation.x = Math.PI; gp.position.set(-2 + k, H + 1.6, 0.4); r.add(gp); }
+  }
+  if (has('jube')) {
+    const j = piece('jube');
+    j.add(box(26, 0.03, 0.3, std(0x60a5fa, { roughness: 0.05, metalness: 0.4, emissive: 0x0c4a6e, emissiveIntensity: 0.3 }), 0, 0.03, FRONT + 3.25));
+    for (const x of [-1.6, 4.0]) j.add(box(0.8, 0.06, 0.5, std(0x8b5a2b), x, 0.17, FRONT + 3.25));
+    for (const x of [-8, -3, 2, 7, 10]) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.06, 4), std(0xffffff)); t.rotation.y = x; t.position.set(x, 0.07, FRONT + 3.25); j.add(t); } // paper boats
+  }
+  if (has('pigeons')) {
+    const pg = piece('pigeons');
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.1, 14), std(0x94a3b8, { metalness: 0.3 })); bowl.position.set(0.8, 0.22, FRONT + 2.2); pg.add(bowl);
+    const feather = std(0x9ca3af, { roughness: 0.7 }), neck = std(0x4b5563);
+    for (let k = 0; k < 6; k++) {
+      const a = k * 1.05, x = 0.8 + Math.cos(a) * 0.55, z = FRONT + 2.2 + Math.sin(a) * 0.45;
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), feather); b.scale.set(1.4, 0.9, 0.9); b.position.set(x, 0.26, z); b.rotation.y = -a; pg.add(b);
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), neck); h.position.set(x - Math.cos(a) * 0.1, 0.34, z - Math.sin(a) * 0.1); pg.add(h);
+    }
+  }
+  if (has('samand')) {
+    const sm = piece('samand');
+    const car = buildCar(CARS.samand, 0xf2c230, { q: 0.7, taxi: true }); car.position.set(-6.6, 0, FRONT + 4.4); sm.add(car);
+  }
+  if (has('bus')) {
+    const b = piece('bus');
+    const steel = std(0x5d6b7e, { metalness: 0.6, roughness: 0.35 });
+    b.add(box(3.0, 0.14, 1.3, std(0x1e63d6, { roughness: 0.4 }), LX - 3.6, 2.3, FRONT + 2.2, 0.04));
+    for (const x of [-1.35, 1.35]) for (const z of [-0.5, 0.5]) b.add(box(0.07, 2.2, 0.07, steel, LX - 3.6 + x, 1.2, FRONT + 2.2 + z));
+    b.add(box(2.0, 0.08, 0.38, std(0xa0703c), LX - 3.6, 0.6, FRONT + 1.9, 0.03));
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.5, 0.04), new THREE.MeshPhysicalMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.45, roughness: 0.05 })); back.position.set(LX - 3.6, 1.3, FRONT + 1.65); b.add(back);
+  }
+  if (has('vanet')) {
+    const v = piece('vanet');
+    const car = buildVanet(0x7fb4d9, { q: 0.7 }); car.position.set(8.4, 0, FRONT + 4.4); v.add(car);
+  }
+}

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
-import { RENOVATIONS, buildAgency } from '../render/agency';
+import { PHASE1, RENOVATIONS, buildAgency } from '../render/agency';
 import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
@@ -58,10 +58,13 @@ export function showAgency(onClose: () => void) {
   const show = () => {
     (c.querySelector('.stars b') as HTMLElement).textContent = fa(save.agency.stars);
     const done = save.agency.done.length, all = RENOVATIONS.length;
+    const phase2 = done >= PHASE1;
+    (c.querySelector('h2') as HTMLElement).innerHTML = `${emo(phase2 ? '🏘️' : '🏠')} ${phase2 ? 'محله‌ی آقاجون' : 'آژانس آقاجون'}`;
     bar.innerHTML = `<span class="pbar"><i style="width:${Math.round((done / all) * 100)}%"></i></span><small>${fa(done)} از ${fa(all)} بازسازی</small>`;
     action.innerHTML = '';
     const next = nextRenovation();
-    if (!next) { action.append(h('p', 'story', `${emo('🎉', 'emo sm')} آژانس آقاجون مثل روز اولش شد! آقاجون اگه بود کلی کیف می‌کرد.`)); return; }
+    if (!next) { action.append(h('p', 'story', `${emo('🎉', 'emo sm')} آژانس و محله‌ی آقاجون مثل روز اولش شد! آقاجون اگه بود کلی کیف می‌کرد.`)); return; }
+    if (save.agency.done.length === PHASE1 && !action.dataset.told) action.append(h('p', 'story', `${emo('🏘️', 'emo sm')} آژانس آماده‌ست! حالا نوبت محله‌ست: نونوایی، سقاخونه، دکه و ایستگاه اتوبوس.`));
     const can = save.agency.stars >= next.cost;
     action.append(h('div', 'nextr', `${emo(next.icon)}<b>${next.name}</b>`));
     const b = button(`${emo('🔨', 'emo sm')} بازسازی کن، ${emo('⭐', 'emo sm')} ${fa(next.cost)}`, can ? 'gold big' : 'ghost', () => {
@@ -82,9 +85,10 @@ export function showAgency(onClose: () => void) {
   let t = 0;
   const frame = () => {
     // A slow swing in front of the building.
-    const a = Math.sin(t * 0.25) * 0.35;
-    cam.position.set(Math.sin(a) * 19, 6.2, 2.5 + Math.cos(a) * 19);
-    cam.lookAt(0, 2.6, 3.2);
+    // Phase 2 is the whole street: pull back to take in the neighbours.
+    const a = Math.sin(t * 0.25) * 0.35, d = save.agency.done.length >= PHASE1 ? 26 : 19;
+    cam.position.set(Math.sin(a) * d, 6.2 + (d - 19) * 0.25, 2.5 + Math.cos(a) * d);
+    cam.lookAt(0, 2.6 + (d - 19) * 0.12, 3.2 - (d - 19) * 0.2);
     if (pop) {
       pop.t += 0.016;
       const k = Math.min(1, pop.t / 0.6), s = k < 1 ? 1 + Math.sin(k * Math.PI) * 0.25 - (1 - k) * (1 - k) : 1;

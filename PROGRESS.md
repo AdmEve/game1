@@ -66,7 +66,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   Tajrish decked out for Yalda (pomegranate and watermelon stands, lights, banner); each win earns a pomegranate,
   a «فال حافظ» couplet and coins, the last night 3 keys. Test with `?yalda`; `node scripts/playthrough.cjs y1 y7`
 - «آژانس آقاجون» renovation meta (`src/render/agency.ts`, `src/ui/agency.ts`): stars from new wins (1, hard 2, boss 3)
-  rebuild grandpa's taxi agency in a 3D diorama, 12 renovations from rubbish clearing to a new Pride; old saves
+  rebuild grandpa's taxi agency in a 3D diorama: 12 renovations from rubbish clearing to a new Pride, then phase 2
+  «محله‌ی آقاجون» (12 more around the street: mural, sangak bakery, saqqakhaneh, kiosk, bus stop, Samand, Vanet); old saves
   are credited for levels already won
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
