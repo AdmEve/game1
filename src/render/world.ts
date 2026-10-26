@@ -81,7 +81,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; landmark?: 'milad' | 'azadi' | 'both'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -127,11 +127,11 @@ export function cone(): THREE.Group {
 }
 
 /** A Tehran plane tree «چنار»: a pale mottled trunk and a layered canopy. */
-function chenar(s: number): THREE.Group {
+function chenar(s: number, snow = false): THREE.Group {
   const t = new THREE.Group();
   const bark = std(0xb9ae94, { roughness: 0.9 });
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.6, 8), bark); trunk.position.y = 0.8; t.add(trunk);
-  const leafA = std(0x4f8f3a, { roughness: 0.8, flatShading: true }), leafB = std(0x6aa848, { roughness: 0.8, flatShading: true });
+  const leafA = std(snow ? 0xe3ebe8 : 0x4f8f3a, { roughness: 0.8, flatShading: true }), leafB = std(snow ? 0xc8d6cf : 0x6aa848, { roughness: 0.8, flatShading: true });
   const puffs: [number, number, number, number][] = [[0, 2.0, 0, 0.85], [0.55, 1.75, 0.2, 0.6], [-0.5, 1.8, -0.15, 0.62], [0.1, 2.45, 0.1, 0.6], [-0.2, 1.7, 0.45, 0.5], [0.3, 2.2, -0.4, 0.55]];
   puffs.forEach(([x, y, z, r], i) => { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), i % 2 ? leafB : leafA); p.position.set(x, y, z); p.rotation.set(i, i * 2, 0); t.add(p); });
   t.traverse((m) => { m.castShadow = true; });
@@ -162,7 +162,7 @@ type Style = 'stone' | 'brick';
  * awnings on the ground floor, balconies, bare cement side walls, an ایزوگام roof with a parapet and the
  * usual rooftop clutter (water tank, evaporative cooler, satellite dishes).
  */
-function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number, night = false): THREE.Group {
+function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number, night = false, snow = false): THREE.Group {
   const g = new THREE.Group();
   const glow: [number, number, number, number, string][] = [];
   const fh = 0.62, h = floors * fh + 0.3, d = 1.8;
@@ -229,7 +229,7 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
   facade.wrapS = facade.wrapT = THREE.ClampToEdgeWrapping;
   // Bare cement side walls: most Tehran blocks are only finished on the street side.
   const cement = std(0xa8a39a, { roughness: 0.95 });
-  const roof = std(0xffffff, { map: isogamTex(), roughness: 0.45, metalness: 0.35 });
+  const roof = snow ? std(0xf4f8fb, { roughness: 0.9 }) : std(0xffffff, { map: isogamTex(), roughness: 0.45, metalness: 0.35 });
   const front = std(0xffffff, { map: facade, roughness: 0.8 });
   if (night) {
     const glowTex = canvasTex(W, FH * floors, (c) => { c.fillStyle = '#000'; c.fillRect(0, 0, W, FH * floors); for (const [x, y, ww, hh, col] of glow) { c.fillStyle = col; c.fillRect(x, y, ww, hh); } });
@@ -325,7 +325,7 @@ function azadiTower(): THREE.Group {
 export interface World { group: THREE.Group; L: Layout; }
 
 export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
-  const night = !!opts.night;
+  const night = !!opts.night, snow = !!opts.snow;
   let s = seed;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   const L = layout(w, h, bays);
@@ -334,8 +334,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   const cx = 0, lotCZ = L.lotH / 2;
 
   // Ground.
-  const grass = grassTex(); grass.repeat.set(30, 30);
-  add(plane(120, 120, std(0xffffff, { map: grass }), 0, -0.02, 0));
+  const grass = snow ? canvasTex(256, 256, (g2) => speckle(g2, 256, 256, '#eef3f7', ['#dfe7ee', '#ffffff', '#cdd8e2'], 6000, 2), 1) : grassTex(); grass.repeat.set(30, 30);
+  add(plane(120, 120, std(0xffffff, { map: grass, roughness: snow ? 0.95 : 0.85 }), 0, -0.02, 0));
   // Ring road around the lot + the top road running across the whole scene.
   const asph = asphaltTex(); const ringW = L.lotW + 2 * (CURB + ROAD), ringH = L.lotH + 2 * (CURB + ROAD);
   asph.repeat.set(ringW / 4, ringH / 4);
@@ -394,7 +394,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // Plane trees along the sidewalk, apartments behind, landmarks on the horizon.
   for (let x = -16; x <= 16; x += 2.6 + rnd()) {
     if (Math.abs(x - shelter.position.x) < 1.8 || Math.abs(x - kiosk.position.x) < 1.3) continue;
-    const t = chenar(0.85 + rnd() * 0.3); t.position.set(x, 0.18, L.walkZ - 0.85 + rnd() * 0.2); add(t);
+    const t = chenar(0.85 + rnd() * 0.3, snow); t.position.set(x, 0.18, L.walkZ - 0.85 + rnd() * 0.2); add(t);
   }
   const tones = ['#e6dccb', '#d9cbb3', '#efe2c8', '#e2d2bd', '#d8d0c4'];
   const bricks = ['#a8613f', '#b5714d', '#9c5638', '#c07f5a'];
@@ -402,7 +402,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   for (let x = -18, i = 0; x < 18; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
-    const b = apartment(bw, floors, tone, style, rnd, night);
+    const b = apartment(bw, floors, tone, style, rnd, night, snow);
     b.position.set(x + bw / 2, 0, L.walkZ - 3.2 - rnd() * 0.6);
     add(b);
     x += bw + 0.15;
@@ -411,17 +411,51 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   for (let x = -24, i = 0; x < 24; i++) {
     const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
     const [tone, style] = facadeOf(i + 3);
-    const b = apartment(bw, floors, tone, style, rnd, night);
+    const b = apartment(bw, floors, tone, style, rnd, night, snow);
     b.position.set(x + bw / 2, 0, L.walkZ - 7.5 - rnd() * 2); add(b);
     x += bw + 0.4;
   }
   const lm = opts.landmark ?? 'both';
   const milad = miladTower();
+  if (lm === 'tochal') milad.visible = false;
   if (lm === 'milad') { milad.scale.setScalar(1.25); milad.position.set(2.5, 0, L.walkZ - 24); } else { milad.scale.setScalar(0.9); milad.position.set(7, 0, L.walkZ - 26); }
   add(milad);
   const azadi = azadiTower();
   if (lm === 'azadi') { azadi.scale.setScalar(2.4); azadi.position.set(0, 0, L.walkZ - 19); azadi.rotation.y = 0; } else { azadi.scale.setScalar(1.1); azadi.position.set(-8, 0, L.walkZ - 22); azadi.rotation.y = 0.35; }
   add(azadi);
+  if (lm === 'tochal') {
+    // Tochal: a big snowy peak with the cable car climbing to it.
+    const peak = new THREE.Mesh(new THREE.ConeGeometry(18, 26, 9), std(0x9fb3c8, { roughness: 1, flatShading: true }));
+    peak.position.set(6, 13, L.walkZ - 34); g.add(peak);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(10, 14.5, 9), std(0xffffff, { roughness: 0.9, flatShading: true }));
+    cap.position.set(6, 19.6, L.walkZ - 34); g.add(cap);
+    const a = new THREE.Vector3(-9, 0, L.walkZ - 12), b = new THREE.Vector3(4, 21, L.walkZ - 31);
+    const towerMat = std(0x64748b, { metalness: 0.6, roughness: 0.4 });
+    for (let k = 0; k <= 3; k++) {
+      const p = a.clone().lerp(b, k / 3);
+      const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.25, p.y + 2.5, 6), towerMat); tw.position.set(p.x, (p.y + 2.5) / 2 - 0.5, p.z); g.add(tw);
+    }
+    const dir = b.clone().sub(a), len = dir.length();
+    for (const off of [-0.25, 0.25]) {
+      const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, len, 4), std(0x1f2937));
+      cable.position.copy(a.clone().add(b).multiplyScalar(0.5)).add(new THREE.Vector3(off, 2, 0));
+      cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()); g.add(cable);
+    }
+    for (let k = 1; k < 8; k++) {
+      const p = a.clone().lerp(b, k / 8).add(new THREE.Vector3(0, 1.45, 0));
+      const cab = new THREE.Mesh(new RoundedBoxGeometry(0.6, 0.55, 0.5, 2, 0.1), std(k % 2 ? 0xdc2626 : 0xf59e0b, { roughness: 0.4 }));
+      cab.position.copy(p); g.add(cab);
+    }
+  }
+  if (snow) {
+    // Plowed snow piled along the kerbs.
+    const pile = std(0xf8fbfd, { roughness: 0.95, flatShading: true });
+    for (let k = 0; k < 26; k++) {
+      const side = k % 2 ? 1 : -1, z = (k / 26) * (L.lotH + 2) - 1;
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45 + rnd() * 0.4, 1), pile);
+      m.scale.set(1.4, 0.45, 1); m.position.set(side * (L.lotW / 2 + CURB + ROAD + 0.4 + rnd() * 0.4), 0.05, z); g.add(m);
+    }
+  }
   if (night) {
     // Floodlit monuments and pools of lamplight.
     const flood = (o: THREE.Object3D, r: number) => { const p = lightPool(r, 0x9fc4ff, 0.5); p.position.set(o.position.x, 0.05, o.position.z + 1); g.add(p); };
@@ -429,10 +463,10 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     azadi.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0x7fa6ff); mat.emissiveIntensity = 0.35; mm.material = mat; } });
     milad.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0xc9a3ff); mat.emissiveIntensity = 0.45; mm.material = mat; } });
   }
-  const mtn = std(0x8fa5bf, { roughness: 1, flatShading: true }), snow = std(0xffffff, { roughness: 0.9, flatShading: true });
+  const mtn = std(0x8fa5bf, { roughness: 1, flatShading: true }), snowCap = std(0xffffff, { roughness: 0.9, flatShading: true });
   for (const [x, hh, r] of [[-34, 18, 15], [-14, 24, 17], [6, 20, 15], [26, 26, 18], [46, 17, 13]]) {
     const m = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 7), mtn); m.position.set(x, hh / 2, L.walkZ - 52); g.add(m);
-    const sn = new THREE.Mesh(new THREE.ConeGeometry(r * 0.34, hh * 0.34, 7), snow); sn.position.set(x, hh - hh * 0.17 + 0.05, L.walkZ - 52); g.add(sn);
+    const sn = new THREE.Mesh(new THREE.ConeGeometry(r * 0.34, hh * 0.34, 7), snowCap); sn.position.set(x, hh - hh * 0.17 + 0.05, L.walkZ - 52); g.add(sn);
   }
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
@@ -447,7 +481,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
 
   if (opts.boulevard) {
     // Valiasr: a double row of old plane trees.
-    for (let x = -16; x <= 16; x += 2.2 + rnd() * 0.6) { const t = chenar(1.15 + rnd() * 0.3); t.position.set(x, 0, L.walkZ - 2.3 + rnd() * 0.3); add(t); }
+    for (let x = -16; x <= 16; x += 2.2 + rnd() * 0.6) { const t = chenar(1.15 + rnd() * 0.3, snow); t.position.set(x, 0, L.walkZ - 2.3 + rnd() * 0.3); add(t); }
   }
   if (night) {
     // Floodlights over the lot and the bays.
@@ -458,7 +492,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   for (let i = 0; i < 18; i++) {
     const side = i % 2 ? 1 : -1, z = rnd() * (L.lotH + 6) - 1;
     const x = side * (L.lotW / 2 + CURB + ROAD + 1.2 + rnd() * 3.5);
-    const t = chenar(0.8 + rnd() * 0.4); t.position.set(x, 0, z); add(t);
+    const t = chenar(0.8 + rnd() * 0.4, snow); t.position.set(x, 0, z); add(t);
   }
   // Everything here is static: merge it into one mesh per material to keep draw calls low.
   const baked = bake(g);

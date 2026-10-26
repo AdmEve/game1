@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import LEVELS from '../src/game/levels.json';
-import { addBay, newState, tap, validate, type Level } from '../src/game/rules';
+import { addBay, newState, startState, tap, validate, type Level } from '../src/game/rules';
 import { solve } from '../src/game/solver';
 
 const levels = LEVELS as Level[];
@@ -108,6 +108,28 @@ describe('mechanics', () => {
   });
 });
 
+describe('officer', () => {
+  it('«پلیس راهور» lets one direction go at a time', () => {
+    const l: Level = {
+      w: 4, h: 3, officer: true,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' },
+        { kind: 'pride', color: 'blue', col: 1, row: 2, dir: 'right' },
+        { kind: 'pride', color: 'red', col: 3, row: 0, dir: 'up' },
+      ],
+      queue: ['red', 'red', 'red', 'red', 'blue', 'blue', 'blue', 'blue', 'red', 'red', 'red', 'red'],
+    };
+    const s = startState(l);
+    expect(s.axis).toBe('v');
+    expect(tap(s, 1)[0]).toMatchObject({ t: 'locked', why: 'officer' });
+    const ev = tap(s, 0);
+    expect(ev).toContainEqual({ t: 'axis', axis: 'h' });
+    expect(tap(s, 2)[0]).toMatchObject({ t: 'locked', why: 'officer' });
+    tap(s, 1);
+    expect(tap(s, 2).at(-1)).toEqual({ t: 'won' });
+  });
+});
+
 describe('courier', () => {
   it('«پیک موتوری» takes one passenger of any color when no car matches', () => {
     const l: Level = {
@@ -128,7 +150,7 @@ describe('courier', () => {
 });
 
 describe('journey levels', () => {
-  it('has 90 levels', () => expect(levels.length).toBe(90));
+  it('has 120 levels', () => expect(levels.length).toBe(120));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

@@ -194,3 +194,35 @@ export function colorSymbol(color: string, size = 0.42): THREE.Sprite {
   s.scale.setScalar(size);
   return s;
 }
+
+/** «پلیس راهور»: a traffic officer in olive uniform, white cap and gloves. Arms show the open direction. */
+export function trafficOfficer(): THREE.Group {
+  const g = new THREE.Group();
+  const uni = mstd(0x4d5b3a, { roughness: 0.7 }), white = mstd(0xf8fafc, { roughness: 0.5 }), skin = mstd(0xe0b088, { roughness: 0.6 });
+  const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.3, 4, 10), mstd(0x2f3a24)); legs.position.y = 0.3; g.add(legs);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.28, 6, 14), uni); torso.position.y = 0.68; g.add(torso);
+  const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.19, 0.2, 14, 1, true), mstd(0xd9f99d, { emissive: 0x4d7c0f, emissiveIntensity: 0.3 })); vest.position.y = 0.7; g.add(vest);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), skin); head.position.y = 1.05; g.add(head);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.09, 16), white); cap.position.y = 1.16; g.add(cap);
+  const peak = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.2), mstd(0x111111)); peak.position.set(0.13, 1.12, 0); g.add(peak);
+  const arm = (side: number) => {
+    const pivot = new THREE.Group(); pivot.position.set(0, 0.86, side * 0.2);
+    const a = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.36, 4, 8), uni); a.position.y = -0.2; pivot.add(a);
+    const glove = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), white); glove.position.y = -0.42; pivot.add(glove);
+    g.add(pivot);
+    return pivot;
+  };
+  g.userData.armL = arm(1); g.userData.armR = arm(-1);
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
+/** Point the officer's arms along the open axis ('v' = up/down the lot, 'h' = left/right). */
+export function poseOfficer(o: THREE.Group, axis: 'v' | 'h', k = 1) {
+  const L = o.userData.armL as THREE.Group, R = o.userData.armR as THREE.Group;
+  // 'h': arms straight out to the sides; 'v': one arm forward, one back.
+  const tL = axis === 'h' ? { x: -Math.PI / 2, z: 0 } : { x: 0, z: Math.PI / 2 };
+  const tR = axis === 'h' ? { x: Math.PI / 2, z: 0 } : { x: 0, z: -Math.PI / 2 };
+  L.rotation.x += (tL.x - L.rotation.x) * k; L.rotation.z += (tL.z - L.rotation.z) * k;
+  R.rotation.x += (tR.x - R.rotation.x) * k; R.rotation.z += (tR.z - R.rotation.z) * k;
+}

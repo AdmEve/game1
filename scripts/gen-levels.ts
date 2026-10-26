@@ -12,7 +12,7 @@ interface Spec {
   w: number; h: number; fill: number; colors: number; mix: number; target: number;
   zamyad?: number; bus?: number; cones?: number; tag?: string;
   /** Mechanics: fraction of covered cars, broken Peykans, دربست passengers, odd/even period. */
-  cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number;
+  cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number; officer?: boolean;
   intro?: Level['intro'];
 }
 
@@ -70,6 +70,30 @@ for (let i = 0; i < 60; i++) {
   // Courier bikes from level 41 on (introduced there).
   if (n === 41) Object.assign(spec, { bikes: 2, intro: 'courier', oddEven: undefined, vip: undefined });
   else if (n > 41 && r() < 0.35) spec.bikes = 1 + Math.floor(r() * 2);
+  if (hard) spec.tag = 'hard';
+  if (boss) spec.tag = 'boss';
+  SPECS.push(spec);
+}
+
+// Chapter 4 (Tochal in the snow): the traffic officer arrives at level 93.
+for (let i = 0; i < 30; i++) {
+  const n = 91 + i, inCh = i;
+  const hard = n % 5 === 0, boss = n === 120;
+  const r = rng(n * 104729);
+  const spec: Spec = {
+    w: 7, h: inCh < 8 ? 8 : inCh < 20 ? 9 : 10, fill: 0.85 + (inCh / 29) * 0.06 + (hard ? 0.02 : 0),
+    colors: 6, mix: Math.round(8 + inCh / 4 + (hard ? 4 : 0)),
+    target: boss ? 0.15 : hard ? 0.3 : Math.max(0.45, 0.78 - 0.25 * (inCh / 29)),
+    zamyad: 0.12, bus: 0.08, cones: Math.floor(r() * 3),
+  };
+  if (r() < 0.4) spec.cover = 0.2 + r() * 0.15;
+  if (r() < 0.35) spec.broken = 1;
+  if (r() < 0.3) spec.vip = 1;
+  if (r() < 0.25) spec.oddEven = 3;
+  if (r() < 0.3) spec.bikes = 1 + Math.floor(r() * 2);
+  if (n === 93) Object.assign(spec, { officer: true, intro: 'officer', oddEven: undefined, vip: undefined, cover: undefined });
+  else if (n > 93 && r() < 0.5) { spec.officer = true; spec.oddEven = undefined; }
+  if (boss) Object.assign(spec, { cover: 0.3, broken: 1, vip: 1, officer: true, bikes: 1 });
   if (hard) spec.tag = 'hard';
   if (boss) spec.tag = 'boss';
   SPECS.push(spec);
@@ -133,7 +157,7 @@ function generate(spec: Spec, seed: number): Level | null {
   void remap;
   // Plates for «طرح زوج و فرد», then a fresh exit order that respects them.
   if (spec.oddEven) for (const v of keep) v.plate = Math.floor(r() * 10);
-  const base: Level = { w, h, vehicles: keep, obstacles: cones, queue: [], oddEven: spec.oddEven };
+  const base: Level = { w, h, vehicles: keep, obstacles: cones, queue: [], oddEven: spec.oddEven, officer: spec.officer };
   const st = startState(base);
   const seq: number[] = [];
   while (seq.length < keep.length) {
@@ -176,6 +200,7 @@ function generate(spec: Spec, seed: number): Level | null {
   const level: Level = { w, h, vehicles: keep, obstacles: cones.length ? cones : undefined, queue };
   if (vip.length) level.vip = vip;
   if (spec.oddEven) level.oddEven = spec.oddEven;
+  if (spec.officer) level.officer = true;
   if (spec.intro) level.intro = spec.intro;
   if (spec.tag) level.tag = spec.tag;
   if (validate(level).length) throw new Error(validate(level).join('; '));

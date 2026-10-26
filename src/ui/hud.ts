@@ -28,6 +28,7 @@ export class Hud {
   private bar = h('div', 'boosters');
   private toastEl = h('div', 'toast');
   private camSign = h('div', 'camsign hidden');
+  private copSign = h('div', 'camsign cop hidden');
   private btns = new Map<BoosterId, HTMLButtonElement>();
   onBooster: (id: BoosterId) => void = () => {};
   onSettings: () => void = () => {};
@@ -39,7 +40,7 @@ export class Hud {
     gear.onclick = () => { click(); this.onSettings(); };
     this.coins.onclick = () => { click(); this.onCoins(); };
     top.append(gear, this.plate, this.coins);
-    this.root.append(top, this.people, this.camSign, this.bar, this.toastEl);
+    this.root.append(top, this.people, this.camSign, this.copSign, this.bar, this.toastEl);
     for (const b of BOOSTERS) {
       const el = h('button', `bst bst-${b.id}`);
       el.onclick = () => { click(); this.onBooster(b.id); };
@@ -61,6 +62,13 @@ export class Hud {
     const dots = Array.from({ length: Math.max(0, left) }, () => '<i></i>').join('');
     this.camSign.className = 'camsign ' + (p ? 'odd' : 'even');
     this.camSign.innerHTML = `${emo('📸', 'emo sm')}<span>طرح <b>${p ? 'فرد' : 'زوج'}</b></span><span class="dots">${dots}</span>`;
+  }
+  /** «پلیس راهور» sign: which direction may go. */
+  setOfficer(axis: 'v' | 'h' | null) {
+    this.copSign.classList.toggle('hidden', axis === null);
+    if (!axis) return;
+    this.copSign.innerHTML = `${emo('👮', 'emo sm')}<span>نوبت <b>${axis === 'v' ? 'عمودی‌ها ↕' : 'افقی‌ها ↔'}</b></span>`;
+    this.copSign.classList.remove('pulse'); void this.copSign.offsetWidth; this.copSign.classList.add('pulse');
   }
   setQueue(n: number) { this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span>`; }
   refresh() {

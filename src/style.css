@@ -230,3 +230,7 @@ body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70%
 .lv.hard:not(.locked) { outline: 2px solid #f59e0b; } .lv.boss:not(.locked) { outline: 2px solid #ef4444; }
 .lv.locked { opacity: .55; }
 .ver { margin-top: 10px; font-size: 12px; color: #94a3b8; }
+
+.camsign.cop { border-color: #4d5b3a; top: calc(118px + var(--sat)); right: auto; left: 12px; }
+.camsign.cop b { color: #3f6212; }
+.camsign.pulse { animation: pulse .5s; }

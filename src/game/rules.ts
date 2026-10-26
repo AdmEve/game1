@@ -44,8 +44,10 @@ export interface Level {
   vip?: number[];
   /** «طرح زوج و فرد»: only even plates may leave, then odd, switching after this many exits. */
   oddEven?: number;
+  /** «پلیس راهور»: an officer lets only vertical or only horizontal cars go, switching after each exit. */
+  officer?: boolean;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer';
 }
 
 export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
@@ -65,6 +67,9 @@ export interface State {
   /** «طرح زوج و فرد»: which plates may leave now (0 even, 1 odd) and exits since the last switch. */
   parity: 0 | 1;
   sinceSwitch: number;
+  /** «پلیس راهور»: which way may leave now, and the exit count when he last turned. */
+  axis: 'v' | 'h';
+  sinceSwitchAxis: number;
   /** Index of the next passenger in the queue. */
   q: number;
   over: false | 'won' | 'lost';
@@ -74,9 +79,10 @@ export type Event =
   | { t: 'exit'; v: number; bay: number }
   | { t: 'blocked'; v: number; by: { v?: number; cell: [number, number] } }
   | { t: 'bays-full'; v: number }
-  | { t: 'locked'; v: number; why: 'broken' | 'plate'; left: number }
+  | { t: 'locked'; v: number; why: 'broken' | 'plate' | 'officer'; left: number }
   | { t: 'reveal'; v: number }
   | { t: 'parity'; parity: 0 | 1 }
+  | { t: 'axis'; axis: 'v' | 'h' }
   | { t: 'board'; bay: number; v: number; color: Color; passenger: number }
   | { t: 'depart'; bay: number; v: number }
   | { t: 'won' }
@@ -106,8 +112,24 @@ export function newState(level: Level): State {
   for (const i of level.vip ?? []) vip[i] = true;
   return {
     level, inLot: level.vehicles.map(() => true), bays: Array(level.bays ?? 5).fill(null), queue: [...level.queue], vip, q: 0, over: false,
-    exits: 0, revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0,
+    exits: 0, revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0, axis: 'v', sinceSwitchAxis: 0,
   };
+}
+
+/**
+ * «پلیس راهور» waves the other direction through after every exit, or straight away if nobody in his
+ * current direction can move (bikes squeeze past him either way).
+ */
+function updateOfficer(s: State, ev?: Event[]) {
+  if (!s.level.officer) return;
+  const g = grid(s);
+  const movable = (ax: 'v' | 'h') => s.level.vehicles.some((v, i) => s.inLot[i] && v.kind !== 'bike' && axisOf(v) === ax && !blocker(s, i, g) && !(v.wait && s.exits < v.wait));
+  const other = s.axis === 'v' ? 'h' : 'v';
+  const want = s.exits > 0 && s.sinceSwitchAxis !== s.exits ? other : s.axis;
+  let next = want;
+  if (!movable(next) && movable(next === 'v' ? 'h' : 'v')) next = next === 'v' ? 'h' : 'v';
+  s.sinceSwitchAxis = s.exits;
+  if (next !== s.axis) { s.axis = next; ev?.push({ t: 'axis', axis: next }); }
 }
 
 /** A fresh state with the plate camera already pointing at plates that can move. */
@@ -118,7 +140,7 @@ export function startState(level: Level): State {
 }
 
 export function cloneState(s: State): State {
-  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch };
+  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis };
 }
 
 /** «طرح زوج و فرد»: which plate parity may leave now (0 = even, 1 = odd), or null if the rule is off. */
@@ -131,6 +153,7 @@ export function parityNow(s: State): 0 | 1 | null {
  * plates can drive out (so the rule never wedges the lot).
  */
 export function updateParity(s: State, ev?: Event[]) {
+  updateOfficer(s, ev);
   const p = s.level.oddEven;
   if (!p) return;
   const flip = () => { s.parity = (1 - s.parity) as 0 | 1; s.sinceSwitch = 0; ev?.push({ t: 'parity', parity: s.parity }); };
@@ -141,9 +164,12 @@ export function updateParity(s: State, ev?: Event[]) {
 }
 
 /** Why a vehicle with a clear lane may still not leave. */
-export function lock(s: State, i: number): { why: 'broken' | 'plate'; left: number } | null {
+const axisOf = (v: VehicleDef): 'v' | 'h' => (v.dir === 'up' || v.dir === 'down' ? 'v' : 'h');
+
+export function lock(s: State, i: number): { why: 'broken' | 'plate' | 'officer'; left: number } | null {
   const v = s.level.vehicles[i];
   if (v.wait && s.exits < v.wait) return { why: 'broken', left: v.wait - s.exits };
+  if (s.level.officer && v.kind !== 'bike' && axisOf(v) !== s.axis) return { why: 'officer', left: 1 };
   const par = parityNow(s);
   if (par !== null && v.plate !== undefined && v.plate % 2 !== par) {
     return { why: 'plate', left: s.level.oddEven! - s.sinceSwitch };

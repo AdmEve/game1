@@ -64,6 +64,7 @@ const hemi = scene.children.find((o) => (o as THREE.HemisphereLight).isHemispher
 const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [number, number, number]; sun: [number, number, [number, number, number]]; exposure: number; env: number; lamps: number }> = {
   day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32 },
   sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0 },
+  snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5 },
   night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6 },
 };
 let sunOffset = new THREE.Vector3(-9, 22, 11);
@@ -238,9 +239,10 @@ function startLevel(pick?: number) {
     lost: () => showLose(),
     float: floatText,
     parity: (p, left) => hud.setParity(p, left),
+    officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night', snow: ch.light === 'snow', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
   hud.setLevel(n + 1, level.tag);
   hud.refresh();
@@ -252,7 +254,8 @@ function startLevel(pick?: number) {
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
     modalOpen = true;
     const c = h('div', 'newch');
-    c.innerHTML = `<div class="burst">${emo(ch.light === 'night' ? '🌙' : ch.light === 'sunset' ? '🌇' : '🌄', 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${ch.light === 'night' ? 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!' : 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!'}</p>`;
+    const blurb = { night: 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!', sunset: 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!', snow: 'برف اومده! همه دارن می‌رن توچال اسکی. پلیس راهور هم سر چهارراه وایستاده.', day: '' }[ch.light];
+    c.innerHTML = `<div class="burst">${emo({ night: '🌙', sunset: '🌇', snow: '❄️', day: '🌄' }[ch.light], 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${blurb}</p>`;
     const close = modal(c, 'pop');
     c.append(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; }));
   } else if (level.intro && !save.seen[level.intro]) {

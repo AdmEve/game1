@@ -7,7 +7,7 @@ import * as sfx from '../audio';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, colorSymbol, hazard, plateBadge, setBrokenBadge, setPlateBadge, vipMarker } from '../render/mechanics';
+import { blowOff, brokenBadge, carCover, colorSymbol, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, trafficOfficer, vipMarker } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
@@ -29,6 +29,8 @@ export interface SessionHooks {
   shake(amp: number): void;
   /** «طرح زوج و فرد» sign: allowed parity and exits until it switches (null when the level has no plate rule). */
   parity(p: 0 | 1 | null, left: number): void;
+  /** «پلیس راهور» sign (null when there is no officer). */
+  officer(axis: 'v' | 'h' | null): void;
   /** Speed-camera flash for a wrong plate. */
   flash(): void;
 }
@@ -109,7 +111,34 @@ export class Session {
     hooks.queueLeft(this.s.queue.length);
     this.refreshPlates();
     this.dressStreets(seed);
+    if (level.officer) {
+      // He stands on the ring road at the lot's top-left corner, facing the lot.
+      this.officer = trafficOfficer();
+      this.officer.position.set(this.L.lotX0 - 0.55, 0, -0.55);
+      this.officer.rotation.y = -Math.PI / 4;
+      this.officer.scale.setScalar(1.7);
+      this.group.add(this.officer);
+      poseOfficer(this.officer, this.s.axis);
+    }
+    hooks.officer(level.officer ? this.s.axis : null);
+    if (worldOpts.snow) this.makeSnow();
   }
+
+  // ───── Falling snow ─────
+  private flakes: THREE.Points | null = null;
+  private lastT = 0;
+  private makeSnow() {
+    const n = 900, pos = new Float32Array(n * 3);
+    const z0 = this.L.walkZ - 8, z1 = this.L.lotH + 4;
+    for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 14; pos[i * 3 + 2] = z0 + Math.random() * (z1 - z0); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const g = c.getContext('2d')!; const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+    const mat = new THREE.PointsMaterial({ size: 0.2, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, opacity: 0.9 });
+    this.flakes = new THREE.Points(geo, mat);
+    this.group.add(this.flakes);
+  }
+  private officer: THREE.Group | null = null;
 
   // ───── Street life: cars parked on the kerbs, pigeons on the pavement ─────
   private pigeons: { o: THREE.Group; home: THREE.Vector3; away: boolean }[] = [];
@@ -357,12 +386,18 @@ export class Session {
     const arrived = craned ? this.animCrane(first.v, first.bay) : this.animExit(first.v, first.bay);
     // Covers blow off and the plate camera switches right away; boarding waits for the car.
     for (const e of ev) {
+      if (e.t === 'axis') {
+        sfx.whistleSound();
+        this.hooks.officer(e.axis);
+        const o = this.officer;
+        if (o) void tween(0.35, () => poseOfficer(o, e.axis, 0.3), ease.out);
+      }
       if (e.t === 'reveal') this.uncover(e.v);
       if (e.t === 'parity') { sfx.click(); this.hooks.float(e.parity ? 'نوبت پلاک فرد!' : 'نوبت پلاک زوج!', this.L.cell(Math.floor(this.level.w / 2), 0).add(new THREE.Vector3(0, 1.5, -1)), 'combo'); }
     }
     this.refreshPlates();
     this.refreshBroken();
-    const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity');
+    const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity' && e.t !== 'axis');
     this.chain = this.chain.then(() => arrived).then(() => this.playBoards(rest)).finally(() => { this.pending--; });
   }
 
@@ -407,7 +442,7 @@ export class Session {
     void blowOff(cover, (d, f) => tween(d, f, ease.out)).then(() => this.group.remove(cover));
   }
 
-  private animLocked(i: number, why: 'broken' | 'plate') {
+  private animLocked(i: number, why: 'broken' | 'plate' | 'officer') {
     const o = this.cars[i];
     const at = o.root.position.clone().add(new THREE.Vector3(0, 1.3, 0));
     haptic('warn');
@@ -417,6 +452,12 @@ export class Session {
       this.hooks.float(`خرابه! ${left} ماشین دیگه`, at, 'bad');
       for (let k = 0; k < 3; k++) setTimeout(() => puff(this.group, o.root.position.clone().add(new THREE.Vector3(0, 0.5, -0.3)), 0.9), k * 120);
       void this.wiggle(o);
+    } else if (why === 'officer') {
+      sfx.whistleSound();
+      this.hooks.float(this.s.axis === 'v' ? 'پلیس: الان نوبت عمودی‌هاست!' : 'پلیس: الان نوبت افقی‌هاست!', at, 'bad');
+      const o = this.officer;
+      if (o) void tween(0.4, (k) => { o.rotation.z = Math.sin(k * Math.PI * 4) * 0.08; }, ease.linear);
+      void this.wiggle(this.cars[i]);
     } else {
       this.hooks.flash();
       this.hooks.float(this.level.vehicles[i].plate! % 2 ? 'پلاک فرده! صبر کن' : 'پلاک زوجه! صبر کن', at, 'bad');
@@ -609,6 +650,17 @@ export class Session {
 
   /** Ambient life each frame: passengers shift their weight and glance around. */
   idle(t: number) {
+    const dt = Math.min(0.05, Math.max(0, t - this.lastT)); this.lastT = t;
+    if (this.flakes) {
+      const p = this.flakes.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        let y = p.getY(i) - dt * (0.9 + (i % 7) * 0.08);
+        if (y < 0) y += 14;
+        p.setY(i, y);
+        p.setX(i, p.getX(i) + Math.sin(t * 0.8 + i) * dt * 0.25);
+      }
+      p.needsUpdate = true;
+    }
     this.pigeons.forEach((p, k) => {
       if (p.away) return;
       const hd = p.o.getObjectByName('head')!;
