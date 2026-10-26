@@ -14,10 +14,10 @@ import { sky } from './render/world';
 import { Session } from './play/session';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
-import { maybeDaily, showChest, showShop } from './ui/meta';
+import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { initMonetization, maybeInterstitial, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
-import { coin } from './audio';
+import { click, coin } from './audio';
 import { setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
@@ -129,6 +129,12 @@ function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'ba
   document.body.append(el);
   setTimeout(() => el.remove(), 1300);
 }
+function cameraFlash() {
+  const f = h('div', 'flash');
+  document.body.append(f);
+  click(); setTimeout(() => click(), 70);
+  setTimeout(() => f.remove(), 450);
+}
 function applyShake(dt: number) {
   if (shakeAmp <= 0.001) { if (shakeAmp > 0) { camera.position.copy(camBase); shakeAmp = 0; } return; }
   camera.position.copy(camBase).add(new THREE.Vector3((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp));
@@ -196,6 +202,8 @@ function startLevel() {
     won: () => showWin(),
     lost: () => showLose(),
     float: floatText,
+    parity: (p, left) => hud.setParity(p, left),
+    flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
   }, n + 1);
   scene.add(session.group);
@@ -204,6 +212,10 @@ function startLevel() {
   hud.active(null);
   hud.show(true);
   fitCamera();
+  if (level.intro && !save.seen[level.intro]) {
+    modalOpen = true;
+    showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; });
+  }
 }
 
 function useBooster(id: BoosterId) {

@@ -1,8 +1,8 @@
 /** Solvability and difficulty analysis for levels. */
-import { KIND, canExit, cloneState, grid, newState, tap, type Level, type State } from './rules';
+import { KIND, canExit, cloneState, grid, startState as newState, tap, type Level, type State } from './rules';
 
 const key = (s: State) =>
-  s.inLot.map((x) => (x ? 1 : 0)).join('') + '|' + s.bays.map((b) => (b ? `${b.color}${b.boarded}/${b.cap}` : '-')).sort().join(',');
+  s.inLot.map((x) => (x ? 1 : 0)).join('') + '|' + s.bays.map((b) => (b ? `${b.color}${b.boarded}/${b.cap}` : '-')).sort().join(',') + '|' + s.parity + s.sinceSwitch;
 
 /** Vehicles that can leave now, with duplicates (same color and seats, both free) collapsed. */
 export function moves(s: State): number[] {
@@ -74,7 +74,7 @@ export function playRates(level: Level, runs = 300, seed = 1) {
       if (greedy) {
         // Look three passengers ahead, like a casual player scanning the queue.
         const ahead = new Set(s.queue.slice(s.q, s.q + 3));
-        const good = free.filter((i) => ahead.has(s.level.vehicles[i].color));
+        const good = free.filter((i) => s.revealed[i] && ahead.has(s.level.vehicles[i].color));
         if (good.length) pick = good;
       }
       tap(s, pick[Math.floor(r() * pick.length)]);

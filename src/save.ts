@@ -9,6 +9,8 @@ export interface Save {
   daily: { day: string; streak: number };
   ads: { lastInterstitial: number; winsSince: number };
   firstOpen: number;
+  /** Mechanic intro cards already shown. */
+  seen: Record<string, boolean>;
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -22,6 +24,7 @@ const fresh = (): Save => ({
   daily: { day: '', streak: 0 },
   ads: { lastInterstitial: 0, winsSince: 0 },
   firstOpen: Date.now(),
+  seen: {},
 });
 
 function load(): Save {
@@ -33,7 +36,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

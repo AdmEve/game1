@@ -42,6 +42,72 @@ describe('rules', () => {
   });
 });
 
+describe('mechanics', () => {
+  const four = (c: 'red' | 'blue') => [c, c, c, c] as ('red' | 'blue')[];
+  it('«پیکان خراب» waits until enough cars have left', () => {
+    const l: Level = {
+      w: 3, h: 2,
+      vehicles: [
+        { kind: 'peykan', color: 'red', col: 0, row: 0, dir: 'up', wait: 1 },
+        { kind: 'pride', color: 'blue', col: 2, row: 0, dir: 'up' },
+      ],
+      queue: [...four('blue'), ...four('red')],
+    };
+    const s = newState(l);
+    expect(tap(s, 0)[0]).toMatchObject({ t: 'locked', why: 'broken', left: 1 });
+    tap(s, 1);
+    expect(tap(s, 0).at(-1)).toEqual({ t: 'won' });
+  });
+
+  it('«چادر ماشین» comes off when a neighbour leaves', () => {
+    const l: Level = {
+      w: 2, h: 2,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up', covered: true },
+        { kind: 'pride', color: 'blue', col: 1, row: 0, dir: 'up' },
+      ],
+      queue: [...four('blue'), ...four('red')],
+    };
+    const s = newState(l);
+    expect(s.revealed).toEqual([false, true]);
+    const ev = tap(s, 1);
+    expect(ev).toContainEqual({ t: 'reveal', v: 0 });
+    expect(s.revealed[0]).toBe(true);
+  });
+
+  it('«دربست» rides alone in an empty car and leaves at once', () => {
+    const l: Level = {
+      w: 2, h: 2,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' },
+        { kind: 'pride', color: 'red', col: 1, row: 0, dir: 'up' },
+      ],
+      queue: ['red', 'red', 'red', 'red', 'red'],
+      vip: [0],
+    };
+    expect(validate(l)).toEqual([]);
+    const s = newState(l);
+    const ev = tap(s, 0);
+    expect(ev.map((e) => e.t)).toEqual(['exit', 'board', 'depart']);
+    expect(tap(s, 1).at(-1)).toEqual({ t: 'won' });
+  });
+
+  it('«طرح زوج و فرد» lets even plates out first, then odd', () => {
+    const l: Level = {
+      w: 3, h: 2, oddEven: 1,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up', plate: 3 },
+        { kind: 'pride', color: 'blue', col: 1, row: 0, dir: 'up', plate: 4 },
+      ],
+      queue: [...four('blue'), ...four('red')],
+    };
+    const s = newState(l);
+    expect(tap(s, 0)[0]).toMatchObject({ t: 'locked', why: 'plate' });
+    tap(s, 1);
+    expect(tap(s, 0).at(-1)).toEqual({ t: 'won' });
+  });
+});
+
 describe('journey levels', () => {
   it('has 30 levels', () => expect(levels.length).toBe(30));
   levels.forEach((l, i) => {

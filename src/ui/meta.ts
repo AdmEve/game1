@@ -105,3 +105,22 @@ export function showChest(onChange: () => void): Promise<void> {
     c.append(open);
   });
 }
+
+const INTROS = {
+  cover: { icon: '🚗', title: 'چادر ماشین', text: 'بعضی ماشین‌ها زیر چادرن و رنگشون معلوم نیست. وقتی ماشین بغلی‌شون بره، باد چادر رو می‌بره!' },
+  broken: { icon: '🔧', title: 'پیکان خراب', text: 'این پیکان خراب شده. عدد روش می‌گه چند تا ماشین دیگه باید برن تا مکانیک درستش کنه.' },
+  vip: { icon: '🕴️', title: 'دربست!', text: 'مسافر دربستی تنها سوار یه ماشین خالیِ هم‌رنگ می‌شه و ماشین فوری راه می‌افته. براش یه ماشین خالی نگه دار!' },
+  oddEven: { icon: '📸', title: 'طرح زوج و فرد', text: 'دوربین فقط به پلاک‌های زوج یا فقط فرد اجازه‌ی رفتن می‌ده و بعد از چند ماشین عوض می‌شه. به تابلو بالای صفحه نگاه کن!' },
+} as const;
+
+/** Mash Rahim introduces a new mechanic. */
+export function showIntro(kind: keyof typeof INTROS): Promise<void> {
+  const it = INTROS[kind];
+  return new Promise((done) => {
+    const c = h('div', 'intro');
+    c.innerHTML = `<div class="new">جدید!</div><div class="burst">${emo(it.icon, 'emo huge')}</div><h2>${it.title}</h2>
+      <div class="speech"><span class="who">${emo('👴', 'emo sm')} مش‌رحیم:</span> ${it.text}</div>`;
+    const close = modal(c, 'pop');
+    c.append(button('فهمیدم!', 'primary big', () => { close(); done(); }));
+  });
+}

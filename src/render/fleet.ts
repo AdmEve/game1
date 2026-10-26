@@ -149,6 +149,17 @@ export function makeVehicle(kind: Kind, color: Color): VehicleObj {
   return { root, body, arrow, length: L };
 }
 
+/** A standalone direction arrow pointing "up" (−z), e.g. for the top of a car cover. */
+export function makeArrow(scale = 0.88): THREE.Group {
+  const g = new THREE.Group();
+  const a = new THREE.Mesh(arrowGeo, arrowMat), e = new THREE.Mesh(arrowGeo, arrowEdge);
+  e.scale.setScalar(1.22); e.position.y = -0.006;
+  g.add(e, a);
+  g.rotation.y = Math.PI / 2;
+  g.scale.setScalar(scale);
+  return g;
+}
+
 /** Pre-build every template so the first level does not hitch. */
 export function warmFleet(pairs: [Kind, Color][]) {
   for (const [k, c] of pairs) template(k, c);

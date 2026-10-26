@@ -5,8 +5,9 @@
 import * as THREE from 'three';
 import * as sfx from '../audio';
 import { haptic } from '../haptics';
-import { KIND, DELTA, addBay, cellsOf, newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
-import { CELL, makeVehicle, type VehicleObj } from '../render/fleet';
+import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
+import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
+import { blowOff, brokenBadge, carCover, hazard, plateBadge, setBrokenBadge, setPlateBadge, vipMarker } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout } from '../render/world';
@@ -26,6 +27,10 @@ export interface SessionHooks {
   /** Floating text at a world point. */
   float(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad'): void;
   shake(amp: number): void;
+  /** «طرح زوج و فرد» sign: allowed parity and exits until it switches (null when the level has no plate rule). */
+  parity(p: 0 | 1 | null, left: number): void;
+  /** Speed-camera flash for a wrong plate. */
+  flash(): void;
 }
 
 const COMBO = ['', '', 'دوتایی!', 'سه‌تایی!', 'چهارتایی!', 'محشره!', 'افسانه‌ای!'];
@@ -51,6 +56,9 @@ export class Session {
   private combo = 0;
   /** Coins earned during the level (combos), paid out with the win reward. */
   bonus = 0;
+  private covers = new Map<number, THREE.Object3D>();
+  private broken = new Map<number, { badge: THREE.Sprite; hazard: THREE.Object3D; nextPuff: number }>();
+  private plates = new Map<number, THREE.Sprite>();
 
   constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1) {
     this.s = newState(level);
@@ -66,6 +74,21 @@ export class Session {
       o.root.rotation.y = { up: 0, down: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[v.dir];
       this.group.add(o.root);
       this.cars.push(o);
+      const i = this.cars.length - 1;
+      if (v.covered) {
+        const cover = carCover(o.length);
+        const arrow = makeArrow(); arrow.position.y = 0.9; cover.add(arrow);
+        o.root.add(cover); this.covers.set(i, cover);
+      }
+      if (v.wait) {
+        const badge = brokenBadge(v.wait); badge.scale.set(0.86, 0.5, 1); badge.position.set(0, 1.5, 0); o.root.add(badge);
+        const hz = hazard(); hz.position.set(0, LOT_Y + 0.17, o.length / 2 + 0.28); hz.rotation.x = -0.25;
+        o.root.add(hz);
+        this.broken.set(i, { badge, hazard: hz, nextPuff: 0 });
+      }
+      if (level.oddEven && v.plate !== undefined) {
+        const pb = plateBadge(v.plate); pb.scale.set(0.74, 0.43, 1); pb.position.set(0, 1.25, o.length * 0.32); o.root.add(pb); this.plates.set(i, pb);
+      }
     });
     for (const c of level.obstacles ?? []) {
       const m = cone(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y); m.rotation.y = c.col * 1.3; this.group.add(m); this.cones.push(m);
@@ -73,6 +96,28 @@ export class Session {
     for (let k = 0; k < Math.min(VISIBLE_QUEUE, this.s.queue.length); k++) this.spawn(k, false);
     this.lockGate = this.gate(this.s.bays.length);
     hooks.queueLeft(this.s.queue.length);
+    this.refreshPlates();
+  }
+
+  private refreshPlates() {
+    const p = this.level.oddEven ? this.s.parity : null;
+    this.hooks.parity(p, this.level.oddEven ? this.level.oddEven - this.s.sinceSwitch : 0);
+    for (const [i, s] of this.plates) setPlateBadge(s, this.level.vehicles[i].plate!, this.level.vehicles[i].plate! % 2 === p);
+  }
+
+  /** Broken cars count down as others leave; at zero they cough back to life. */
+  private refreshBroken() {
+    for (const [i, b] of [...this.broken]) {
+      const left = (this.level.vehicles[i].wait ?? 0) - this.s.exits;
+      if (left > 0) { setBrokenBadge(b.badge, left); void tween(0.3, (k) => b.badge.scale.set(0.86 * (1 + Math.sin(k * Math.PI) * 0.3), 0.5 * (1 + Math.sin(k * Math.PI) * 0.3), 1), ease.out); continue; }
+      this.broken.delete(i);
+      const o = this.cars[i];
+      sfx.engine(0.1, false); sfx.horn('old', 1, 0.5);
+      this.hooks.float('درست شد!', o.root.position.clone().add(new THREE.Vector3(0, 1.3, 0)), 'combo');
+      void this.wiggle(o);
+      void tween(0.3, (k) => b.badge.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b.badge));
+      void tween(0.4, (k) => { b.hazard.scale.setScalar(Math.max(0.001, 1 - k)); }, ease.in).then(() => o.root.remove(b.hazard));
+    }
   }
 
   // ───── Queue of people ─────
@@ -83,6 +128,7 @@ export class Session {
     const idx = this.vq + k;
     if (idx >= this.s.queue.length) return;
     const p = person(this.s.queue[idx], idx);
+    if (this.s.vip[idx]) { const m = vipMarker(); m.scale.setScalar(1 / 1.12); p.root.add(m); }
     p.root.position.copy(this.slot(k));
     p.root.rotation.y = Math.PI / 2 + (((idx * 37) % 10) - 5) * 0.04;
     this.group.add(p.root);
@@ -240,12 +286,20 @@ export class Session {
     const first = ev[0];
     if (!first) return;
     if (first.t === 'blocked') { void this.animBlocked(i, first.by); return; }
+    if (first.t === 'locked') { this.animLocked(i, first.why); return; }
     if (first.t === 'bays-full') { this.hooks.toast('جای پارک پره!'); void this.wiggle(this.cars[i]); sfx.bump(); haptic('warn'); return; }
     if (first.t !== 'exit') return;
     haptic('light');
     this.pending++;
     const arrived = craned ? this.animCrane(first.v, first.bay) : this.animExit(first.v, first.bay);
-    const rest = ev.slice(1);
+    // Covers blow off and the plate camera switches right away; boarding waits for the car.
+    for (const e of ev) {
+      if (e.t === 'reveal') this.uncover(e.v);
+      if (e.t === 'parity') { sfx.click(); this.hooks.float(e.parity ? 'نوبت پلاک فرد!' : 'نوبت پلاک زوج!', this.L.cell(Math.floor(this.level.w / 2), 0).add(new THREE.Vector3(0, 1.5, -1)), 'combo'); }
+    }
+    this.refreshPlates();
+    this.refreshBroken();
+    const rest = ev.slice(1).filter((e) => e.t !== 'reveal' && e.t !== 'parity');
     this.chain = this.chain.then(() => arrived).then(() => this.playBoards(rest)).finally(() => { this.pending--; });
   }
 
@@ -274,6 +328,35 @@ export class Session {
         sfx.lose(); haptic('warn');
         this.hooks.lost();
       }
+    }
+  }
+
+  private uncover(i: number) {
+    const cover = this.covers.get(i);
+    if (!cover) return;
+    this.covers.delete(i);
+    // Re-parent into the world so it can fly free of the car.
+    const at = new THREE.Vector3(); cover.getWorldPosition(at);
+    const q = new THREE.Quaternion(); cover.getWorldQuaternion(q);
+    this.group.add(cover); cover.position.copy(at); cover.quaternion.copy(q);
+    sfx.chirp(0, 0.05);
+    void blowOff(cover, (d, f) => tween(d, f, ease.out)).then(() => this.group.remove(cover));
+  }
+
+  private animLocked(i: number, why: 'broken' | 'plate') {
+    const o = this.cars[i];
+    const at = o.root.position.clone().add(new THREE.Vector3(0, 1.3, 0));
+    haptic('warn');
+    if (why === 'broken') {
+      sfx.engine(0, true); setTimeout(() => sfx.bump(), 250);
+      const left = (this.level.vehicles[i].wait ?? 0) - this.s.exits;
+      this.hooks.float(`خرابه! ${left} ماشین دیگه`, at, 'bad');
+      for (let k = 0; k < 3; k++) setTimeout(() => puff(this.group, o.root.position.clone().add(new THREE.Vector3(0, 0.5, -0.3)), 0.9), k * 120);
+      void this.wiggle(o);
+    } else {
+      this.hooks.flash();
+      this.hooks.float(this.level.vehicles[i].plate! % 2 ? 'پلاک فرده! صبر کن' : 'پلاک زوجه! صبر کن', at, 'bad');
+      void this.wiggle(o);
     }
   }
 
@@ -321,6 +404,8 @@ export class Session {
 
   private async animExit(i: number, bay: number) {
     const o = this.cars[i], v = this.level.vehicles[i];
+    this.uncover(i);
+    const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
     const pts = this.route(i, bay);
     const heavy = v.kind === 'bus' || v.kind === 'zamyad';
     sfx.engine(0, heavy); sfx.chirp(0.05);
@@ -346,6 +431,9 @@ export class Session {
 
   private async animCrane(i: number, bay: number) {
     const o = this.cars[i];
+    this.uncover(i);
+    const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
+    const br = this.broken.get(i); if (br) { o.root.remove(br.badge, br.hazard); this.broken.delete(i); }
     sfx.craneSound(); haptic('medium');
     const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 6), new THREE.MeshStandardMaterial({ color: 0x222831, metalness: 0.6 }));
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 16, Math.PI * 1.4), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 }));
@@ -454,6 +542,13 @@ export class Session {
 
   /** Ambient life each frame: passengers shift their weight and glance around. */
   idle(t: number) {
+    for (const [i, b] of this.broken) {
+      if (t < b.nextPuff) continue;
+      b.nextPuff = t + 0.35 + Math.random() * 0.3;
+      const o = this.cars[i];
+      const hood = new THREE.Vector3(0, 0.55, -this.cars[i].length * 0.3).applyQuaternion(o.root.quaternion).add(o.root.position);
+      puff(this.group, hood, 0.55);
+    }
     this.queue.forEach((p, k) => {
       if (!p) return;
       const ph = t * 2.2 + (this.vq + k) * 1.7;

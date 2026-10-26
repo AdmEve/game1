@@ -27,6 +27,7 @@ export class Hud {
   private people = h('div', 'pill people');
   private bar = h('div', 'boosters');
   private toastEl = h('div', 'toast');
+  private camSign = h('div', 'camsign hidden');
   private btns = new Map<BoosterId, HTMLButtonElement>();
   onBooster: (id: BoosterId) => void = () => {};
   onSettings: () => void = () => {};
@@ -38,7 +39,7 @@ export class Hud {
     gear.onclick = () => { click(); this.onSettings(); };
     this.coins.onclick = () => { click(); this.onCoins(); };
     top.append(gear, this.plate, this.coins);
-    this.root.append(top, this.people, this.bar, this.toastEl);
+    this.root.append(top, this.people, this.camSign, this.bar, this.toastEl);
     for (const b of BOOSTERS) {
       const el = h('button', `bst bst-${b.id}`);
       el.onclick = () => { click(); this.onBooster(b.id); };
@@ -52,6 +53,14 @@ export class Hud {
   setLevel(n: number, tag?: string) {
     this.plate.className = 'plate' + (tag ? ' plate-' + tag : '');
     this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>${tag === 'boss' ? 'مرحله‌ی رئیس' : tag === 'hard' ? 'مرحله‌ی سخت' : 'مرحله'}</small>${fa(n)}</span>`;
+  }
+  /** «طرح زوج و فرد» sign: which plates may leave and how many exits until it switches. */
+  setParity(p: 0 | 1 | null, left: number) {
+    this.camSign.classList.toggle('hidden', p === null);
+    if (p === null) return;
+    const dots = Array.from({ length: Math.max(0, left) }, () => '<i></i>').join('');
+    this.camSign.className = 'camsign ' + (p ? 'odd' : 'even');
+    this.camSign.innerHTML = `${emo('📸', 'emo sm')}<span>طرح <b>${p ? 'فرد' : 'زوج'}</b></span><span class="dots">${dots}</span>`;
   }
   setQueue(n: number) { this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span>`; }
   refresh() {
