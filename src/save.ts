@@ -23,6 +23,8 @@ export interface Save {
   rush: { day: string; streak: number };
   /** «شب یلدا» event: the year it was played and how many of its nights are done. */
   yalda: { year: number; done: number };
+  /** «آژانس آقاجون»: unspent stars and the renovations done. `init` marks the one-off grant for levels won before stars existed. */
+  agency: { stars: number; done: string[]; init?: boolean };
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -43,6 +45,7 @@ const fresh = (): Save => ({
   garage: { keys: 0, restored: [] },
   rush: { day: '', streak: 0 },
   yalda: { year: 0, done: 0 },
+  agency: { stars: 0, done: [], init: true },
 });
 
 function load(): Save {
@@ -54,7 +57,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

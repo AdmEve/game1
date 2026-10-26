@@ -212,6 +212,7 @@ body[data-light='autumn'] .tint { opacity: 1; background: linear-gradient(180deg
 .btn.garage-btn { background: linear-gradient(180deg, #fde68a, #f59e0b); color: #4a2a00; box-shadow: 0 5px 0 #b45309, 0 10px 20px rgba(0,0,0,.25); font-size: 18px; }
 .btn.garage-btn .kb { display: inline-flex; align-items: center; gap: 3px; background: rgba(255,255,255,.75); border-radius: 10px; padding: 0 8px; font-size: 14px; margin-right: 6px; }
 .reward.keyr { background: #fef3c7; margin-right: 6px; font-size: 24px; } .reward.keyr small { font-size: 12px; color: #92400e; }
+.reward.starr { background: #fef9c3; margin-right: 6px; font-size: 24px; } .reward.starr small { font-size: 12px; color: #854d0e; }
 
 /* Radio bulletin on the home screen */
 .radio { background: rgba(15,23,42,.82); color: #fff; border-radius: 18px; padding: 8px 12px 10px; text-align: right; margin-bottom: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.3);
@@ -301,3 +302,21 @@ body[data-light='autumn'] .tint { opacity: 1; background: linear-gradient(180deg
 .result.yalda .hafez p { margin: 2px 0; font-size: 16px; font-weight: 800; color: #3b1d0a; line-height: 1.9; }
 .result.yalda .hafez p + p { text-align: left; }
 .result.yalda .hafez p:first-of-type { text-align: right; }
+
+/* «آژانس آقاجون» */
+.agency canvas { display: block; }
+.card.agency-card { padding: 18px 12px 12px; max-height: 92vh; overflow-y: auto; }
+.agency .stars { display: inline-flex; align-items: center; gap: 4px; background: #fef9c3; color: #854d0e; font-weight: 900; padding: 2px 12px; border-radius: 12px; margin-bottom: 6px; }
+.agency .stage { position: relative; border-radius: 22px; overflow: hidden; display: grid; place-items: center; box-shadow: inset 0 0 0 3px rgba(255,255,255,.6); }
+.agency .stage.sparkle::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,240,180,.9), transparent 60%); animation: flash .9s ease-out forwards; }
+.abar2 { margin: 10px 4px 4px; text-align: right; }
+.abar2 .pbar { display: block; height: 10px; border-radius: 5px; background: #e2e8f0; overflow: hidden; }
+.abar2 .pbar i { display: block; height: 100%; background: linear-gradient(90deg, #facc15, #f59e0b); border-radius: 5px; }
+.abar2 small { font-weight: 800; color: #64748b; font-size: 12px; }
+.nextr { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; margin: 6px 0 0; }
+.nextr .emo { width: 30px; height: 30px; }
+.btn.agency-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 0; padding: 10px 14px; text-align: right;
+  background: linear-gradient(180deg, #34d399, #0f766e); box-shadow: 0 5px 0 #134e4a, 0 10px 20px rgba(0,0,0,.25); font-size: 18px; }
+.btn.agency-btn small { display: block; font-size: 12.5px; font-weight: 800; opacity: .95; }
+.btn.agency-btn .sb { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.9); color: #854d0e; border-radius: 12px; padding: 2px 10px; font-size: 16px; }
+.btn.agency-btn .sb.ready { animation: pulse 1.4s infinite; }

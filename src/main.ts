@@ -18,6 +18,8 @@ import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
+import { addStars, nextRenovation, showAgency } from './ui/agency';
+import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
 import { yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
@@ -362,6 +364,8 @@ function showWin() {
   const lvl = levels[n];
   const keys = replay ? 0 : (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
   if (keys) addKeys(keys);
+  const stars = replay ? 0 : starsFor(lvl?.tag);
+  if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
   save.coins += coins;
   if (!replay) save.level = Math.min(save.level + 1, levels.length);
@@ -371,7 +375,7 @@ function showWin() {
   hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;
@@ -513,6 +517,11 @@ function showHome() {
   const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
   });
+  const next = nextRenovation();
+  const ready = !!next && save.agency.stars >= next.cost;
+  c.append(button(`<span>${emo('🏠', 'emo sm')} آژانس آقاجون<small>${next ? `بعدی: ${next.name}` : 'آژانس کامل بازسازی شد!'}</small></span><span class="sb ${ready ? 'ready' : ''}">${emo('⭐', 'emo xs')} ${fa(save.agency.stars)}</span>`, 'agency-btn', () => {
+    close(); showAgency(() => showHome());
+  }));
   const rowEl = h('div', 'home-row');
   rowEl.append(gar);
   c.append(rowEl);
@@ -539,6 +548,11 @@ function showHome() {
 
 // ───── Boot ─────
 async function boot() {
+  // Stars arrived after launch: credit players for the levels they had already won.
+  if (!save.agency.init) {
+    save.agency.stars += levels.slice(0, save.level).reduce((a, l) => a + starsFor(l.tag), 0);
+    save.agency.init = true; persist();
+  }
   hud = new Hud(document.body);
   hud.onBooster = useBooster;
   hud.onSettings = showSettings;
