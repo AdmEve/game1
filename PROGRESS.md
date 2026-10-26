@@ -50,6 +50,9 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
   interview (6💎); each lifts the meter without using up a question.
 - Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
 - First-run tutorial; incremental life-log rendering for budget phones.
+- 26 weekly challenges (8 use the mini-games, pets and grandchildren), 62 achievements, 82 TV quiz questions.
+- Rewarded-ad «زنگ به دوست» lifeline in the konkur quiz and the TV show; one rating ask after a happy moment
+  (`maybeAskRating` in `src/ui/flow.ts`); a «متن درشت» setting (CSS zoom, `--z` keeps vh sizes fitting).
 - A «شجره‌نامه» family tree at the top of the graveyard for families played over generations (graves
   remember their `parent` life).
 - `scripts/story.ts <seed>` prints a whole life to proof-read.
