@@ -80,7 +80,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; landmark?: 'milad' | 'azadi' | 'both'; boulevard?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; landmark?: 'milad' | 'azadi' | 'both'; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;

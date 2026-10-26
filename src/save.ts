@@ -12,6 +12,8 @@ export interface Save {
   /** Mechanic intro cards already shown. */
   seen: Record<string, boolean>;
   rated: boolean;
+  /** «گاراژ من»: car keys and the classics restored so far. */
+  garage: { keys: number; restored: string[] };
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -27,6 +29,7 @@ const fresh = (): Save => ({
   firstOpen: Date.now(),
   seen: {},
   rated: false,
+  garage: { keys: 0, restored: [] },
 });
 
 function load(): Save {
@@ -38,7 +41,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, garage: { ...f.garage, ...s.garage },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

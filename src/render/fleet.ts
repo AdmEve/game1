@@ -86,15 +86,15 @@ interface Template { mesh: THREE.Group; length: number; width: number; roofX: nu
 const cache = new Map<string, Template>();
 const QUALITY = 0.32;
 
-function template(kind: Kind, color: Color): Template {
-  const key = kind + color;
+function template(kind: Kind, color: Color, skin?: string): Template {
+  const key = kind + color + (skin ?? '');
   const hit = cache.get(key);
   if (hit) return hit;
   let raw: THREE.Object3D, length: number, width: number, roofX: number, roofY: number, tilt = 0;
   if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
   else if (kind === 'zamyad') { raw = buildZamyad(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.7; }
   else {
-    const spec = CARS[kind];
+    const spec = CARS[skin ?? kind];
     raw = buildCar(spec, PAINT[color], { taxi: kind === 'samand', q: QUALITY });
     length = spec.L; width = spec.W;
     const taxi = kind === 'samand';
@@ -124,8 +124,8 @@ const arrowEdge = new THREE.MeshBasicMaterial({ color: 0x0b1220, transparent: tr
  */
 export interface VehicleObj { root: THREE.Group; body: THREE.Group; arrow: THREE.Group; length: number; }
 
-export function makeVehicle(kind: Kind, color: Color): VehicleObj {
-  const t = template(kind, color);
+export function makeVehicle(kind: Kind, color: Color, skin?: string): VehicleObj {
+  const t = template(kind, color, skin);
   const L = KIND[kind].len * CELL - 0.26;
   const s = L / t.length, sz = Math.min(s, 0.98 / t.width);
   const body = new THREE.Group();

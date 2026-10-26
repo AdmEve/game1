@@ -291,7 +291,7 @@ export function buildCar(spec, color, opts = {}) {
   DETAIL = Q;
   const car = new THREE.Group();
   const P = typeof color === 'object' && color.isMaterial ? color : paint(color, spec.metallic);
-  const roofMat = opts.roofColor != null ? paint(opts.roofColor) : P;
+  const roofMat = (opts.roofColor ?? spec.roofColor) != null ? paint(opts.roofColor ?? spec.roofColor) : P;
   const hl = spec.L / 2, hw = spec.W / 2;
   const top = curve(spec.top);
   const clear = spec.clear ?? 0.22;
@@ -495,6 +495,63 @@ export const CARS = {
     badge: { y: 0.66 },
     taillights: [{ w: 0.42, h: 0.16, z: 0.52, y: 0.84, r: 0.05 }],
     plateF: 0.38, plateR: 0.6, handles: [0.2, -0.68],
+  },
+  // ───── Classics for «گاراژ من» ─────
+  // Paykan Javanan (1970s sporty Paykan): twin round lamps, black vinyl roof, chrome everywhere.
+  javanan: {
+    name: 'پیکان جوانان', L: 4.28, W: 1.6, R: 0.3, tireW: 0.18, wheels: [1.23, -1.27], rim: 'alloy', planExp: 9, bodyRt: 0.07, beige: true, chromeTrim: true,
+    top: [[-2.14, 0.6], [-2.11, 0.79], [-1.98, 0.86], [-1.36, 0.88], [0.8, 0.875], [1.9, 0.835], [2.09, 0.79], [2.14, 0.6]],
+    cab: { xA: 0.84, xRF: 0.14, xRR: -0.86, xC: -1.38, roof: 1.38, half: 0.75, tumble: 0.17, rt: 0.08 },
+    windows: [[0.66, -0.04], [-0.14, -1.0]],
+    bumpers: [{ y0: 0.37, y1: 0.47, mat: 'chrome', depth: 0.3, grow: 0.045 }],
+    headlights: [{ w: 0.17, h: 0.17, z: 0.6, y: 0.67, r: 0.085, bezel: 'chrome' }, { w: 0.15, h: 0.15, z: 0.41, y: 0.67, r: 0.075, bezel: 'chrome' }],
+    grille: { w: 0.5, h: 0.15, y: 0.67, bars: 6 },
+    taillights: [{ w: 0.3, h: 0.12, z: 0.56, y: 0.71, amber: true }],
+    plateF: 0.42, plateR: 0.58, handles: [0.16, -0.62],
+    strips: [{ y0: 0.6, y1: 0.615, mat: 'chrome', x0: -2.05, x1: 2.05 }],
+    roofColor: 0x111111,
+  },
+  // Chevrolet Royale (GM Iran, 1975–80): a long American sedan with a big chrome grille.
+  royale: {
+    name: 'شورولت رویال', L: 5.0, W: 1.8, R: 0.32, tireW: 0.2, wheels: [1.55, -1.45], rim: 'hubcap', planExp: 10, bodyRt: 0.07, beige: true, chromeTrim: true,
+    top: [[-2.5, 0.62], [-2.47, 0.84], [-2.3, 0.9], [-1.55, 0.92], [0.7, 0.9], [2.2, 0.86], [2.45, 0.82], [2.5, 0.62]],
+    cab: { xA: 0.72, xRF: 0.0, xRR: -1.02, xC: -1.58, roof: 1.38, half: 0.84, tumble: 0.15, rt: 0.07 },
+    windows: [[0.52, -0.2], [-0.3, -1.25]],
+    bumpers: [{ y0: 0.36, y1: 0.5, mat: 'chrome', depth: 0.32, grow: 0.05 }],
+    headlights: [{ w: 0.24, h: 0.17, z: 0.7, y: 0.71, r: 0.02, bezel: 'chrome' }],
+    grille: { w: 0.9, h: 0.2, y: 0.7, bars: 7 },
+    badge: { y: 0.71 },
+    taillights: [{ w: 0.5, h: 0.14, z: 0.55, y: 0.74 }],
+    plateF: 0.43, plateR: 0.6, handles: [0.1, -0.85],
+    strips: [{ y0: 0.58, y1: 0.6, mat: 'chrome', x0: -2.4, x1: 2.4 }],
+    roofColor: 0xefe9dc,
+  },
+  // Jiane (Citroën Dyane, made in Iran 1970–80): tall, narrow, round-hooded and lovable.
+  jiane: {
+    name: 'ژیان', L: 3.9, W: 1.5, R: 0.32, tireW: 0.15, wheels: [1.2, -1.2], rim: 'steel', planExp: 5, bodyRt: 0.14, clear: 0.28,
+    top: [[-1.95, 0.7], [-1.9, 0.9], [-1.7, 0.98], [0.75, 0.96], [1.5, 0.86], [1.85, 0.74], [1.95, 0.6]],
+    cab: { xA: 0.78, xRF: 0.42, xRR: -1.05, xC: -1.86, roof: 1.52, half: 0.7, tumble: 0.12, rt: 0.2,
+      roofPts: [[-1.86, 0.98], [-1.55, 1.38], [-1.05, 1.52], [0.42, 1.52], [0.78, 0.96]] },
+    windows: [[0.6, -0.12], [-0.22, -1.1]],
+    bumpers: [{ y0: 0.38, y1: 0.46, mat: 'chrome', depth: 0.22, grow: 0.04 }],
+    headlights: [{ w: 0.24, h: 0.16, z: 0.52, y: 0.74, r: 0.04, bezel: 'chrome' }],
+    grille: { w: 0.5, h: 0.2, y: 0.66, bars: 4, barMat: 'trim' },
+    taillights: [{ w: 0.12, h: 0.14, z: 0.6, y: 0.78, r: 0.05 }],
+    plateF: 0.42, plateR: 0.52, handles: [0.1, -0.7],
+  },
+  // Renault 5 (Saipa, 1976–2000s): the boxy little hatchback.
+  renault5: {
+    name: 'رنو ۵', L: 3.52, W: 1.52, R: 0.28, tireW: 0.16, wheels: [1.08, -1.22], rim: 'steel', planExp: 7, bodyRt: 0.09,
+    top: [[-1.76, 0.6], [-1.74, 0.9], [-1.6, 0.94], [0.7, 0.9], [1.45, 0.8], [1.72, 0.74], [1.76, 0.55]],
+    cab: { xA: 0.72, xRF: 0.12, xRR: -1.35, xC: -1.7, roof: 1.38, half: 0.72, tumble: 0.18, rt: 0.1,
+      roofPts: [[-1.7, 0.94], [-1.55, 1.3], [-1.35, 1.38], [0.12, 1.38], [0.72, 0.9]] },
+    windows: [[0.55, -0.35], [-0.45, -1.3]],
+    bumpers: [{ y0: 0.3, y1: 0.58, mat: 'plastic', depth: 0.3, grow: 0.05 }],
+    headlights: [{ w: 0.3, h: 0.17, z: 0.5, y: 0.7, r: 0.02 }],
+    grille: { w: 0.36, h: 0.1, y: 0.7, bars: 3, barMat: 'trim' },
+    taillights: [{ w: 0.16, h: 0.3, z: 0.62, y: 0.78, r: 0.02, amber: true }],
+    plateF: 0.44, plateR: 0.45, handles: [-0.05],
+    strips: [{ y0: 0.5, y1: 0.58, x0: -1.6, x1: 1.6 }],
   },
   // Zamyad (Nissan Junior) pickup: built separately below.
 };

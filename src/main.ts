@@ -17,6 +17,7 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
+import { addKeys, showGarage } from './ui/garage';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { click, coin } from './audio';
@@ -233,7 +234,7 @@ function startLevel() {
     parity: (p, left) => hud.setParity(p, left),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2 });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2, skins: save.garage.restored });
   scene.add(session.group);
   hud.setLevel(save.level + 1, level.tag);
   hud.refresh();
@@ -278,6 +279,9 @@ function reward() {
 function showWin() {
   const n = save.level;
   const coins = reward() + (session?.bonus ?? 0);
+  const lvl = levels[n];
+  const keys = (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
+  if (keys) addKeys(keys);
   save.stats.wins++;
   save.coins += coins;
   save.level++;
@@ -287,7 +291,7 @@ function showWin() {
   hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;
@@ -379,6 +383,10 @@ function showHome() {
   c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
     <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
   const close = modal(c, 'home-card');
+  const gar = button(`${emo('🔧', 'emo sm')} گاراژ من <span class="kb">${emo('🔑', 'emo xs')} ${fa(save.garage.keys)}</span>`, 'garage-btn', () => {
+    close(); showGarage(() => showHome());
+  });
+  c.append(gar);
   c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     close();
     await maybeDaily(() => hud.refresh());

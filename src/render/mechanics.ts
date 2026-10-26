@@ -32,15 +32,18 @@ function fabricMat() {
 }
 
 /** A cover sized for a vehicle of length L (along −z when the vehicle faces up). */
-export function carCover(L: number): THREE.Group {
+export function carCover(L: number, top = 0.95): THREE.Group {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new RoundedBoxGeometry(1.04, 0.62, L + 0.06, 4, 0.26), fabricMat());
-  body.position.y = 0.36; body.castShadow = true;
+  // Tall enough to hide the model underneath (`top` = its roof height).
+  const bh = Math.max(0.8, top * 0.82);
+  const body = new THREE.Mesh(new RoundedBoxGeometry(1.12, bh, L + 0.1, 4, 0.3), fabricMat());
+  body.position.y = bh / 2 + 0.02; body.castShadow = true;
   // The cover drapes over the cabin: a second softer hump.
-  const hump = new THREE.Mesh(new RoundedBoxGeometry(0.92, 0.38, L * 0.5, 4, 0.18), fabricMat());
-  hump.position.set(0, 0.68, L * 0.05); hump.castShadow = true;
-  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.66, 0.07), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }));
-  strap.position.set(0, 0.34, -L * 0.18);
+  const hump = new THREE.Mesh(new RoundedBoxGeometry(0.98, 0.42, L * 0.7, 4, 0.2), fabricMat());
+  hump.position.set(0, Math.max(0.78, top - 0.12), L * 0.02); hump.castShadow = true;
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.1, bh + 0.04, 0.07), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }));
+  strap.position.set(0, bh / 2 + 0.02, -L * 0.2);
+  g.userData.top = Math.max(0.78, top - 0.12) + 0.21;
   g.add(body, hump, strap);
   return g;
 }

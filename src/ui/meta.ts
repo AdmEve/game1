@@ -75,7 +75,7 @@ export function maybeDaily(onChange: () => void): Promise<void> {
     const close = modal(c, 'pop');
     c.append(button(`بگیر! ${emo('🪙', 'emo sm')} ${fa(DAILY[streak - 1])}`, 'primary big', () => {
       save.coins += DAILY[streak - 1];
-      if (streak === 7) for (const k of ['crane', 'whistle', 'bay'] as const) save.boosters[k]++;
+      if (streak === 7) { for (const k of ['crane', 'whistle', 'bay'] as const) save.boosters[k]++; save.garage.keys++; }
       save.daily = { day: today(), streak };
       persist(); onChange();
       for (let i = 0; i < 5; i++) coin(i * 0.08);
@@ -93,12 +93,12 @@ export function showChest(onChange: () => void): Promise<void> {
   return new Promise((done) => {
     const c = h('div', 'chest');
     c.innerHTML = `<h2>صندوق جایزه!</h2><div class="box">${emo('🎁', 'emo huge')}</div><div class="loot">
-      <span>${emo('🪙')}<b>${fa(coins)}</b></span><span>${emo(BOOSTERS.find((b) => b.id === gift)!.icon)}<b>${fa(1)}</b></span></div>`;
+      <span>${emo('🪙')}<b>${fa(coins)}</b></span><span>${emo(BOOSTERS.find((b) => b.id === gift)!.icon)}<b>${fa(1)}</b></span><span>${emo('🔑')}<b>${fa(1)}</b></span></div>`;
     const close = modal(c, 'pop');
     const open = button('باز کن!', 'gold big', () => {
       c.classList.add('opened');
       open.remove();
-      save.coins += coins; save.boosters[gift]++; persist(); onChange();
+      save.coins += coins; save.boosters[gift]++; save.garage.keys++; persist(); onChange();
       coin(); coin(0.15); haptic('success');
       c.append(button('عالیه!', 'primary', () => { close(); done(); }));
     });

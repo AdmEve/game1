@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#cfd6dd;overflow:hidden}</style></head>
+<body><script type="module">
+// Dev preview of the garage classics (served by the vite dev server).
+import * as THREE from 'three';
+import { CARS, buildCar } from '/src/render/cars.js';
+import { outdoorEnv } from '/src/render/env.js';
+import 'vazirmatn/Vazirmatn-font-face.css';
+await document.fonts.load('900 40px Vazirmatn');
+const W = 1600, H = 900;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace; r.shadowMap.enabled = true;
+document.body.append(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfe5ea);
+scene.environment = outdoorEnv(r); scene.environmentIntensity = 0.8;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 0.7));
+const sun = new THREE.DirectionalLight(0xfff2dc, 2.4); sun.position.set(6, 12, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); scene.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0xc9cdd1 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const list = [['javanan', 0xc62828], ['royale', 0x1e3a5f], ['jiane', 0x8fbf9f], ['renault5', 0xf2c230]];
+list.forEach(([k, c], i) => { const car = buildCar(CARS[k], c, { q: 1 }); car.position.set(-6.3 + i * 4.2, 0, 0); car.rotation.y = -0.9; car.traverse((m) => { if (m.isMesh) m.castShadow = true; }); scene.add(car); });
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100); cam.position.set(0, 5.5, 14); cam.lookAt(0, 0.6, 0);
+r.render(scene, cam);
+document.title = 'ready';
+</script></body></html>

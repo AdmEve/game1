@@ -10,7 +10,8 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #9dcff7; font-family: Vazirmatn, system-ui, sans-serif; color: var(--ink); touch-action: manipulation; }
-#app, canvas { position: fixed; inset: 0; display: block; }
+#app, #app > canvas { position: fixed; inset: 0; display: block; }
+.garage canvas { display: block; }
 .tiltshift { position: fixed; left: 0; right: 0; top: 0; height: 30%; pointer-events: none; backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px);
   mask-image: linear-gradient(180deg, #000 0%, #000 35%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 35%, transparent 100%); }
 .vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 85% 75% at 50% 55%, transparent 60%, rgba(10,20,40,.28) 100%); }
@@ -194,3 +195,19 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 body[data-light='sunset'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(255,120,60,.30) 0%, rgba(255,150,80,.10) 40%, rgba(120,60,140,.10) 100%); mix-blend-mode: soft-light; }
 body[data-light='night'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(10,20,60,.45) 0%, rgba(10,20,60,.15) 45%, rgba(5,10,30,.25) 100%); }
 body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70% at 50% 58%, transparent 50%, rgba(2,6,20,.55) 100%); }
+
+/* ───── Garage ───── */
+.card.garage-card { padding: 18px 14px 14px; }
+.garage .keys { display: inline-flex; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; font-weight: 900; padding: 2px 12px; border-radius: 12px; margin-bottom: 6px; }
+.garage .stage { position: relative; border-radius: 22px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, #e2e8f0, #94a3b8); display: grid; place-items: center; }
+.garage .stage.sparkle::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,240,180,.9), transparent 60%); animation: flash .9s ease-out forwards; }
+.gnav { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 2px; }
+.gnav .btn.round { width: 48px; margin: 0; padding: 6px 0; font-size: 26px; }
+.ginfo b { display: block; font-size: 22px; font-weight: 900; color: var(--navy); } .ginfo small { color: #64748b; font-weight: 700; }
+.story { text-align: right; background: #fff7ed; border-radius: 14px; padding: 8px 12px; line-height: 1.9; font-weight: 600; color: #7c2d12; margin: 6px 0; }
+.story.dim { background: #f1f5f9; color: #64748b; }
+.owned { font-weight: 900; color: var(--green-d); }
+.gaction .hint { display: block; color: #64748b; margin-top: 6px; }
+.btn.garage-btn { background: linear-gradient(180deg, #fde68a, #f59e0b); color: #4a2a00; box-shadow: 0 5px 0 #b45309, 0 10px 20px rgba(0,0,0,.25); font-size: 18px; }
+.btn.garage-btn .kb { display: inline-flex; align-items: center; gap: 3px; background: rgba(255,255,255,.75); border-radius: 10px; padding: 0 8px; font-size: 14px; margin-right: 6px; }
+.reward.keyr { background: #fef3c7; margin-right: 6px; font-size: 24px; } .reward.keyr small { font-size: 12px; color: #92400e; }

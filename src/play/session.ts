@@ -66,8 +66,13 @@ export class Session {
     this.L = world.L;
     this.group.add(world.group);
     for (let k = 0; k < MAX_BAYS; k++) { this.bayFree.push(Promise.resolve()); this.bayIsFree.push(true); }
-    level.vehicles.forEach((v) => {
-      const o = makeVehicle(v.kind, v.color);
+    level.vehicles.forEach((v, idx) => {
+      // Restored classics from the garage take the place of some ordinary sedans.
+      const skins = worldOpts.skins ?? [];
+      const sedan = v.kind === 'pride' || v.kind === 'peykan' || v.kind === 'p405';
+      const roll = (idx * 2654435761 + seed * 40503) >>> 0;
+      const skin = sedan && skins.length && roll % 4 === 0 ? skins[(roll >>> 4) % skins.length] : undefined;
+      const o = makeVehicle(v.kind, v.color, skin);
       const cells = cellsOf(v);
       const a = this.L.cell(...cells[0]), b = this.L.cell(...cells[cells.length - 1]);
       o.root.position.set((a.x + b.x) / 2, LOT_Y, (a.z + b.z) / 2);
@@ -76,8 +81,9 @@ export class Session {
       this.cars.push(o);
       const i = this.cars.length - 1;
       if (v.covered) {
-        const cover = carCover(o.length);
-        const arrow = makeArrow(); arrow.position.y = 0.9; cover.add(arrow);
+        const roof = v.kind === 'zamyad' ? 1.3 : v.kind === 'bus' ? 1.45 : 0.95;
+        const cover = carCover(o.length, roof);
+        const arrow = makeArrow(); arrow.position.y = cover.userData.top + 0.02; cover.add(arrow);
         o.root.add(cover); this.covers.set(i, cover);
       }
       if (v.wait) {
