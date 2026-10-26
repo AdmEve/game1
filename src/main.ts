@@ -12,6 +12,8 @@ import { outdoorEnv } from './render/env.js';
 import { warmFleet } from './render/fleet';
 import { sky } from './render/world';
 import { Session } from './play/session';
+import { CHAPTERS, chapterOf, type Light } from './game/chapters';
+import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
@@ -37,7 +39,8 @@ app.append(renderer.domElement);
 // Lens look: a tilt-shift blur on the far city (miniature feel) and a soft vignette.
 const tilt = document.createElement('div'); tilt.className = 'tiltshift';
 const vignette = document.createElement('div'); vignette.className = 'vignette';
-app.append(tilt, vignette);
+const tint = document.createElement('div'); tint.className = 'tint';
+app.append(tilt, tint, vignette);
 
 const scene = new THREE.Scene();
 scene.background = sky();
@@ -52,6 +55,28 @@ sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
 sun.shadow.radius = 3;
 scene.add(sun, sun.target);
+
+const hemi = scene.children.find((o) => (o as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight;
+
+/** Per-chapter time of day: sky, fog, sun angle and color, exposure, how much lamps and headlights glow. */
+const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [number, number, number]; sun: [number, number, [number, number, number]]; exposure: number; env: number; lamps: number }> = {
+  day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32 },
+  sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0 },
+  night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6 },
+};
+let sunOffset = new THREE.Vector3(-9, 22, 11);
+function applyLight(light: Light) {
+  const L = LIGHTS[light];
+  (scene.background as THREE.Texture)?.dispose();
+  scene.background = sky(L.sky);
+  (scene.fog as THREE.Fog).color.setHex(L.fog);
+  hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
+  sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sunOffset = new THREE.Vector3(...L.sun[2]);
+  renderer.toneMappingExposure = L.exposure;
+  scene.environmentIntensity = L.env;
+  lightsMaterial.emissiveIntensity = L.lamps;
+  document.body.dataset.light = light;
+}
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 260);
 const PITCH = THREE.MathUtils.degToRad(54);
@@ -111,7 +136,7 @@ function fitCamera() {
   }
   camBase.copy(camera.position);
   // Keep the sun's shadow box around the playfield.
-  sun.position.copy(target).add(new THREE.Vector3(-9, 22, 11));
+  sun.position.copy(target).add(sunOffset);
   sun.target.position.copy(target);
   const ext = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.75 + 4;
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 1, far: 70 });
@@ -194,6 +219,8 @@ function startLevel() {
   disposeSession();
   const n = Math.min(save.level, levels.length - 1);
   const level = levels[n];
+  const ch = chapterOf(n);
+  applyLight(ch.light);
   craneMode = false;
   modalOpen = false;
   session = new Session(level, {
@@ -206,14 +233,20 @@ function startLevel() {
     parity: (p, left) => hud.setParity(p, left),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1);
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night', landmark: ch.landmark, boulevard: ch.n === 2 });
   scene.add(session.group);
   hud.setLevel(save.level + 1, level.tag);
   hud.refresh();
   hud.active(null);
   hud.show(true);
   fitCamera();
-  if (level.intro && !save.seen[level.intro]) {
+  if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
+    modalOpen = true;
+    const c = h('div', 'newch');
+    c.innerHTML = `<div class="burst">${emo(ch.light === 'night' ? '🌙' : ch.light === 'sunset' ? '🌇' : '🌄', 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${ch.light === 'night' ? 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!' : 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!'}</p>`;
+    const close = modal(c, 'pop');
+    c.append(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; }));
+  } else if (level.intro && !save.seen[level.intro]) {
     modalOpen = true;
     showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; });
   }
@@ -340,8 +373,11 @@ function showHome() {
   modalOpen = true;
   hud.show(false);
   const c = h('div', 'home');
+  const ch = chapterOf(Math.min(save.level, levels.length - 1));
+  const done = Math.min(save.level, ch.to) - ch.from, total = ch.to - ch.from;
+  const map = CHAPTERS.map((k) => `<span class="${save.level >= k.to ? 'done' : k === ch ? 'now' : 'locked'}">${save.level >= k.from ? fa(k.n) : emo('🔒', 'emo xs')}</span>`).join('<i></i>');
   c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
-    <div class="chapter"><div class="ch-t">${emo('📍')} فصل ۱: تجریش</div><div class="ch-bar"><i style="width:${Math.round((Math.min(save.level, levels.length) / levels.length) * 100)}%"></i></div><div class="ch-n">${fa(Math.min(save.level, levels.length))} از ${fa(levels.length)}</div></div>`;
+    <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
   const close = modal(c, 'home-card');
   c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     close();

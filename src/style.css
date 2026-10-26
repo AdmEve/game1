@@ -182,3 +182,15 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .card .intro, .intro { position: relative; }
 .speech { background: #f1f5f9; border-radius: 16px; padding: 10px 12px; text-align: right; line-height: 1.9; font-weight: 600; color: #334155; margin: 6px 0 4px; }
 .speech .who { font-weight: 900; color: #0f5f33; }
+
+.ch-map { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 8px; direction: rtl; }
+.ch-map span { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 15px; background: #e2e8f0; color: #64748b; }
+.ch-map span.done { background: var(--green); color: #fff; } .ch-map span.now { background: var(--gold); color: #4a2a00; box-shadow: 0 0 0 4px rgba(245,180,0,.35); }
+.ch-map i { width: 34px; height: 4px; background: #cbd5e1; }
+.newch small { display: inline-block; background: #ef4444; color: #fff; font-weight: 900; padding: 2px 12px; border-radius: 10px; }
+
+/* Time-of-day grading over the 3D view */
+.tint { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s; }
+body[data-light='sunset'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(255,120,60,.30) 0%, rgba(255,150,80,.10) 40%, rgba(120,60,140,.10) 100%); mix-blend-mode: soft-light; }
+body[data-light='night'] .tint { opacity: 1; background: linear-gradient(180deg, rgba(10,20,60,.45) 0%, rgba(10,20,60,.15) 45%, rgba(5,10,30,.25) 100%); }
+body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70% at 50% 58%, transparent 50%, rgba(2,6,20,.55) 100%); }

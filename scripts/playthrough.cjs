@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
     const res = await p.evaluate(async (n) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
-      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true };
+      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, ch2: true, ch3: true };
       r.save.level = n - 1; r.startLevel();
       const s = r.session();
       const { solve } = await import('/src/game/solver.ts');

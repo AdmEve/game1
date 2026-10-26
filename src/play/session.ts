@@ -10,7 +10,7 @@ import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { blowOff, brokenBadge, carCover, hazard, plateBadge, setBrokenBadge, setPlateBadge, vipMarker } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { person, type Person } from '../render/people';
-import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout } from '../render/world';
+import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
@@ -60,9 +60,9 @@ export class Session {
   private broken = new Map<number, { badge: THREE.Sprite; hazard: THREE.Object3D; nextPuff: number }>();
   private plates = new Map<number, THREE.Sprite>();
 
-  constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1) {
+  constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1, worldOpts: WorldOpts = {}) {
     this.s = newState(level);
-    const world = buildWorld(level.w, level.h, MAX_BAYS, seed);
+    const world = buildWorld(level.w, level.h, MAX_BAYS, seed, worldOpts);
     this.L = world.L;
     this.group.add(world.group);
     for (let k = 0; k < MAX_BAYS; k++) { this.bayFree.push(Promise.resolve()); this.bayIsFree.push(true); }

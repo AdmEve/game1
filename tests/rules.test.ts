@@ -109,7 +109,7 @@ describe('mechanics', () => {
 });
 
 describe('journey levels', () => {
-  it('has 30 levels', () => expect(levels.length).toBe(30));
+  it('has 90 levels', () => expect(levels.length).toBe(90));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

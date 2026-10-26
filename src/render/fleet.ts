@@ -14,7 +14,8 @@ export const CELL = 1.25;
 
 // Vertex-colored stand-ins for the many small dark/plain materials.
 const misc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.05 });
-const lights = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.08, clearcoat: 1, emissive: 0xffffff, emissiveIntensity: 0.32 });
+export const lightsMaterial = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.08, clearcoat: 1, emissive: 0xffffff, emissiveIntensity: 0.32 });
+const lights = lightsMaterial;
 lights.onBeforeCompile = (sh) => {
   sh.fragmentShader = sh.fragmentShader.replace('vec3 totalEmissiveRadiance = emissive;', 'vec3 totalEmissiveRadiance = emissive * vColor;');
 };

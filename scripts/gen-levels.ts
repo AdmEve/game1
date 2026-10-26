@@ -50,6 +50,28 @@ const SPECS: Spec[] = [
   { w: 7, h: 10, fill: 0.93, colors: 6, mix: 15, target: 0.15, zamyad: 0.12, bus: 0.08, cones: 2, tag: 'boss', oddEven: 4, cover: 0.3, broken: 1, vip: 1 },
 ];
 
+// Chapters 2 and 3: a sawtooth that climbs within each chapter, a hard level every five, a boss at the end,
+// and a seeded mix of the four mechanics (odd/even plates more common at Azadi).
+for (let i = 0; i < 60; i++) {
+  const n = 31 + i, inCh = i % 30, ch3 = i >= 30;
+  const hard = n % 5 === 0, boss = n % 30 === 0;
+  const r = rng(n * 7919);
+  const spec: Spec = {
+    w: 7, h: inCh < 8 ? 8 : inCh < 20 ? 9 : 10, fill: 0.84 + (inCh / 29) * 0.06 + (hard ? 0.02 : 0),
+    colors: inCh < 6 ? 5 : 6, mix: Math.round(7 + inCh / 4 + (hard ? 4 : 0)),
+    target: boss ? 0.15 : hard ? 0.3 : Math.max(0.45, 0.8 - 0.25 * (inCh / 29)),
+    zamyad: 0.12, bus: 0.08, cones: Math.floor(r() * 3),
+  };
+  if (r() < 0.5) spec.cover = 0.2 + r() * 0.15;
+  if (r() < 0.4) spec.broken = 1 + (r() < 0.3 ? 1 : 0);
+  if (r() < 0.35) spec.vip = 1 + (r() < 0.3 ? 1 : 0);
+  if (r() < (ch3 ? 0.55 : 0.3)) spec.oddEven = 3 + Math.floor(r() * 2);
+  if (boss) Object.assign(spec, { cover: 0.3, broken: 1, vip: 1, oddEven: 4 });
+  if (hard) spec.tag = 'hard';
+  if (boss) spec.tag = 'boss';
+  SPECS.push(spec);
+}
+
 const DIRS: Dir[] = ['up', 'down', 'left', 'right'];
 const SEDANS: Kind[] = ['pride', 'peykan', 'p405'];
 
@@ -148,10 +170,14 @@ function generate(spec: Spec, seed: number): Level | null {
 }
 
 const out: Level[] = [];
-SPECS.forEach((spec, n) => {
+SPECS.forEach((spec0, n) => {
   let best: { level: Level; err: number; rates: { random: number; greedy: number }; seed: number } | null = null;
-  for (let seed = 1; seed <= 600; seed++) {
-    const level = generate(spec, (n + 1) * 10007 + seed);
+  // If the target is far off, ease the queue mixing (or tighten it) and search again.
+  for (let attempt = 0; attempt < 4 && (!best || best.err > 0.12); attempt++) {
+  const tooHard = best ? best.rates.greedy < spec0.target : false;
+  const spec = { ...spec0, mix: Math.max(0, spec0.mix + (attempt === 0 ? 0 : tooHard ? -3 * attempt : 3 * attempt)) };
+  for (let seed = 1; seed <= 400; seed++) {
+    const level = generate(spec, (n + 1) * 10007 + seed + attempt * 100003);
     if (!level) continue;
     if (!solve(level).solvable) continue;
     const cells = level.vehicles.reduce((a, v) => a + KIND[v.kind].len, 0);
@@ -162,6 +188,8 @@ SPECS.forEach((spec, n) => {
     if (!best || err < best.err) best = { level, err, rates, seed };
     if (err < 0.03) break;
   }
+  }
+  const spec = spec0;
   if (!best) throw new Error(`no level for spec ${n + 1}`);
   out.push(best.level);
   console.log(`L${n + 1} ${spec.w}x${spec.h} vehicles=${best.level.vehicles.length} passengers=${best.level.queue.length} greedy=${best.rates.greedy.toFixed(2)} random=${best.rates.random.toFixed(2)} (target ${spec.target})${spec.tag ? ' ' + spec.tag : ''}`);

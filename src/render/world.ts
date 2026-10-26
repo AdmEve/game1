@@ -72,12 +72,27 @@ const pavingTex = () => canvasTex(256, 256, (g) => {
 }, 1);
 const grassTex = () => canvasTex(256, 256, (g) => speckle(g, 256, 256, '#6aa84f', ['#5a9a42', '#7dbb5c', '#4e8a3a', '#8cc66a'], 9000, 2), 1);
 
-export function sky(): THREE.Texture {
+export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']]): THREE.Texture {
   return canvasTex(4, 512, (g) => {
     const gr = g.createLinearGradient(0, 0, 0, 512);
-    gr.addColorStop(0, '#4b93dd'); gr.addColorStop(0.5, '#9dcff7'); gr.addColorStop(0.85, '#e8eef2'); gr.addColorStop(1, '#f7e7cf');
+    for (const [o, c] of stops) gr.addColorStop(o, c);
     g.fillStyle = gr; g.fillRect(0, 0, 4, 512);
   }, 1);
+}
+
+export interface WorldOpts { stop?: string; night?: boolean; landmark?: 'milad' | 'azadi' | 'both'; boulevard?: boolean; }
+
+/** A soft pool of light on the ground (night scenes): an additive radial gradient. */
+let poolTex: THREE.Texture | null = null;
+function lightPool(r: number, color = 0xffd9a0, opacity = 0.55): THREE.Mesh {
+  poolTex ??= canvasTex(128, 128, (g) => {
+    const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: poolTex, color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  return m;
 }
 
 const std = (color: number, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...o });
@@ -146,8 +161,9 @@ type Style = 'stone' | 'brick';
  * awnings on the ground floor, balconies, bare cement side walls, an ایزوگام roof with a parapet and the
  * usual rooftop clutter (water tank, evaporative cooler, satellite dishes).
  */
-function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number): THREE.Group {
+function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number, night = false): THREE.Group {
   const g = new THREE.Group();
+  const glow: [number, number, number, number, string][] = [];
   const fh = 0.62, h = floors * fh + 0.3, d = 1.8;
   const W = 384, FH = 96, cols = w > 2.8 ? 4 : 3;
   const facade = canvasTex(W, FH * floors, (c) => {
@@ -178,6 +194,7 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
           const open = rnd() < 0.7;
           c.fillStyle = '#2a2f36'; c.fillRect(x, y + 30, sw, 62);
           if (open) {
+            glow.push([x + 4, y + 34, sw - 8, 54, '#ffd98a']);
             const gr = c.createLinearGradient(0, y + 34, 0, y + 92); gr.addColorStop(0, '#ffe7a8'); gr.addColorStop(1, '#f2b866');
             c.fillStyle = gr; c.fillRect(x + 4, y + 34, sw - 8, 54);
             c.fillStyle = 'rgba(120,70,30,.5)'; for (let j = 0; j < 6; j++) c.fillRect(x + 10 + j * ((sw - 20) / 6), y + 60 + (j % 2) * 8, 14, 22);
@@ -197,7 +214,8 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
           c.fillRect(x - 5, y + 14, ww + 10, 62);
           c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x - 7, y + 76, ww + 14, 5);
           c.fillStyle = '#334155'; c.fillRect(x, y + 18, ww, 54);
-          const lit = rnd() < 0.3;
+          const lit = rnd() < (night ? 0.55 : 0.3);
+          if (lit) glow.push([x + 3, y + 21, ww - 6, 48, rnd() < 0.2 ? '#cfe3ff' : '#ffd88a']);
           const glass = c.createLinearGradient(x, y + 18, x + ww, y + 72);
           glass.addColorStop(0, lit ? '#ffe9b0' : '#a9c7e3'); glass.addColorStop(1, lit ? '#f7c870' : '#6e93b8');
           c.fillStyle = glass; c.fillRect(x + 3, y + 21, ww / 2 - 4, 48); c.fillRect(x + ww / 2 + 1, y + 21, ww / 2 - 4, 48);
@@ -212,6 +230,11 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
   const cement = std(0xa8a39a, { roughness: 0.95 });
   const roof = std(0xffffff, { map: isogamTex(), roughness: 0.45, metalness: 0.35 });
   const front = std(0xffffff, { map: facade, roughness: 0.8 });
+  if (night) {
+    const glowTex = canvasTex(W, FH * floors, (c) => { c.fillStyle = '#000'; c.fillRect(0, 0, W, FH * floors); for (const [x, y, ww, hh, col] of glow) { c.fillStyle = col; c.fillRect(x, y, ww, hh); } });
+    glowTex.wrapS = glowTex.wrapT = THREE.ClampToEdgeWrapping;
+    front.emissiveMap = glowTex; front.emissive = new THREE.Color(0xffffff); front.emissiveIntensity = 1.7;
+  }
   const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [cement, cement, roof, cement, front, cement]);
   body.position.y = h / 2; g.add(body);
   // Parapet around the roof.
@@ -253,13 +276,13 @@ function apartment(w: number, floors: number, tone: string, style: Style, rnd: (
 }
 
 /** Tehran's green street lamp. */
-function streetLamp(): THREE.Group {
+function streetLamp(night = false): THREE.Group {
   const g = new THREE.Group();
   const m = std(0x2f5d4a, { metalness: 0.5, roughness: 0.45 });
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 2.6, 8), m); pole.position.y = 1.3; g.add(pole);
   const arm = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 12, Math.PI / 2), m); arm.position.set(0.3, 2.6, 0); arm.rotation.z = Math.PI / 2; g.add(arm);
   const head = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.12, 10), m); head.position.set(0.6, 2.86, 0); g.add(head);
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), std(0xfff4d0, { emissive: 0xffe8a8, emissiveIntensity: 0.4 })); bulb.position.set(0.6, 2.79, 0); g.add(bulb);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), std(0xfff4d0, { emissive: 0xffe8a8, emissiveIntensity: night ? 4 : 0.4 })); bulb.position.set(0.6, 2.79, 0); g.add(bulb);
   g.traverse((m) => { m.castShadow = true; });
   return g;
 }
@@ -315,7 +338,8 @@ function azadiTower(): THREE.Group {
 
 export interface World { group: THREE.Group; L: Layout; }
 
-export function buildWorld(w: number, h: number, bays: number, seed = 1): World {
+export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
+  const night = !!opts.night;
   let s = seed;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   const L = layout(w, h, bays);
@@ -367,7 +391,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
   for (const x of [-1.2, 1.2]) for (const z of [-0.45, 0.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 8), steel); p.position.set(x, 0.9, z); shelter.add(p); }
   const back = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.3, 0.04), new THREE.MeshPhysicalMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.45, roughness: 0.05 })); back.position.set(0, 1.0, -0.45); shelter.add(back);
   shelter.add(box(1.8, 0.08, 0.32, std(0xa0703c), 0, 0.45, -0.25, 0.03));
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.36, 0.06), [steel, steel, steel, steel, std(0xffffff, { map: label('ایستگاه تجریش', '#1e63d6', '#ffffff') }), steel]);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.36, 0.06), [steel, steel, steel, steel, std(0xffffff, { map: label(opts.stop ?? 'ایستگاه تجریش', '#1e63d6', '#ffffff') }), steel]);
   sign.position.set(0, 2.12, 0.2); shelter.add(sign);
   shelter.traverse((m) => { m.castShadow = true; m.receiveShadow = true; });
   shelter.position.set(L.queueX0 + 1.6, 0.18, L.walkZ - 0.3);
@@ -392,7 +416,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
   for (let x = -18, i = 0; x < 18; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
-    const b = apartment(bw, floors, tone, style, rnd);
+    const b = apartment(bw, floors, tone, style, rnd, night);
     b.position.set(x + bw / 2, 0, L.walkZ - 3.2 - rnd() * 0.6);
     add(b);
     x += bw + 0.15;
@@ -401,12 +425,24 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
   for (let x = -24, i = 0; x < 24; i++) {
     const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
     const [tone, style] = facadeOf(i + 3);
-    const b = apartment(bw, floors, tone, style, rnd);
+    const b = apartment(bw, floors, tone, style, rnd, night);
     b.position.set(x + bw / 2, 0, L.walkZ - 7.5 - rnd() * 2); add(b);
     x += bw + 0.4;
   }
-  const milad = miladTower(); milad.scale.setScalar(0.9); milad.position.set(7, 0, L.walkZ - 26); add(milad);
-  const azadi = azadiTower(); azadi.scale.setScalar(1.1); azadi.position.set(-8, 0, L.walkZ - 22); azadi.rotation.y = 0.35; add(azadi);
+  const lm = opts.landmark ?? 'both';
+  const milad = miladTower();
+  if (lm === 'milad') { milad.scale.setScalar(1.25); milad.position.set(2.5, 0, L.walkZ - 24); } else { milad.scale.setScalar(0.9); milad.position.set(7, 0, L.walkZ - 26); }
+  add(milad);
+  const azadi = azadiTower();
+  if (lm === 'azadi') { azadi.scale.setScalar(2.4); azadi.position.set(0, 0, L.walkZ - 19); azadi.rotation.y = 0; } else { azadi.scale.setScalar(1.1); azadi.position.set(-8, 0, L.walkZ - 22); azadi.rotation.y = 0.35; }
+  add(azadi);
+  if (night) {
+    // Floodlit monuments and pools of lamplight.
+    const flood = (o: THREE.Object3D, r: number) => { const p = lightPool(r, 0x9fc4ff, 0.5); p.position.set(o.position.x, 0.05, o.position.z + 1); g.add(p); };
+    flood(azadi, lm === 'azadi' ? 9 : 5); flood(milad, 4);
+    azadi.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0x7fa6ff); mat.emissiveIntensity = 0.35; mm.material = mat; } });
+    milad.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0xc9a3ff); mat.emissiveIntensity = 0.45; mm.material = mat; } });
+  }
   const mtn = std(0x8fa5bf, { roughness: 1, flatShading: true }), snow = std(0xffffff, { roughness: 0.9, flatShading: true });
   for (const [x, hh, r] of [[-34, 18, 15], [-14, 24, 17], [6, 20, 15], [26, 26, 18], [46, 17, 13]]) {
     const m = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 7), mtn); m.position.set(x, hh / 2, L.walkZ - 52); g.add(m);
@@ -415,12 +451,22 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
     if (Math.abs(x - shelter.position.x) < 1.6) continue;
-    const l = streetLamp(); l.position.set(x + 1.3, 0.18, L.walkZ - 0.75); l.rotation.y = -Math.PI / 2; add(l);
+    const l = streetLamp(night); l.position.set(x + 1.3, 0.18, L.walkZ - 0.75); l.rotation.y = -Math.PI / 2; add(l);
+    if (night) { const p = lightPool(2.2, 0xffd9a0, 0.75); p.position.set(x + 1.3, 0.2, L.walkZ - 0.15); g.add(p); }
   }
   [[0xb91c1c, 0], [0x1d4ed8, 0.55], [0x111827, 1.1]].forEach(([c, dx]) => {
     const m = motorbike(c); m.position.set(kiosk.position.x - 1.3 - dx, 0.18, L.walkZ + 0.15); m.rotation.y = Math.PI / 2 + 0.25; add(m);
   });
   const tl = trafficLight(); tl.position.set(L.bayX[0] + 3.0, 0.18, L.walkZ + 0.85); add(tl);
+
+  if (opts.boulevard) {
+    // Valiasr: a double row of old plane trees.
+    for (let x = -16; x <= 16; x += 2.2 + rnd() * 0.6) { const t = chenar(1.15 + rnd() * 0.3); t.position.set(x, 0, L.walkZ - 2.3 + rnd() * 0.3); add(t); }
+  }
+  if (night) {
+    // Floodlights over the lot and the bays.
+    for (const [x, z, r] of [[0, L.lotH / 2, Math.max(L.lotW, L.lotH) * 0.75], [0, L.bayZ, 5.5]] as const) { const p = lightPool(r, 0xffe6b8, 0.5); p.position.set(x, 0.13, z); g.add(p); }
+  }
 
   // Trees on the grass around the lot.
   for (let i = 0; i < 18; i++) {
