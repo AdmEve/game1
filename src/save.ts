@@ -5,6 +5,10 @@ export interface Save {
   boosters: { crane: number; whistle: number; bay: number };
   settings: { sound: boolean; music: boolean; haptics: boolean };
   stats: { wins: number; losses: number };
+  owned: { starter: boolean; no_ads: boolean };
+  daily: { day: string; streak: number };
+  ads: { lastInterstitial: number; winsSince: number };
+  firstOpen: number;
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -14,6 +18,10 @@ const fresh = (): Save => ({
   boosters: { crane: 2, whistle: 2, bay: 2 },
   settings: { sound: true, music: true, haptics: true },
   stats: { wins: 0, losses: 0 },
+  owned: { starter: false, no_ads: false },
+  daily: { day: '', streak: 0 },
+  ads: { lastInterstitial: 0, winsSince: 0 },
+  firstOpen: Date.now(),
 });
 
 function load(): Save {
@@ -22,7 +30,11 @@ function load(): Save {
     if (raw) {
       const s = JSON.parse(raw) as Partial<Save>;
       const f = fresh();
-      return { ...f, ...s, boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats } };
+      return {
+        ...f, ...s,
+        boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads },
+      };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }
   return fresh();

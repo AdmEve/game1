@@ -14,6 +14,8 @@ import { sky } from './render/world';
 import { Session } from './play/session';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
+import { maybeDaily, showChest, showShop } from './ui/meta';
+import { initMonetization, maybeInterstitial, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { coin } from './audio';
 import { setTension, startMusic, stopMusic } from './music';
@@ -228,6 +230,7 @@ function reward() {
 }
 
 function showWin() {
+  const n = save.level;
   const coins = reward() + (session?.bonus ?? 0);
   save.stats.wins++;
   save.coins += coins;
@@ -235,11 +238,30 @@ function showWin() {
   persist();
   modalOpen = true;
   hud.show(false);
+  hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`;
   const close = modal(c, 'pop');
-  c.append(button(`مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { close(); modalOpen = false; startLevel(); }));
+  const next = async () => {
+    close(); modalOpen = true;
+    if ((n + 1) % 5 === 0) await showChest(() => hud.refresh());
+    await maybeInterstitial(n);
+    modalOpen = false; startLevel();
+  };
+  if (rewardedAvailable()) {
+    const dbl = button(`${emo('🎬', 'emo sm')} دو برابرش کن!`, 'gold', async () => {
+      dbl.setAttribute('disabled', '');
+      if (await showRewarded()) {
+        save.coins += coins; persist(); hud.refresh();
+        (c.querySelector('.reward b') as HTMLElement).textContent = `+${faNum(coins * 2)}`;
+        for (let i = 0; i < 5; i++) coin(i * 0.08);
+        dbl.remove();
+      } else dbl.removeAttribute('disabled');
+    });
+    c.append(dbl);
+  }
+  c.append(button(`مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
 }
 
@@ -252,12 +274,21 @@ function showLose() {
   c.innerHTML = `<div class="burst">${emo('🚧', 'emo huge')}</div><h2>راه‌بندون شد!</h2><p>همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.</p>`;
   const close = modal(c, 'pop');
   const canBay = session && session.s.bays.length < 6;
-  if (canBay) c.append(button(`${emo('🅿️', 'emo sm')} یه جای پارک دیگه، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
-    if (save.coins < price) { hud.toast('سکه کافی نداری!'); return; }
-    save.coins -= price; persist(); hud.refresh();
-    close(); modalOpen = false;
-    session!.extraBay();
-  }));
+  const resume = () => { close(); modalOpen = false; session!.extraBay(); };
+  if (canBay) {
+    c.append(button(`${emo('🅿️', 'emo sm')} یه جای پارک دیگه، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
+      if (save.coins < price) { hud.toast('سکه کافی نداری!'); showShop(() => {}, () => hud.refresh()); return; }
+      save.coins -= price; persist(); hud.refresh();
+      resume();
+    }));
+    if (rewardedAvailable()) {
+      const ad = button(`${emo('🎬', 'emo sm')} با دیدن تبلیغ ادامه بده`, 'primary', async () => {
+        ad.setAttribute('disabled', '');
+        if (await showRewarded()) resume(); else ad.removeAttribute('disabled');
+      });
+      c.append(ad);
+    }
+  }
   c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(); }));
 }
 
@@ -287,7 +318,11 @@ function showHome() {
   c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
     <div class="chapter"><div class="ch-t">${emo('📍')} فصل ۱: تجریش</div><div class="ch-bar"><i style="width:${Math.round((Math.min(save.level, levels.length) / levels.length) * 100)}%"></i></div><div class="ch-n">${fa(Math.min(save.level, levels.length))} از ${fa(levels.length)}</div></div>`;
   const close = modal(c, 'home-card');
-  c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', () => { close(); modalOpen = false; hud.show(true); }));
+  c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+    close();
+    await maybeDaily(() => hud.refresh());
+    modalOpen = false; hud.show(true);
+  }));
 }
 
 // ───── Boot ─────
@@ -295,11 +330,12 @@ async function boot() {
   hud = new Hud(document.body);
   hud.onBooster = useBooster;
   hud.onSettings = showSettings;
-  hud.onCoins = () => hud.toast('فروشگاه به‌زودی!');
+  hud.onCoins = () => { modalOpen = true; showShop(() => { modalOpen = false; }, () => hud.refresh()); };
   await document.fonts.load('900 40px Vazirmatn').catch(() => {});
   warmFleet([]);
   startLevel();
   if (!debug.has('play')) showHome();
+  void initMonetization();
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
