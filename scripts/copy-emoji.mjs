@@ -28,9 +28,6 @@ function walk(dir, files = []) {
 
 const found = new Set();
 for (const f of walk(src)) for (const m of readFileSync(f, 'utf8').matchAll(RE)) found.add(m[0]);
-// Avatar combinations built at runtime.
-const bases = ['👶', '👦', '👧', '👨', '👩', '👴', '👵', '🧔', '🧑', '👱'];
-for (const b of bases) for (const t of ['', '🏻', '🏼', '🏽', '🏾']) found.add(b + t);
 
 if (existsSync(out)) rmSync(out, { recursive: true });
 mkdirSync(out, { recursive: true });

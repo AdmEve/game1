@@ -1,6 +1,6 @@
 // Draws the launcher icons, adaptive-icon foregrounds, splash screens and the 512px store icon
 // from HTML (Vazirmatn + Twemoji) with the pre-installed Playwright Chromium.
-// Run: node scripts/make-icons.mjs   (needs public/emoji, i.e. run `npm run build` once first)
+// Run: node scripts/make-icons.mjs   (the car art comes from scripts/icon-car.html; see PROGRESS.md)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import { readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -12,52 +12,36 @@ try { playwright = require('playwright'); } catch { playwright = require(execSyn
 const root = fileURLToPath(new URL('..', import.meta.url));
 const res = root + 'android/app/src/main/res/';
 const font = root + 'node_modules/vazirmatn/fonts/webfonts/';
-const emoji = (code) => `file://${root}public/emoji/${code}.svg`;
 
+const hero = `file://${root}scripts/art/hero-taxi.png`;
 const css = `
 @font-face { font-family: V; src: url('file://${font}Vazirmatn-Black.woff2'); font-weight: 900; }
 @font-face { font-family: V; src: url('file://${font}Vazirmatn-Bold.woff2'); font-weight: 700; }
 * { margin: 0; box-sizing: border-box; }
-body { width: 1024px; height: 1024px; font-family: V; direction: rtl; }
-.tile { position: absolute; inset: 0; background: #1f6f6b;
-  background-image:
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,.10) 0 22%, transparent 23%),
-    conic-gradient(from 45deg, rgba(255,255,255,.06) 0 25%, transparent 0 50%, rgba(255,255,255,.06) 0 75%, transparent 0);
-  background-size: 100% 100%, 128px 128px; }
-.medal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffd77a, #f0a12e 58%, #c97a0d);
-  box-shadow: inset 0 -26px 0 rgba(0,0,0,.14), 0 18px 40px rgba(0,0,0,.25);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #3b2300; }
-.plus { font-weight: 900; line-height: .9; }
-.sal { font-weight: 700; line-height: 1; }
-.e { position: absolute; }
+body { font-family: V; direction: rtl; }
+/* A Tehran road from above: asphalt, a yellow center line, a zebra crossing. */
+.tile { position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,.22), transparent 55%),
+    linear-gradient(180deg, #2f8f55, #16613a); }
+.car { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); filter: drop-shadow(0 4% 6% rgba(0,0,0,.35)); }
 `;
 
 function iconHtml({ size, shape, transparent, scale }) {
-  // scale: medal diameter relative to the canvas.
-  const d = Math.round(size * scale);
+  const d = Math.round(size * scale * 1.5);
   const bg = transparent ? '' : `<div class="tile" style="border-radius:${shape === 'round' ? '50%' : shape === 'square' ? '0' : '22%'}"></div>`;
   return `<html><head><style>${css} body{width:${size}px;height:${size}px;position:relative;overflow:hidden;background:transparent}</style></head><body>
-  ${bg}
-  <div class="medal" style="width:${d}px;height:${d}px">
-    <div class="plus" dir="ltr" style="font-size:${Math.round(d * 0.46)}px">+۱</div>
-    <div class="sal" style="font-size:${Math.round(d * 0.19)}px">سال</div>
-  </div>
-  <img class="e" src="${emoji('1f476-1f3fc')}" style="width:${Math.round(d * 0.3)}px;left:${Math.round(size / 2 - d * 0.62)}px;top:${Math.round(size / 2 - d * 0.62)}px">
-  <img class="e" src="${emoji('1f474-1f3fd')}" style="width:${Math.round(d * 0.3)}px;left:${Math.round(size / 2 + d * 0.32)}px;top:${Math.round(size / 2 + d * 0.3)}px">
-  </body></html>`;
+  ${bg}<img class="car" src="${hero}" style="width:${d}px"></body></html>`;
 }
 
 function splashHtml(w, h) {
   const s = Math.min(w, h);
   return `<html><head><style>${css} body{width:${w}px;height:${h}px;position:relative;overflow:hidden}</style></head><body>
-  <div class="tile" style="background-image:conic-gradient(from 45deg, rgba(255,255,255,.06) 0 25%, transparent 0 50%, rgba(255,255,255,.06) 0 75%, transparent 0);background-size:128px 128px"></div>
-  <div style="position:absolute;left:0;right:0;top:${Math.round(h * 0.36)}px;text-align:center;color:#fff">
-    <div style="display:flex;justify-content:center;gap:${Math.round(s * 0.02)}px;margin-bottom:${Math.round(s * 0.03)}px">
-      ${['1f476', '1f392', '1f393', '1f48d', '1f474'].map((c) => `<img src="${emoji(c)}" style="width:${Math.round(s * 0.1)}px">`).join('')}
-    </div>
-    <div style="font-weight:900;font-size:${Math.round(s * 0.13)}px;line-height:1.3;text-shadow:0 ${Math.round(s * 0.008)}px 0 rgba(0,0,0,.2)">زندگی ایرونی</div>
-    <div style="font-weight:700;font-size:${Math.round(s * 0.045)}px;opacity:.9">شبیه‌ساز زندگی ایرانی</div>
+  <div class="tile"></div>
+  <img class="car" src="${hero}" style="width:${Math.round(s * 0.95)}px;top:${Math.round(h * 0.4)}px">
+  <div style="position:absolute;left:0;right:0;top:${Math.round(h * 0.64)}px;text-align:center">
+    <div style="display:inline-block;font-weight:900;font-size:${Math.round(s * 0.15)}px;line-height:1.25;color:#fff;padding:0 ${Math.round(s * 0.05)}px ${Math.round(s * 0.015)}px;border:${Math.round(s * 0.012)}px solid #fff;border-radius:${Math.round(s * 0.04)}px;background:#0f5f33;transform:rotate(-3deg)">راه‌بندون</div>
+    <div style="margin-top:${Math.round(s * 0.04)}px;font-weight:700;font-size:${Math.round(s * 0.045)}px;color:#fff;opacity:.9">ترافیک تهران، تو دستای تو</div>
   </div></body></html>`;
 }
 

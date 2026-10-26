@@ -5,7 +5,7 @@ android {
     namespace = "com.admeve.zendegi"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.admeve.zendegi"
+        applicationId "com.admeve.rahbandoon"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes the run number so every new build installs over the previous one.

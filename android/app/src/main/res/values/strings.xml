@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">زندگی ایرونی</string>
-    <string name="title_activity_main">زندگی ایرونی</string>
-    <string name="package_name">com.admeve.zendegi</string>
-    <string name="custom_url_scheme">com.admeve.zendegi</string>
+    <string name="app_name">راه‌بندون</string>
+    <string name="title_activity_main">راه‌بندون</string>
+    <string name="package_name">com.admeve.rahbandoon</string>
+    <string name="custom_url_scheme">com.admeve.rahbandoon</string>
 </resources>

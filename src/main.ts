@@ -1,81 +1,268 @@
 import 'vazirmatn/Vazirmatn-font-face.css';
 import './style.css';
-import './content';
-import { App as CapApp } from '@capacitor/app';
+import * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import type { Life } from './engine/types';
-import { killNow } from './engine/play';
-import { initMonetization } from './monetize';
-import { cancelReminders, scheduleReminders } from './notify';
-import { meta, persist } from './save';
-import { closeTop, h, layers } from './ui/dom';
-import { showDeath } from './ui/death';
-import { hooks, runQueue } from './ui/flow';
-import { currentLife, refresh, showGame } from './ui/game';
-import { achievements, app, applyTextSize, gameMenu, meSheet, shop, showHome } from './ui/menu';
-import { openTab } from './ui/tabs';
+import { App as CapApp } from '@capacitor/app';
+import LEVELS from './game/levels.json';
+import type { Level } from './game/rules';
+import { tick } from './render/anim';
+import { outdoorEnv } from './render/env.js';
+import { warmFleet } from './render/fleet';
+import { sky } from './render/world';
+import { Session } from './play/session';
+import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
+import { emo } from './ui/emoji';
+import { persist, save } from './save';
+import { coin } from './audio';
+import { haptic } from './haptics';
 
-let screen: 'home' | 'game' = 'home';
+const levels = LEVELS as Level[];
+const debug = new URLSearchParams(location.search);
 
-function play(L: Life) {
-  screen = 'game';
-  meta.life = L;
-  persist();
-  showGame(L);
-}
+// ───── Renderer and scene ─────
+const app = document.getElementById('app')!;
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: debug.has('shot') });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.append(renderer.domElement);
 
-function home() {
-  screen = 'home';
-  showHome();
-}
+const scene = new THREE.Scene();
+scene.background = sky();
+scene.fog = new THREE.Fog(0xdfe9f2, 40, 95);
+scene.environment = outdoorEnv(renderer);
+scene.environmentIntensity = 0.8;
+scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.7));
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 3;
+scene.add(sun, sun.target);
 
-applyTextSize();
-app.play = play;
-app.home = home;
-hooks.refresh = () => refresh(false);
-hooks.openTab = openTab;
-hooks.openShop = shop;
-hooks.openMenu = gameMenu;
-hooks.openAchievements = achievements;
-hooks.openMe = meSheet;
-hooks.afterDeath = () => {
-  const L = currentLife();
-  if (L?.dead) showDeath(L, { newLife: () => home(), play });
-};
+const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 260);
+const PITCH = THREE.MathUtils.degToRad(54);
 
-function onBack() {
-  if (layers.length) { closeTop(); return; }
-  if (screen === 'game') { home(); return; }
-  CapApp.exitApp().catch(() => {});
-}
+let session: Session | null = null;
+let hud: Hud;
+let craneMode = false;
+let modalOpen = false;
+const safe = { top: 132, bottom: 128 };
 
-function boot() {
-  const app = document.getElementById('app')!;
-  app.append(h('div', { id: 'screen' }), h('div', { id: 'layers' }));
-  if (Capacitor.isNativePlatform()) {
-    StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    CapApp.addListener('backButton', onBack);
-    CapApp.addListener('pause', () => { persist(); void scheduleReminders(); });
-    CapApp.addListener('resume', () => void cancelReminders());
-    void cancelReminders();
-  }
-  window.addEventListener('beforeunload', () => persist());
-  if (meta.life && !meta.life.dead) play(meta.life);
-  else home();
-  void initMonetization();
-  SplashScreen.hide().catch(() => {});
-  if (new URLSearchParams(location.search).has('debug')) {
-    (window as unknown as { __z: unknown }).__z = {
-      meta,
-      currentLife,
-      kill: () => { const L = currentLife(); if (L) { killNow(L, 'سکته‌ی قلبی'); hooks.afterDeath(); } },
-      /** Show a specific event now (store screenshots, testing). */
-      event: (id: string, p?: Record<string, unknown>) => { const L = currentLife(); if (L) { L.queue.unshift({ id, p }); void runQueue(L); } },
-      refresh: () => refresh(),
+/** Fit the level's focus box between the top bar and the booster bar. */
+function fitCamera() {
+  const W = window.innerWidth, H = window.innerHeight;
+  renderer.setSize(W, H);
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  if (!session) return;
+  const box = session.focus();
+  const center = box.getCenter(new THREE.Vector3());
+  const dir = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH));
+  const corners: THREE.Vector3[] = [];
+  for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
+  const top = 1 - (2 * safe.top) / H, bottom = -1 + (2 * safe.bottom) / H, side = 1 - 24 / W;
+  let target = center.clone();
+  for (let iter = 0; iter < 4; iter++) {
+    let lo = 4, hi = 120;
+    const fits = (d: number) => {
+      camera.position.copy(target).addScaledVector(dir, d); camera.lookAt(target); camera.updateMatrixWorld();
+      let minY = Infinity, maxY = -Infinity, maxX = 0;
+      for (const c of corners) { const p = c.clone().project(camera); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); maxX = Math.max(maxX, Math.abs(p.x)); }
+      return { ok: maxY - minY <= top - bottom && maxX <= side, minY, maxY };
     };
+    for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (fits(m).ok) hi = m; else lo = m; }
+    const r = fits(hi);
+    // Sit the lot right above the booster bar; spare height goes to the city skyline.
+    const want = bottom, have = r.minY;
+    if (Math.abs(want - have) < 0.004) break;
+    const shift = (have - want) * hi * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.sin(PITCH);
+    target = target.clone().add(new THREE.Vector3(0, 0, -shift));
   }
+  // Keep the sun's shadow box around the playfield.
+  sun.position.copy(target).add(new THREE.Vector3(-9, 22, 11));
+  sun.target.position.copy(target);
+  const ext = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.75 + 4;
+  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 1, far: 70 });
+  sun.shadow.camera.updateProjectionMatrix();
 }
 
-boot();
+// ───── Input ─────
+const ray = new THREE.Raycaster();
+const groundY = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.45);
+let down: { x: number; y: number } | null = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!down || !session || modalOpen) return;
+  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 14) return;
+  ray.setFromCamera(new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1), camera);
+  const p = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(groundY, p)) return;
+  const i = session.vehicleAt(p);
+  if (i < 0) return;
+  if (craneMode) {
+    if (session.crane(i)) { save.boosters.crane--; persist(); hud.refresh(); }
+    craneMode = false; hud.active(null);
+  } else session.tap(i);
+});
+
+// ───── Level flow ─────
+function disposeSession() {
+  if (!session) return;
+  scene.remove(session.group);
+  session.group.traverse((o) => {
+    const m = o as THREE.Mesh;
+    // Vehicle geometry and materials are shared between levels; free only the world's.
+    if (!m.isMesh || m.geometry.userData.keep) return;
+    m.geometry.dispose();
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
+      (mat as THREE.MeshStandardMaterial).map?.dispose();
+      mat.dispose();
+    }
+  });
+  session = null;
+}
+
+function startLevel() {
+  disposeSession();
+  const n = Math.min(save.level, levels.length - 1);
+  const level = levels[n];
+  craneMode = false;
+  session = new Session(level, {
+    queueLeft: (q) => hud.setQueue(q),
+    toast: (t) => hud.toast(t),
+    canPlay: () => !modalOpen,
+    won: () => showWin(),
+    lost: () => showLose(),
+  }, n + 1);
+  scene.add(session.group);
+  hud.setLevel(save.level + 1, level.tag);
+  hud.refresh();
+  hud.active(null);
+  hud.show(true);
+  fitCamera();
+}
+
+function useBooster(id: BoosterId) {
+  if (!session || modalOpen) return;
+  const def = BOOSTERS.find((b) => b.id === id)!;
+  if (save.boosters[id] <= 0) {
+    if (save.coins < def.price) { hud.toast('سکه کافی نداری!'); return; }
+    save.coins -= def.price; save.boosters[id]++; persist(); hud.refresh(); coin();
+  }
+  if (id === 'crane') {
+    craneMode = !craneMode;
+    hud.active(craneMode ? 'crane' : null);
+    if (craneMode) hud.toast(def.hint, 2200);
+    return;
+  }
+  const ok = id === 'bay' ? session.extraBay() : session.whistle();
+  if (!ok) { hud.toast(id === 'bay' ? 'همه‌ی جاهای پارک بازه!' : 'یه لحظه صبر کن…'); return; }
+  save.boosters[id]--; persist(); hud.refresh(); hud.bump(id); haptic('medium');
+}
+
+function reward() {
+  const n = save.level;
+  return 20 + Math.min(40, n * 2) + (levels[n]?.tag ? 40 : 0);
+}
+
+function showWin() {
+  const coins = reward();
+  save.stats.wins++;
+  save.coins += coins;
+  save.level++;
+  persist();
+  modalOpen = true;
+  hud.show(false);
+  const c = h('div', 'result win');
+  c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`;
+  const close = modal(c, 'pop');
+  c.append(button(`مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { close(); modalOpen = false; startLevel(); }));
+  for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
+}
+
+function showLose() {
+  save.stats.losses++;
+  persist();
+  modalOpen = true;
+  const c = h('div', 'result lose');
+  const price = 300;
+  c.innerHTML = `<div class="burst">${emo('🚧', 'emo huge')}</div><h2>راه‌بندون شد!</h2><p>همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.</p>`;
+  const close = modal(c, 'pop');
+  const canBay = session && session.s.bays.length < 6;
+  if (canBay) c.append(button(`${emo('🅿️', 'emo sm')} یه جای پارک دیگه، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
+    if (save.coins < price) { hud.toast('سکه کافی نداری!'); return; }
+    save.coins -= price; persist(); hud.refresh();
+    close(); modalOpen = false;
+    session!.extraBay();
+  }));
+  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(); }));
+}
+
+function showSettings() {
+  modalOpen = true;
+  const c = h('div', 'settings');
+  c.innerHTML = `<h2>${emo('⚙️')} تنظیمات</h2>`;
+  const row = (label: string, key: keyof typeof save.settings) => {
+    const r = h('label', 'row', `<span>${label}</span>`);
+    const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
+    t.onchange = () => { save.settings[key] = t.checked; persist(); };
+    r.append(t); c.append(r);
+  };
+  row('صدا', 'sound'); row('لرزش', 'haptics');
+  const close = modal(c, 'pop');
+  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(); }));
+  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; }));
+}
+
+function showHome() {
+  modalOpen = true;
+  hud.show(false);
+  const c = h('div', 'home');
+  c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
+    <div class="chapter"><div class="ch-t">${emo('📍')} فصل ۱: تجریش</div><div class="ch-bar"><i style="width:${Math.round((Math.min(save.level, levels.length) / levels.length) * 100)}%"></i></div><div class="ch-n">${fa(Math.min(save.level, levels.length))} از ${fa(levels.length)}</div></div>`;
+  const close = modal(c, 'home-card');
+  c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', () => { close(); modalOpen = false; hud.show(true); }));
+}
+
+// ───── Boot ─────
+async function boot() {
+  hud = new Hud(document.body);
+  hud.onBooster = useBooster;
+  hud.onSettings = showSettings;
+  hud.onCoins = () => hud.toast('فروشگاه به‌زودی!');
+  await document.fonts.load('900 40px Vazirmatn').catch(() => {});
+  warmFleet([]);
+  startLevel();
+  if (!debug.has('play')) showHome();
+  window.addEventListener('resize', fitCamera);
+  let last = performance.now();
+  const loop = (t: number) => {
+    const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    tick(dt);
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  };
+  if (debug.has('shot')) renderer.render(scene, camera);
+  else requestAnimationFrame(loop);
+  if (Capacitor.isNativePlatform()) {
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    SplashScreen.hide().catch(() => {});
+    CapApp.addListener('backButton', () => { if (!modalOpen) showSettings(); });
+  }
+  // Test hooks for headless screenshots.
+  (window as unknown as { __rb: unknown }).__rb = {
+    session: () => session, save, startLevel, levels, camera,
+    /** Advance the animations by `sec` in fixed steps, then draw one frame. */
+    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } renderer.render(scene, camera); },
+  };
+  document.title = 'ready';
+}
+void boot();

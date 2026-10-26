@@ -1,6 +1,6 @@
 {
-  "appId": "com.admeve.zendegi",
-  "appName": "زندگی ایرونی",
+  "appId": "com.admeve.rahbandoon",
+  "appName": "راه‌بندون",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false
@@ -9,16 +9,12 @@
     "SystemBars": {
       "insetsHandling": "css",
       "initialViewportFitValueHint": "cover",
-      "style": "LIGHT"
+      "style": "DARK"
     },
     "SplashScreen": {
       "launchShowDuration": 600,
-      "backgroundColor": "#1F6F6B",
+      "backgroundColor": "#1F7A47",
       "showSpinner": false
-    },
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_notify",
-      "iconColor": "#1F6F6B"
     }
   }
 }

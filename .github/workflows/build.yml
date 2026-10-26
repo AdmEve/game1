@@ -61,22 +61,22 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk ../ZendegiIrooni.apk
+          cp app/build/outputs/apk/release/app-release.apk ../Rahbandoon.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ZendegiIrooni-android-apk
-          path: ZendegiIrooni.apk
+          name: Rahbandoon-android-apk
+          path: Rahbandoon.apk
 
       - name: Publish "latest" release (download link for your phone)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete android-latest --yes --cleanup-tag || true
-          gh release create android-latest ZendegiIrooni.apk \
+          gh release create android-latest Rahbandoon.apk \
             --target "$GITHUB_SHA" \
-            --title "Zendegi Irooni – latest build (${GITHUB_REF_NAME}, #${{ github.run_number }})" \
-            --notes "Install on Android: open this page on your phone, tap **ZendegiIrooni.apk**, then allow installing from this source.
+            --title "Rahbandoon – latest build (${GITHUB_REF_NAME}, #${{ github.run_number }})" \
+            --notes "Install on Android: open this page on your phone, tap **Rahbandoon.apk**, then allow installing from this source.
 
           Signed with: ${SIGNED_WITH}.
 

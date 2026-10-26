@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent;overflow:hidden}</style></head>
+<body><script type="module">
+// Renders the hero vehicle for icons/splash with a transparent background (served by the vite dev server).
+import * as THREE from 'three';
+import { CARS, buildCar } from '/src/render/cars.js';
+import { outdoorEnv } from '/src/render/env.js';
+import 'vazirmatn/Vazirmatn-font-face.css';
+await document.fonts.load('900 40px Vazirmatn');
+const q = new URLSearchParams(location.search), S = +(q.get('s') ?? 1024);
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setSize(S, S); r.setPixelRatio(1); r.setClearColor(0, 0);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9; r.outputColorSpace = THREE.SRGBColorSpace;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.append(r.domElement);
+const scene = new THREE.Scene();
+scene.environment = outdoorEnv(r); scene.environmentIntensity = 0.75;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 0.7));
+const sun = new THREE.DirectionalLight(0xfff2dc, 2.4); sun.position.set(4, 8, 6); scene.add(sun);
+const car = buildCar(CARS[q.get('car') ?? 'samand'], 0xf5b400, { taxi: true, q: 2 });
+car.rotation.y = -0.62; scene.add(car);
+const cam = new THREE.PerspectiveCamera(21, 1, 0.1, 100);
+cam.position.set(6.2, 3.4, 7.6); cam.lookAt(0.15, 0.62, 0);
+r.render(scene, cam);
+document.title = 'ready';
+</script></body></html>

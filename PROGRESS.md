@@ -1,94 +1,53 @@
-# Progress log — «زندگی ایرونی»
+# Progress log: «راه‌بندون» (Rahbandoon)
 
-Read this first when resuming. Design: `docs/design.md`. Market research: `docs/market-research.md`.
+Read this first when resuming. The design is in `rahbandoon/GDD.md` (approved by the owner). This repo
+used to hold the life simulator «زندگی ایرونی»; its final state is commit `2904b60` on this branch
+(local tag `zendegi-irooni-final`; pushing tags is blocked here).
 
 ## How to work on it
 
-- `npm run dev` runs the game in a browser (mobile viewport 390×844). `?debug` exposes `window.__z`
-  (`meta`, `currentLife()`, `kill()`).
-- `npm test` plays 300 random lives (crash, NaN and `undefined` checks). `npx vite-node scripts/sim.ts 300`
-  prints balance numbers: life expectancy, causes of death, net worth, achievements, prison reasons.
-- `npm run build` copies the used Twemoji SVGs into `public/emoji/`, typechecks and builds `dist/`.
-- `node scripts/make-icons.mjs` regenerates launcher icons, splash screens and `store/icon-512.png`.
-- CI (`.github/workflows/build.yml`) tests, builds and publishes the APK to the `android-latest` release
-  of AdmEve/game1. It is signed with a throwaway key until `KEYSTORE_BASE64`/`KEYSTORE_PASSWORD` secrets exist.
+- `npm run dev` serves the game (mobile viewport 390×844). Query flags:
+  - `?play` skips the home screen
+  - `?shot` stops the render loop (for headless screenshots) and exposes `window.__rb`:
+    `session()`, `advance(sec)` (steps animations and draws one frame), `startLevel()`, `save`
+- `node scripts/shot.cjs "<query>" out.png <ms> "<js to run first>"` takes a 390×844@3x screenshot from the
+  dev server with SwiftShader. Example: `node scripts/shot.cjs play /tmp/a.png 2000 "window.__rb.session().tap(3)"`.
+- `npm test` checks the rules and that all levels are valid and solvable (solver replay).
+- `npm run levels` regenerates `src/game/levels.json` from the specs in `scripts/gen-levels.ts`. It picks
+  each level from many seeds to hit a target win rate for a simulated casual player.
+- Icons and splash: render the hero car with `scripts/icon-car.html` (served by the dev server, captured with
+  an omitBackground screenshot into `scripts/art/hero-taxi.png`), then run `node scripts/make-icons.mjs`.
+- CI (`.github/workflows/build.yml`) tests, builds and publishes the APK to the `android-latest` release.
 
 ## Code map
 
 | Path | What |
 |---|---|
-| `src/engine/` | Pure simulation: `life.ts` (new life, family), `year.ts` (one year: school, uni, army, work, money, family, health, death, events), `econ.ts` (inflation, dollar, gold, housing, stocks, crypto), `ctx.ts` (helpers events use), `registry.ts` (event/action types), `play.ts` (API for the UI), `hire.ts` (jobs), `achieve.ts` |
-| `src/content/` | Data and writing: cities, names, traits, majors, jobs, assets, Hafez; `events/*.ts` (random and milestone events), `actions/*.ts` (activities, money, love/marriage, people, fun) |
-| `src/ui/` | DOM UI: `game.ts` (main screen), `flow.ts` (event modals), `tabs.ts` (sheets), `death.ts` (obituary + share), `menu.ts` (home, new life, shop, achievements, graveyard, god mode) |
-| `src/save.ts` | Meta progress (gems, purchases, achievements, graveyard) and the current life in localStorage |
-| `src/monetize.ts`, `src/config.ts` | Bazaar Poolakey billing + Tapsell ads; SKUs and gem prices |
+| `src/game/rules.ts` | Pure rules: grid, exits, bays, boarding, win/lose, boosters (crane = force exit, whistle = reorder queue head, extra bay) |
+| `src/game/solver.ts` | DFS solver with dead-state memo, and simulated random/greedy players for difficulty |
+| `src/game/levels.json` | The 30 Journey levels (generated) |
+| `src/render/cars.js` | Parametric Iranian cars (Peykan, Pride, 405, Samand taxi, Zamyad, BRT bus): swept bodies, exact glass/trim edges via marching-triangle clipping, decals by raycast, Iranian plates |
+| `src/render/fleet.ts` | Bakes each model+color into a few merged meshes, caches it, wraps it for the board (faces −z, `body` child for suspension) |
+| `src/render/world.ts` | The Tajrish diorama: lot, ring road, bays, sidewalk, جوی, shelter, kiosk, plane trees, apartments, Milad/Azadi, Alborz |
+| `src/render/anim.ts` | Tweens, rounded paths, `drive()` with acceleration, pitch and roll |
+| `src/render/people.ts`, `fx.ts` | Passengers (men, women in manteau and scarf), smoke, coins, confetti |
+| `src/play/session.ts` | One level in play: turns taps into rule events and those into ordered animations |
+| `src/main.ts` | Renderer, camera fit (the lot sits above the booster bar), input picking, level flow, screens |
+| `src/ui/hud.ts`, `src/style.css` | DOM HUD (plate-shaped level badge, coins, boosters), modals |
+| `src/audio.ts` | Synthesised SFX: horns per car type, engine, chirps, pops, coins, whistle, crane, santur plucks |
 
-## Before publishing on Cafe Bazaar (needs the owner)
+## Status
 
-1. **Permanent signing key.** Without secrets every CI build is signed with a new throwaway key, and an app
-   uploaded with one key can never be updated. Once, on any computer:
-   `keytool -genkeypair -keystore zendegi.keystore -alias zendegi -keyalg RSA -keysize 2048 -validity 10000`
-   then add GitHub secrets `KEYSTORE_BASE64` (`base64 -w0 zendegi.keystore`) and `KEYSTORE_PASSWORD`, and keep
-   the file safe forever.
-2. **Bazaar developer panel:** create the app (`com.admeve.zendegi`), the in-app products listed in
-   `store/listing-fa.md`, and paste the RSA key into `src/config.ts` (`BAZAAR_RSA_KEY`).
-3. **Tapsell:** create the app and a rewarded + an interstitial zone; put the ids in `src/config.ts`.
-4. Upload the APK from the `android-latest` release, the icon and the eight screenshots in `store/`.
+### Phase 0: vertical slice (in progress)
+- [x] Rules, solver, 30 solver-verified levels with a sawtooth difficulty curve
+- [x] Real 3D Iranian cars in the game, driving routes around the ring road into bays
+- [x] Passengers board, cars depart with horn and coins; win and lose flow; continue with the 6th bay
+- [x] Boosters: crane, police whistle, parking bay; coins economy
+- [x] Home screen, win and lose screens, settings; icon and splash from a 3D render
+- [ ] Verify the APK on a real phone (performance tiers if needed)
+- [ ] Music (adaptive layers), real recorded horns and voice lines
+- [ ] Polish: car idle animations, passenger walk cycles, a tutorial hand on level 1–3, a hint for blocked taps
+- [ ] Chapter diorama polish: Tajrish square details, time-of-day lighting
 
-## Done
-
-- Engine: full year loop, 66 jobs, 40 majors, Konkur with ranks and offers, military service, marriage
-  (khastegari → mehriyeh → wedding → kids → divorce/mehr claim), inflation and a currency reform when
-  prices pass 1000×, markets, houses/cars with haggling, businesses, emigration, prison, generations.
-- About 150 events and actions, 53 achievements, Hafez fortunes on Yalda.
-- UI: all screens, the obituary share card, the shop, the daily gift, god mode, VIP extra stats.
-- Icons and splash are this game's own.
-- Weekly challenges (3 per week from `src/engine/challenges.ts`, gems when done; card on the home screen
-  and in the menu) and a funny life title («سلطان مهریه»، «کنکوری ابدی»…) on the obituary card.
-- Death screen: time machine (20💎), back one year (12💎), free revive by ad, VIP and rate upsells.
-- 💎 boosts at big moments: an aunt vouches for you at the khastegari (8💎), a reference letter at a job
-  interview (6💎); each lifts the meter without using up a question.
-- Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
-- First-run tutorial; incremental life-log rendering for budget phones.
-- 26 weekly challenges (8 use the mini-games, pets and grandchildren), 62 achievements, 82 TV quiz questions.
-- Rewarded-ad «زنگ به دوست» lifeline in the konkur quiz and the TV show; one rating ask after a happy moment
-  (`maybeAskRating` in `src/ui/flow.ts`); a «متن درشت» setting (CSS zoom, `--z` keeps vh sizes fitting).
-- A «شجره‌نامه» family tree at the top of the graveyard for families played over generations (graves
-  remember their `parent` life).
-- `scripts/story.ts <seed>` prints a whole life to proof-read.
-- `scripts/ui-smoke.cjs` plays three lives through the real UI, mini-games included, and reports page errors.
-- Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
-- Mini-games: the konkur quiz (`src/ui/quiz.ts`, 5 timed questions that move the rank) with a shareable
-  «کارنامه» card (and a «کارت عروسی» card after the wedding and a «کارت پرواز» boarding pass when you
-  emigrate, in `src/ui/share.ts`), and haggling for cars and houses (`src/ui/haggle.ts`, rules in `src/engine/haggle.ts`):
-  slide an offer, the seller counters, loses patience at lowballs and makes a last offer. The driving
-  test (`src/ui/driving.ts`): three rules questions, then parallel parking in three timed taps. Jumping
-  the fire at Chaharshanbe Suri (`src/ui/fire.ts`) uses the same timing strip (`src/ui/timing.ts`).
-  Mini-games that settle an event are listed in `MINIGAMES` in `src/ui/flow.ts`.
-  A TV quiz show (`src/ui/tvquiz.ts`, questions in `src/content/trivia.ts`): five timed questions, a
-  prize ladder up to 500M toman (1405 money), a safe level, one 50:50, take the money or risk it. The
-  khastegari is an interview (`src/content/events/khastegari.ts`): three questions from the other family
-  with a «رضایت خانواده» meter (events can show a `meter`); lies help now and may come out later.
-  Skilled jobs (tier ≥ 1 or hard ≥ 0.3) go to a job interview (`src/content/events/interview.ts`) the
-  same way, ending with the salary question that sets `job.deal`. Shared Q&A logic: `src/content/talk.ts`.
-- Pets (`src/content/pets.ts`, `src/content/events/pets.ts`): street cats, Persian cats, dogs, parrots,
-  canaries, the Nowruz goldfish, turtles, rabbits. They live in `L.pets` (not `people`), age, cost money
-  each year, have their own sheet in the people tab (cuddle, play, Instagram, vet, give away) and ~18
-  events (the parrot swears in front of guests, the dog scares off a thief, kittens, getting lost…).
-- Prison (`src/content/events/prison.ts`): a «زندان» activities tab (work out, the library, a trade
-  workshop that grants a real certificate, family visits, an appeal, settling a debt with the plaintiff,
-  bail for 15💎) and events (Nowruz amnesty, a charity paying debt prisoners out, a cellmate friend,
-  letters from mum, the prison show).
-- Events driven by stats (very good looks, brains, reputation; depression, poor health) and traits
-  (`src/content/events/traits.ts`).
-
-## Next (most valuable first)
-
-1. More events with choices, especially ages 3–12 and 45–65; proof-read new text with
-   `scripts/story.ts <seed>` and check that texts never mention a dead parent or a missing spouse/kids
-   (scan lives for «بابات»/«مامانت»/«همسرت» while that person is gone; use `Ctx.parent()`).
-2. More mini-games: backgammon with grandpa; more trivia questions (keep facts checked).
-3. Balance with `scripts/sim.ts` after each content batch; the random bot is reckless, so judge
-   prison/debt numbers with that in mind.
-4. Once the owner has set up Bazaar and Tapsell (see «Before publishing»), test purchases and ads on a
-   real phone.
+### Next phases
+See the roadmap in `rahbandoon/GDD.md` §12 (alpha: meta, garage, shop, Poolakey, ads, 150 levels).
