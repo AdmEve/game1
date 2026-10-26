@@ -34,6 +34,14 @@ export const CHALLENGES: Challenge[] = [
   { id: 'returnee', emoji: '🇮🇷', title: 'برگشتم!', desc: 'مهاجرت کن و برگرد ایران', gems: 15, done: (L) => 'emigrated' in L.flags && L.country === 'ir' },
   { id: 'gen3', emoji: '🌳', title: 'سه نسل', desc: 'نسل سوم خانواده رو بازی کن', gems: 20, done: (L) => L.gen >= 3 },
   { id: 'lawyer_rich', emoji: '⚖️', title: 'وکیل پولدار', desc: 'وکیل بشو و دارایی‌ات به ۵۰ میلیارد (به پول ۱۴۰۵) برسه', gems: 20, done: (L) => L.career.some((c) => c.id === 'lawyer') && real(L) >= 50e9 },
+  { id: 'tv_jackpot', emoji: '📺', title: 'برنده‌ی بزرگ', desc: 'تو مسابقه‌ی تلویزیونی جایزه‌ی آخر رو ببر', gems: 25, done: (L) => L.ach.includes('tvchamp') },
+  { id: 'fire_hero', emoji: '🔥', title: 'پهلوون چهارشنبه‌سوری', desc: 'از روی هر سه تا آتیش چهارشنبه‌سوری بپر و نسوز', gems: 10, done: (L) => L.ach.includes('firejumper') },
+  { id: 'bargain', emoji: '🤝', title: 'چونه‌زن قهار', desc: 'موقع خرید ماشین یا خونه حداقل ۱۵٪ تخفیف بگیر', gems: 15, done: (L) => L.ach.includes('haggler') },
+  { id: 'driver18', emoji: '🪪', title: 'راننده‌ی جوون', desc: 'تا ۱۸ سالگی گواهینامه بگیر', gems: 10, done: (L) => 'driver' in L.flags && L.flags.driver - L.born <= 18 },
+  { id: 'olympiad', emoji: '🏅', title: 'المپیادی', desc: 'تو المپیاد مدال بگیر', gems: 20, done: (L) => 'olympiad' in L.flags },
+  { id: 'zoo', emoji: '🐾', title: 'باغ وحش', desc: 'سه تا حیوون خونگی همزمان داشته باش', gems: 15, done: (L) => (L.pets ?? []).filter((p) => p.alive).length >= 3 },
+  { id: 'grandparent', emoji: '👵', title: 'پدربزرگ و مادربزرگ', desc: 'نوه‌دار شو', gems: 15, done: (L) => 'grandparent' in L.flags },
+  { id: 'matchmaker', emoji: '💐', title: 'معرف خیر', desc: 'یه خواهر، برادر یا رفیقت رو به یه نفر خوب معرفی کن و به هم برسن', gems: 15, done: (L) => L.ach.includes('matchmaker') },
   { id: 'farmer_happy', emoji: '🌾', title: 'زندگی روستایی', desc: 'کشاورز باش و با شادی بالای ۸۰ بمیر', gems: 15, done: (L) => L.career.some((c) => c.id === 'farmer') && !!L.dead && L.stats.happy >= 80 },
 ];
 
