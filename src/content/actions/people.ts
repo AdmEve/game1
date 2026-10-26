@@ -1,3 +1,4 @@
+import { award } from '../../engine/achieve';
 import { clamp } from '../../engine/ctx';
 import { fa, money } from '../../engine/fmt';
 import { defActions, defPersonActs } from '../../engine/registry';
@@ -141,6 +142,7 @@ defPersonActs([
       if (c.lucky(0.3)) {
         n.flags = { ...(n.flags ?? {}), married: c.L.year };
         c.close(n, 20).happy(6).rep(3);
+        award(c, 'matchmaker');
         return `یه نفر خوب به ${c.relName(n)} معرفی کردی و… شد! عروسی گرفتن و تو شدی معرف عزیز دو تا خانواده!`;
       }
       c.close(n, c.chance(0.5) ? -6 : 2);

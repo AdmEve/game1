@@ -326,6 +326,7 @@ defEvents([
         do: (c) => {
           const deal = c.p.deal as number;
           const off = (c.p.price as number) - deal;
+          if (off >= (c.p.price as number) * 0.15) award(c, 'haggler');
           return `${off > 0 ? `با چونه زدن ${money(off)} تخفیف گرفتی! ` : ''}${buyNow(c, deal)}`;
         },
       },

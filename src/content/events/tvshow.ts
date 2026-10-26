@@ -1,4 +1,5 @@
 /** Taking part in a TV quiz show (played as a mini-game in src/ui/tvquiz.ts). */
+import { award } from '../../engine/achieve';
 import { money } from '../../engine/fmt';
 import { defActions, defEvents } from '../../engine/registry';
 import { TV_LADDER as LADDER } from '../trivia';
@@ -34,6 +35,7 @@ defEvents([
           const won = c.price(c.p.won as number);
           if (!won) { c.happy(-3).rep(1); return 'دست خالی برگشتی، ولی کل فامیل تو رو تو تلویزیون دیدن!'; }
           c.money(won).happy(10).rep(3);
+          if ((c.p.won as number) >= LADDER[LADDER.length - 1]) award(c, 'tvchamp');
           return `${money(won)} از مسابقه‌ی تلویزیونی بردی! فرداش تو محل همه بهت می‌گفتن «همون که تو تلویزیون بود!»`;
         },
       },

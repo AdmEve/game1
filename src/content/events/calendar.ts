@@ -1,4 +1,5 @@
 /** Days of the Iranian year: Ramadan and Muharram customs, Mother's and Father's Day, the first of Mehr… */
+import { award } from '../../engine/achieve';
 import type { Ctx } from '../../engine/ctx';
 import { money } from '../../engine/fmt';
 import { defEvents } from '../../engine/registry';
@@ -14,7 +15,7 @@ defEvents([
     title: 'پریدن از روی آتیش',
     text: 'تو کوچه سه تا آتیش روشن کردن…',
     choices: [
-      { label: 'عالی بود!', when: (c) => !!c.p.played && !c.p.burnt, do: (c) => { c.happy(8).rep(1); return '«زردی من از تو، سرخی تو از من!» از روی هر سه تا آتیش پریدی. سال نو با انرژی شروع می‌شه!'; } },
+      { label: 'عالی بود!', when: (c) => !!c.p.played && !c.p.burnt, do: (c) => { c.happy(8).rep(1); award(c, 'firejumper'); return '«زردی من از تو، سرخی تو از من!» از روی هر سه تا آتیش پریدی. سال نو با انرژی شروع می‌شه!'; } },
       { label: 'آخ!', when: (c) => !!c.p.burnt, do: (c) => { c.health(-4).happy(-2); return 'پاچه‌ی شلوارت آتیش گرفت و با یه سطل آب خاموشت کردن! سال دیگه احتیاط کن.'; } },
       {
         label: 'می‌پرم!',
