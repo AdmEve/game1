@@ -39,9 +39,10 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 ## Status
 
 ### Done
-- Rules, solver (with locks, reveals, VIP, plate camera, officer), 120 solver-verified levels in 4 chapters
+- Rules, solver (with locks, reveals, VIP, plate camera, officer, fruit carts), 150 solver-verified levels in 5 chapters
 - Chapters: 1 Tajrish (day), 2 Valiasr (sunset, plane-tree boulevard), 3 Azadi Square (night, lit windows),
-  4 Tochal in snow (snowy world, falling snow, cable car; «پلیس راهور» traffic officer from level 93)
+  4 Tochal in snow (snowy world, falling snow, cable car; «پلیس راهور» traffic officer from level 93),
+  5 Grand Bazaar (domes, arcade, tiled portal; «گاری میوه» rolling fruit carts from level 122)
 - «ساعت شلوغی» daily challenge generated on the phone from the date (`src/game/daily.ts`, `src/game/generator.ts`)
 - Mechanics: «چادر ماشین» covers, «پیکان خراب» wait counter, «دربست» VIP passengers, «طرح زوج و فرد» plates
   with an auto-switching camera (never wedges); Mash Rahim intro cards
@@ -51,7 +52,7 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Meta: «دکه» shop (boosters for coins, coin packs and starter pack via Poolakey), daily gift calendar,
   chest every 5 levels, rewarded ads (double coins, continue), capped interstitials, Bazaar rating prompt
 - Adaptive quality tiers (frame-rate probe), tilt-shift + vignette + per-chapter colour grading
-- Mechanic: «پیک موتوری» courier bikes (wild card, from level 41); colour-blind mode; garage with 4 classics
+- Mechanic: «پیک موتوری» courier bikes (wild card, from level 41); colour-blind mode; garage with 9 classics (incl. Jeep Willys, Peykan Vanet, Benz O302 bus)
 - Level select (settings → «انتخاب مرحله»); tap the version label 7 times to unlock every level (testers)
 - Fair lose screen (names and highlights the car the queue needed), tips on levels 1–3, radio bulletins,
   per-chapter music moods, street life (pigeons, idling cars, kerb parking)
@@ -60,7 +61,7 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
 
 ### Next
-- Chapter 5+ (Grand Bazaar), district league (needs a backend), more garage classics (Jeep Willys, Benz bus)
+- Chapter 6+ (Darband / Shiraz / Isfahan), district league (needs a backend)
 - «رادیو راه‌بندون» bulletins, district league (needs a backend), chapter 4+ (Grand Bazaar, Tochal)
 - Real-device performance check (owner), real recorded horns and voice lines
 - Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`
