@@ -45,6 +45,8 @@ export interface Meta {
   yearsSinceAd: number;
   firstOpen: number;
   rated: boolean;
+  /** Asked once for a rating after a happy moment. */
+  rateAsked?: boolean;
   tutorial: boolean;
   notifyAsked?: boolean;
   /** Weekly challenges finished this week. */

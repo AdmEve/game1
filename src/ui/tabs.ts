@@ -15,7 +15,7 @@ import { LIFESTYLES, livingCost, rentCost, salaryOf } from '../engine/year';
 import { collectAchievements, persist, spendGems } from '../save';
 import { ask, btn, clear, h, rt, sheet, toast } from './dom';
 import { avatarEmoji, emo, rich } from './emoji';
-import { hooks, momentButton, needGems, runQueue, showOutcome } from './flow';
+import { hooks, maybeAskRating, momentButton, needGems, runQueue, showOutcome } from './flow';
 import { currentLife } from './game';
 
 let open: { render: () => void; close: () => void } | null = null;
@@ -66,6 +66,7 @@ async function doAction(a: ActionView) {
   hooks.refresh();
   open?.render();
   await showOutcome(out, momentButton(L, was));
+  await maybeAskRating(out);
   if (L.queue.length) await runQueue(L);
   open?.render();
   if (L.dead) { open?.close(); hooks.afterDeath(); }

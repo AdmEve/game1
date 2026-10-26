@@ -6,7 +6,8 @@ import { choose, currentEvent, type EventView, type Outcome } from '../engine/pl
 import type { Life, StatKey } from '../engine/types';
 import { haptic } from '../haptics';
 import { meta, persist, spendGems } from '../save';
-import { btn, h, modal, rt } from './dom';
+import { ask, btn, h, modal, rt } from './dom';
+import { rateApp } from '../monetize';
 import { emo } from './emoji';
 import { haggleWhat } from '../content/actions/money';
 import { drivingTest } from './driving';
@@ -79,6 +80,14 @@ function eventCard(ev: EventView, onPick: (i: number) => void, L?: Life): HTMLEl
     deltaChips(ev.deltas),
     ev.id === 'm_konkur' && L?.queue[0]?.p ? btn('📤 اشتراک کارنامه', () => void shareKarname(L, L.queue[0].p!.rank as number, L.queue[0].p!.n as number), 'btn share small') : null,
     h('div', { class: 'choices' }, ...choices));
+}
+
+/** Once, after a really happy moment for someone who has played a while: ask for a Bazaar rating. */
+export async function maybeAskRating(out: Outcome) {
+  if (meta.rated || meta.rateAsked || meta.stats.years < 40 || (out.deltas.happy ?? 0) < 10 || out.died) return;
+  meta.rateAsked = true;
+  persist();
+  if (await ask('⭐ داری خوش می‌گذرونی؟ با یه امتیاز پنج ستاره تو کافه‌بازار کلی کمکمون می‌کنی!', 'باشه، امتیاز می‌دم', 'بعداً')) rateApp();
 }
 
 /** A share button for a big moment that just happened (a move abroad), or null. */
@@ -164,7 +173,10 @@ export async function runQueue(L: Life): Promise<void> {
     hooks.refresh();
     // Just married: offer the wedding card.
     const married = out.event === 'wedding' && L.people.some((p) => p.rel === 'spouse' && p.alive);
-    if (!ev.notice) await showOutcome(out, married ? btn('📤 اشتراک کارت عروسی', () => void shareWedding(L), 'btn share small') : momentButton(L, was));
+    if (!ev.notice) {
+      await showOutcome(out, married ? btn('📤 اشتراک کارت عروسی', () => void shareWedding(L), 'btn share small') : momentButton(L, was));
+      await maybeAskRating(out);
+    }
   }
   persist();
   hooks.refresh();
