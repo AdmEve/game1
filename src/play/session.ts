@@ -11,6 +11,7 @@ import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/ani
 import { person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
+import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
 export const MAX_BAYS = 6;
@@ -159,9 +160,26 @@ export class Session {
     return bd <= 0.75 ? best : -1;
   }
 
+  taps = 0;
+  lastInput = performance.now();
+
   tap(i: number) {
     if (this.ended || !this.hooks.canPlay()) return;
+    this.taps++;
+    this.lastInput = performance.now();
     this.play(ruleTap(this.s, i), i);
+  }
+
+  /** The next move of a winning line from the current state (for the tutorial hand and idle hints). */
+  hint(): number {
+    if (this.ended || this.pending > 0) return -1;
+    const r = solve(this.level, 60_000, this.s);
+    return r.solvable ? r.solution[0] : -1;
+  }
+
+  /** Screen anchor for a vehicle (world point on its roof). */
+  anchor(i: number): THREE.Vector3 {
+    return this.cars[i].root.position.clone().add(new THREE.Vector3(0, 0.9, 0));
   }
 
   /** Crane booster: lift any vehicle out, even if it is boxed in. */

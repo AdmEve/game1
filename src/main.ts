@@ -55,6 +55,23 @@ let craneMode = false;
 let modalOpen = false;
 const safe = { top: 132, bottom: 128 };
 
+// Tutorial hand: on the first levels before the first tap, and after a long idle anywhere.
+const hand = h('div', 'hand', emo('👆', 'emo'));
+document.body.append(hand);
+let hintFor = -1, hintAt = 0;
+function updateHand() {
+  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); hintFor = -1; return; }
+  const idle = performance.now() - session.lastInput;
+  const want = (save.level < 3 && session.taps === 0) || (save.level < 3 && idle > 3500) || idle > 10000;
+  if (!want) { hand.classList.remove('show'); hintFor = -1; return; }
+  if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); hintAt = performance.now(); }
+  if (hintFor < 0) { hand.classList.remove('show'); return; }
+  const p = session.anchor(hintFor).project(camera);
+  hand.style.left = `${((p.x + 1) / 2) * window.innerWidth}px`;
+  hand.style.top = `${((1 - p.y) / 2) * window.innerHeight}px`;
+  hand.classList.add('show');
+}
+
 /** Fit the level's focus box between the top bar and the booster bar. */
 function fitCamera() {
   const W = window.innerWidth, H = window.innerHeight;
@@ -110,6 +127,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     if (session.crane(i)) { save.boosters.crane--; persist(); hud.refresh(); }
     craneMode = false; hud.active(null);
   } else session.tap(i);
+  hand.classList.remove('show'); hintFor = -1;
 });
 
 // ───── Level flow ─────
@@ -247,6 +265,7 @@ async function boot() {
   const loop = (t: number) => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     tick(dt);
+    updateHand();
     renderer.render(scene, camera);
     requestAnimationFrame(loop);
   };
@@ -259,9 +278,9 @@ async function boot() {
   }
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
-    session: () => session, save, startLevel, levels, camera,
+    session: () => session, save, startLevel, levels, camera, renderer,
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
-    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } renderer.render(scene, camera); },
+    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
   };
   document.title = 'ready';
 }

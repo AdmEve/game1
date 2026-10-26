@@ -31,7 +31,7 @@ function extract(geo: THREE.BufferGeometry, start: number, count: number, keepUv
 }
 
 /** Merge every mesh under root into one mesh per material family. */
-export function bake(root: THREE.Object3D): THREE.Group {
+export function bake(root: THREE.Object3D, opts: { shadows?: boolean } = {}): THREE.Group {
   root.updateMatrixWorld(true);
   const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const put = (m: THREE.Material, g: THREE.BufferGeometry) => { if (!buckets.has(m)) buckets.set(m, []); buckets.get(m)!.push(g); };
@@ -47,6 +47,8 @@ export function bake(root: THREE.Object3D): THREE.Group {
       const hasMap = !!mat.map;
       const g = extract(src, r.start, r.count, hasMap);
       g.applyMatrix4(mesh.matrixWorld);
+      // Flat-shaded parts (foliage, rocks) keep their facets: per-face normals on the unindexed copy.
+      if (mat.flatShading) g.computeVertexNormals();
       const physical = (mat as THREE.MeshPhysicalMaterial).isMeshPhysicalMaterial;
       const plain = !hasMap && !mat.transparent && mat.metalness < 0.9;
       if (plain && mat.emissiveIntensity > 0 && mat.emissive && mat.emissive.getHex() !== 0 && physical && (mat as THREE.MeshPhysicalMaterial).clearcoat > 0 && mat.roughness < 0.2) {
@@ -62,7 +64,7 @@ export function bake(root: THREE.Object3D): THREE.Group {
     if (!merged) continue;
     merged.userData.keep = true;
     const m = new THREE.Mesh(merged, mat);
-    m.castShadow = !(mat as THREE.Material).transparent;
+    m.castShadow = (opts.shadows ?? true) && !(mat as THREE.Material).transparent;
     m.receiveShadow = true;
     out.add(m);
   }
@@ -75,28 +77,31 @@ function tint(g: THREE.BufferGeometry, c: THREE.Color) {
   g.setAttribute('color', new THREE.BufferAttribute(a, 3));
 }
 
-interface Template { mesh: THREE.Group; length: number; width: number; roofX: number; roofY: number; }
+interface Template { mesh: THREE.Group; length: number; width: number; roofX: number; roofY: number; tilt: number; }
 const cache = new Map<string, Template>();
-const QUALITY = 0.5;
+const QUALITY = 0.32;
 
 function template(kind: Kind, color: Color): Template {
   const key = kind + color;
   const hit = cache.get(key);
   if (hit) return hit;
-  let raw: THREE.Object3D, length: number, width: number, roofX: number, roofY: number;
-  if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
-  else if (kind === 'zamyad') { raw = buildZamyad(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = -1.2; roofY = 1.25; }
+  let raw: THREE.Object3D, length: number, width: number, roofX: number, roofY: number, tilt = 0;
+  if (kind === 'bus') { raw = buildBus(PAINT[color], { dest: 'تجریش', q: QUALITY, roofColor: PAINT[color] }); length = 7.4; width = 2.0; roofX = -1.8; roofY = 2.98; }
+  else if (kind === 'zamyad') { raw = buildZamyad(PAINT[color], { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.7; }
   else {
     const spec = CARS[kind];
     raw = buildCar(spec, PAINT[color], { taxi: kind === 'samand', q: QUALITY });
     length = spec.L; width = spec.W;
     const taxi = kind === 'samand';
     roofX = taxi ? (spec.cab.xA + spec.L / 2) / 2 + 0.05 : (spec.cab.xRF + spec.cab.xRR) / 2;
-    roofY = taxi ? curve(spec.top)(roofX) : spec.cab.roof;
+    const top = curve(spec.top);
+    roofY = taxi ? top(roofX) + 0.03 : spec.cab.roof;
+    // The taxi wears its arrow on the hood (the roof carries the تاکسی sign): follow the hood's slope.
+    if (taxi) tilt = Math.atan((top(roofX + 0.15) - top(roofX - 0.15)) / 0.3);
   }
   // Zamyad's model is offset: its cab sits forward of the origin.
   if (kind === 'zamyad') raw.position.x = -0.04;
-  const t = { mesh: bake(raw), length, width, roofX, roofY };
+  const t = { mesh: bake(raw), length, width, roofX, roofY, tilt };
   cache.set(key, t);
   return t;
 }
@@ -128,6 +133,7 @@ export function makeVehicle(kind: Kind, color: Color): VehicleObj {
   e.scale.setScalar(1.22); e.position.y = -0.006;
   arrow.add(e, a);
   arrow.position.set(t.roofX * s, t.roofY * s + 0.02, 0);
+  arrow.rotation.z = t.tilt;
   arrow.scale.setScalar(kind === 'bus' ? 1.25 : 0.88);
   body.add(arrow);
   // Model space faces +x; the game's "up" is −z.

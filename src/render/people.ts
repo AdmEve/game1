@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { Color } from '../game/rules';
-import { PAINT } from './fleet';
+import { PAINT, bake } from './fleet';
 
 const SKIN = [0xf1c9a0, 0xe0b088, 0xd29b72, 0xc4895f, 0xf3d2b3];
 const HAIR = [0x231a14, 0x3b2a20, 0x111111, 0x5a3825, 0x8a8a8a];
@@ -20,7 +20,6 @@ const geo = {
   bag: new RoundedBoxGeometry(0.16, 0.18, 0.08, 2, 0.03),
   arm: new THREE.CapsuleGeometry(0.05, 0.26, 4, 8),
 };
-for (const g of Object.values(geo)) g.userData.keep = true;
 const mats = new Map<number, THREE.Material>();
 const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
   const k = c * 7 + (o.roughness ?? 0.6) * 1000;
@@ -29,7 +28,7 @@ const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
 };
 const shirt = (c: Color) => {
   const k = -PAINT[c] - 1;
-  if (!mats.has(k)) mats.set(k, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, 0.05, 0.06), roughness: 0.5, clearcoat: 0.25 }));
+  if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, 0.05, 0.06), roughness: 0.5 }));
   return mats.get(k)!;
 };
 
@@ -51,6 +50,12 @@ export function person(color: Color, i: number): Person {
     add(geo.drape, mat(SCARF[i % SCARF.length], { roughness: 0.8 }), 0, 0.82, -0.04);
   } else add(geo.hair, mat(HAIR[i % HAIR.length], { roughness: 0.8 }), 0, 0.995).rotation.x = -0.3;
   if (i % 3 === 2) { const b = add(geo.bag, mat(0x7a4b2a, { roughness: 0.5 }), 0.24, 0.45); b.rotation.y = 0.3; }
+  // One or two draw calls per person instead of eight.
+  const baked = bake(body);
+  root.remove(body);
+  const merged = new THREE.Group();
+  merged.add(...baked.children);
+  root.add(merged);
   root.scale.setScalar(1.12);
-  return { root, body, color };
+  return { root, body: merged, color };
 }

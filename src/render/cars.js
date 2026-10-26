@@ -257,7 +257,7 @@ function rrShape(w, h, r) {
   s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
   return s;
 }
-const slab = (w, h, r, d = 0.012) => new THREE.ExtrudeGeometry(rrShape(w, h, r), { depth: d, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2, curveSegments: 6 });
+const slab = (w, h, r, d = 0.012) => new THREE.ExtrudeGeometry(rrShape(w, h, r), { depth: d, bevelEnabled: DETAIL >= 0.6, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2, curveSegments: DETAIL < 0.6 ? 2 : 6 });
 // A lamp: a bezel with a glossy lens inside.
 function lamp(w, h, r, lensMat, bezel = M.trim) {
   const g = new THREE.Group();
@@ -283,8 +283,12 @@ function grille(w, h, bars, barMat = M.chrome, base = M.trim) {
     cab: { xA, xRF, xRR, xC, roof, half, tumble, rt, roofPts? }
     windows: [[xFrontEdge, xRearEdge], ...] side glass in x
 */
+let DETAIL = 1;
+const rseg = () => (DETAIL < 0.6 ? 1 : 3);
+
 export function buildCar(spec, color, opts = {}) {
   const Q = opts.q ?? 1;
+  DETAIL = Q;
   const car = new THREE.Group();
   const P = typeof color === 'object' && color.isMaterial ? color : paint(color, spec.metallic);
   const roofMat = opts.roofColor != null ? paint(opts.roofColor) : P;
@@ -341,13 +345,13 @@ export function buildCar(spec, color, opts = {}) {
   // Interior seen through the glass.
   const seatMat = spec.beige ? M.seatBeige : M.seat;
   const belt0 = top((cb.xA + cb.xC) / 2);
-  const seat = (x, z, w) => { const s = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.5, w, 3, 0.08), seatMat); s.position.set(x, belt0 - 0.2, z); car.add(s);
-    const b = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.5, w, 3, 0.06), seatMat); b.position.set(x - 0.26, belt0 - 0.04, z); b.rotation.z = 0.18; car.add(b); };
+  const seat = (x, z, w) => { const s = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.5, w, rseg(), 0.08), seatMat); s.position.set(x, belt0 - 0.2, z); car.add(s);
+    const b = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.5, w, rseg(), 0.06), seatMat); b.position.set(x - 0.26, belt0 - 0.04, z); b.rotation.z = 0.18; car.add(b); };
   if (!spec.noSeats) {
     const xf = cb.xRF - 0.28, xr = spec.rearSeatX ?? cb.xRR + 0.05;
     seat(xf, hw * 0.45, 0.5); seat(xf, -hw * 0.45, 0.5); if (spec.rearSeat !== false) seat(xr, 0, hw * 1.6);
-    const dash = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.12, hw * 1.6, 3, 0.04), M.plastic); dash.position.set(cb.xA - 0.42, belt0 - 0.04, 0); car.add(dash);
-    const sw = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.025, 8, 24), M.plastic); sw.position.set(cb.xA - 0.62, belt0 + 0.06, hw * 0.45); sw.rotation.y = Math.PI / 2; sw.rotation.x = 0.5; car.add(sw);
+    const dash = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.12, hw * 1.6, rseg(), 0.04), M.plastic); dash.position.set(cb.xA - 0.42, belt0 - 0.04, 0); car.add(dash);
+    const sw = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.025, Q < 0.6 ? 4 : 8, Q < 0.6 ? 12 : 24), M.plastic); sw.position.set(cb.xA - 0.62, belt0 + 0.06, hw * 0.45); sw.rotation.y = Math.PI / 2; sw.rotation.x = 0.5; car.add(sw);
   }
 
   car.updateMatrixWorld(true);
@@ -368,7 +372,7 @@ export function buildCar(spec, color, opts = {}) {
   }
   // Side rubbing strips.
   for (const s of spec.strips ?? []) {
-    const g = loft({ x0: -hl + 0.02, x1: hl - 0.02, cx0: s.x0, cx1: s.x1, nx: 80, nr: 24, planExp: spec.planExp ?? 7, bot: s.y0, top: s.y1, half: hw + 0.012, rt: 0.01, rb: 0.01 });
+    const g = loft({ x0: -hl + 0.02, x1: hl - 0.02, cx0: s.x0, cx1: s.x1, nx: Math.round(80 * Q), nr: Math.max(8, Math.round(24 * Q)), planExp: spec.planExp ?? 7, bot: s.y0, top: s.y1, half: hw + 0.012, rt: 0.01, rb: 0.01 });
     const m = new THREE.Mesh(g, s.mat === 'chrome' ? M.chrome : M.trim); car.add(m);
   }
 
@@ -390,12 +394,12 @@ export function buildCar(spec, color, opts = {}) {
   if (spec.plateR != null) rear(new THREE.Mesh(plateGeo, plateMat), spec.plateR, 0.013, plateLift(spec.plateR));
 
   // Door handles, mirrors.
-  for (const x of spec.handles ?? []) for (const sg of [1, -1]) side(new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.028, 0.02, 2, 0.008), spec.chromeTrim ? M.chrome : M.trim), x, top(x) - 0.09, sg, 0.006);
+  for (const x of spec.handles ?? []) for (const sg of [1, -1]) side(new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.028, 0.02, rseg(), 0.008), spec.chromeTrim ? M.chrome : M.trim), x, top(x) - 0.09, sg, 0.006);
   const mx = spec.mirrorX ?? cb.xA - 0.12;
   for (const sg of [1, -1]) {
     const mg = new THREE.Group();
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.12), M.trim); arm.position.z = sg * 0.03; mg.add(arm);
-    const head = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.11, 0.15, 3, 0.03), spec.mirrorPaint ? P : M.trim); head.position.z = sg * 0.13; mg.add(head);
+    const head = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.11, 0.15, rseg(), 0.03), spec.mirrorPaint ? P : M.trim); head.position.z = sg * 0.13; mg.add(head);
     mg.position.set(mx, top(mx) + 0.06, sg * (cabHalf(mx) - 0.03)); mg.traverse((m) => { if (m.isMesh) m.castShadow = true; }); car.add(mg);
   }
 
@@ -424,7 +428,7 @@ function taxiDress(car, spec, top, roofY, P) {
     g.fillStyle = '#111'; g.font = '900 46px V'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('تاکسی', w / 2, h / 2 - 5);
   });
   const sm = new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.35, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.25 });
-  const box = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.16, 0.66, 3, 0.04), [new THREE.MeshStandardMaterial({ color: 0xf6f6f0, roughness: 0.4 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), sm, sm]);
+  const box = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.16, 0.66, rseg(), 0.04), [new THREE.MeshStandardMaterial({ color: 0xf6f6f0, roughness: 0.4 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), new THREE.MeshStandardMaterial({ color: 0xf6f6f0 }), sm, sm]);
   box.rotation.y = Math.PI / 2;
   box.position.set(x, roofY(x) + 0.1, 0); box.castShadow = true;
   sign.add(box);
@@ -520,7 +524,7 @@ export function buildZamyad(color, opts = {}) {
   base.position.x = xb; base.castShadow = true; g.add(base);
   const floor = new THREE.Mesh(new THREE.BoxGeometry(bedL - 0.1, 0.02, 1.58), new THREE.MeshStandardMaterial({ color: 0x3b3f44, roughness: 0.8 }));
   floor.position.set(xb, 0.79, 0); g.add(floor);
-  const wall = (w, d, x, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, 0.3, d, 2, 0.015), P); m.position.set(x, 0.93, z); m.castShadow = true; g.add(m); };
+  const wall = (w, d, x, z) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, 0.3, d, rseg(), 0.015), P); m.position.set(x, 0.93, z); m.castShadow = true; g.add(m); };
   wall(bedL, 0.05, xb, 0.815); wall(bedL, 0.05, xb, -0.815); wall(0.05, 1.68, xb - bedL / 2 + 0.025, 0); wall(0.05, 1.68, xb + bedL / 2 - 0.025, 0);
   for (const sg of [1, -1]) {
     const w = wheel(0.34, 0.19, 'steel', opts.q ?? 1); w.position.set(-1.05, 0.34, sg * 0.69); if (sg < 0) w.rotation.y = Math.PI; g.add(w);
@@ -560,7 +564,7 @@ export function buildBus(color = 0xc4161c, opts = {}) {
     taillights: [{ w: 0.18, h: 0.4, z: 0.85, y: 0.95, r: 0.03 }],
     plateF: 0.48, plateR: 0.5, mirrorX: 3.55, mirrorPaint: true,
   };
-  const bus = buildCar(spec, color, { ...opts, roofColor: 0xf3f3ef, plate: plateTex({ a: 11, letter: 'ع', b: 274, city: 11, yellow: true }) });
+  const bus = buildCar(spec, color, { roofColor: 0xf3f3ef, ...opts, plate: plateTex({ a: 11, letter: 'ع', b: 274, city: 11, yellow: true }) });
   bus.traverse((m) => { if (m.isMesh && Array.isArray(m.material) && m.material[1] === M.glass) { m.material = m.material.slice(); m.material[1] = M.glassDark; } });
   // Destination board over the windscreen.
   const sign = tex(512, 96, (g, w, h) => { g.fillStyle = '#111'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffae1a'; g.font = '900 64px V'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(opts.dest ?? 'تجریش', w / 2, h / 2 + 2); });
@@ -573,7 +577,7 @@ export function buildBus(color = 0xc4161c, opts = {}) {
     p.position.set(0, 0.86, sg * (W / 2 + 0.006)); if (sg < 0) p.rotation.y = Math.PI; bus.add(p);
   }
   // Roof AC unit.
-  const ac = new THREE.Mesh(new RoundedBoxGeometry(1.6, 0.22, 1.3, 3, 0.08), new THREE.MeshStandardMaterial({ color: 0xe9ebee, roughness: 0.5 }));
+  const ac = new THREE.Mesh(new RoundedBoxGeometry(1.6, 0.22, 1.3, rseg(), 0.08), new THREE.MeshStandardMaterial({ color: 0xe9ebee, roughness: 0.5 }));
   ac.position.set(0.4, 2.86, 0); ac.castShadow = true; bus.add(ac);
   return bus;
 }

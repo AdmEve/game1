@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { CELL } from './fleet';
+import { CELL, bake } from './fleet';
 
 export const ROAD = 1.8; // ring road width
 export const CURB = 0.22;
@@ -294,5 +294,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
     const x = side * (L.lotW / 2 + CURB + ROAD + 1.2 + rnd() * 3.5);
     const t = chenar(0.8 + rnd() * 0.4); t.position.set(x, 0, z); add(t);
   }
-  return { group: g, L };
+  // Everything here is static: merge it into one mesh per material to keep draw calls low.
+  const baked = bake(g);
+  baked.traverse((m) => { (m as THREE.Mesh).receiveShadow = true; });
+  return { group: baked, L };
 }

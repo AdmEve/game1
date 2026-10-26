@@ -20,7 +20,7 @@ export function moves(s: State): number[] {
 export interface SolveResult { solvable: boolean; solution: number[]; nodes: number; }
 
 /** Depth-first search with memo of dead states. Tries moves that serve the queue first. */
-export function solve(level: Level, limit = 400_000): SolveResult {
+export function solve(level: Level, limit = 400_000, from?: State): SolveResult {
   const dead = new Set<string>();
   let nodes = 0;
   const path: number[] = [];
@@ -42,7 +42,7 @@ export function solve(level: Level, limit = 400_000): SolveResult {
     dead.add(k);
     return false;
   };
-  const ok = rec(newState(level));
+  const ok = rec(from ? cloneState(from) : newState(level));
   return { solvable: ok, solution: ok ? [...path] : [], nodes };
 }
 
