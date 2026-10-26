@@ -4,7 +4,7 @@
  */
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
-export const COLORS = ['red', 'yellow', 'blue', 'green', 'purple', 'orange', 'white', 'pink'] as const;
+export const COLORS = ['red', 'yellow', 'blue', 'green', 'purple', 'orange', 'white', 'pink', 'silver', 'black'] as const;
 export type Color = (typeof COLORS)[number];
 export type Kind = 'pride' | 'peykan' | 'p405' | 'samand' | 'zamyad' | 'bus' | 'bike';
 

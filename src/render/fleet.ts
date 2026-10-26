@@ -9,7 +9,7 @@ import { KIND, type Color, type Kind } from '../game/rules';
 import { courierBike } from './mechanics';
 
 export const PAINT: Record<Color, number> = {
-  red: 0xc8141c, yellow: 0xf5b400, blue: 0x1857c9, green: 0x138a3f, purple: 0x6a2bc2, orange: 0xe85a0c, white: 0xeeeeea, pink: 0xe0508c,
+  red: 0xc8141c, yellow: 0xf5b400, blue: 0x1857c9, green: 0x138a3f, purple: 0x6a2bc2, orange: 0xe85a0c, white: 0xeeeeea, pink: 0xe0508c, silver: 0x9aa3ad, black: 0x1c1f24,
 };
 export const CELL = 1.25;
 
@@ -126,7 +126,7 @@ const arrowEdge = new THREE.MeshBasicMaterial({ color: 0x0b1220, transparent: tr
  */
 export interface VehicleObj { root: THREE.Group; body: THREE.Group; arrow: THREE.Group; length: number; }
 
-export function makeVehicle(kind: Kind, color: Color, skin?: string): VehicleObj {
+export function makeVehicle(kind: Kind, color: Color, skin?: string, opts: { arrow?: boolean } = {}): VehicleObj {
   const t = template(kind, color, skin);
   const L = KIND[kind].len * CELL - 0.26;
   const s = L / t.length, sz = Math.min(s, 0.98 / t.width);
@@ -142,7 +142,7 @@ export function makeVehicle(kind: Kind, color: Color, skin?: string): VehicleObj
   arrow.position.set(t.roofX * s, t.roofY * s + 0.02, 0);
   arrow.rotation.z = t.tilt;
   arrow.scale.setScalar(kind === 'bus' ? 1.25 : kind === 'bike' ? 0.7 : 0.88);
-  body.add(arrow);
+  if (opts.arrow !== false) body.add(arrow);
   // Model space faces +x; the game's "up" is −z.
   const turn = new THREE.Group();
   turn.rotation.y = Math.PI / 2;

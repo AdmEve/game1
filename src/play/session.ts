@@ -108,6 +108,50 @@ export class Session {
     this.lockGate = this.gate(this.s.bays.length);
     hooks.queueLeft(this.s.queue.length);
     this.refreshPlates();
+    this.dressStreets(seed);
+  }
+
+  // ───── Street life: cars parked on the kerbs, pigeons on the pavement ─────
+  private pigeons: { o: THREE.Group; home: THREE.Vector3; away: boolean }[] = [];
+  private dressStreets(seed: number) {
+    let r = seed * 48271 % 2147483647;
+    const rnd = () => ((r = (r * 48271) % 2147483647) / 2147483647);
+    const kinds = ['pride', 'peykan', 'p405', 'pride'] as const, cols = ['white', 'silver', 'black', 'white', 'silver'] as const;
+    for (const side of [-1, 1]) {
+      const x = side * (this.L.lotW / 2 + 0.22 + 1.8 + 0.75);
+      for (let z = 0.6; z < this.L.lotH - 1; z += 2.9 + rnd() * 1.4) {
+        if (rnd() < 0.3) continue;
+        const o = makeVehicle(kinds[Math.floor(rnd() * kinds.length)], cols[Math.floor(rnd() * cols.length)], undefined, { arrow: false });
+        o.root.position.set(x, 0, z + 1);
+        o.root.rotation.y = rnd() < 0.5 ? 0 : Math.PI;
+        this.group.add(o.root);
+      }
+    }
+    const grey = new THREE.MeshStandardMaterial({ color: 0x8b93a1, roughness: 0.8 }), neck = new THREE.MeshStandardMaterial({ color: 0x4b6b74, roughness: 0.5, metalness: 0.3 });
+    const bodyG = new THREE.SphereGeometry(0.07, 10, 8), headG = new THREE.SphereGeometry(0.04, 8, 6);
+    for (let k = 0; k < 6; k++) {
+      const o = new THREE.Group();
+      const b = new THREE.Mesh(bodyG, grey); b.scale.set(1.4, 1, 1); b.position.y = 0.07; o.add(b);
+      const hd = new THREE.Mesh(headG, neck); hd.position.set(0.09, 0.13, 0); hd.name = 'head'; o.add(hd);
+      o.traverse((m) => { m.castShadow = true; });
+      const home = new THREE.Vector3(this.L.bayX[this.L.bayX.length - 1] - 0.4 + rnd() * 2.2, 0.18, this.L.walkZ + 0.75 + rnd() * 0.3);
+      o.position.copy(home); o.rotation.y = rnd() * 6.28;
+      this.group.add(o);
+      this.pigeons.push({ o, home, away: false });
+    }
+  }
+  private scarePigeons() {
+    for (const p of this.pigeons) {
+      if (p.away) continue;
+      p.away = true;
+      const from = p.o.position.clone(), dir = new THREE.Vector3(Math.random() - 0.5, 0, -1).normalize();
+      void tween(1.2, (k) => { p.o.position.copy(from).addScaledVector(dir, k * 6).setY(from.y + k * 4); p.o.rotation.z = Math.sin(k * 40) * 0.3; }, ease.in)
+        .then(() => tween(0.01, () => {}))
+        .then(() => setTimeout(() => {
+          const back = p.o.position.clone();
+          void tween(1.4, (k) => { p.o.position.lerpVectors(back, p.home, k); p.o.position.y = p.home.y + (1 - k) * 2 + Math.sin(k * Math.PI) * 0.5; p.o.rotation.z = Math.sin(k * 30) * 0.2 * (1 - k); }, ease.out).then(() => { p.away = false; });
+        }, 4000));
+    }
   }
 
   private addSymbol(i: number) {
@@ -398,6 +442,7 @@ export class Session {
     const kindHorn = v.kind === 'bus' ? 'bus' : v.kind === 'peykan' || v.kind === 'zamyad' ? 'old' : 'new';
     sfx.horn(kindHorn, 2, 0.05);
     this.hooks.shake(0.06);
+    this.scarePigeons();
     this.hooks.float('بوق!', o.root.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 'bad');
     if (by.v !== undefined) { const b = this.cars[by.v]; void this.wiggle(b); }
     else { const c = this.cones.find((m) => m.position.distanceTo(this.L.cell(...by.cell)) < 0.2); if (c) void tween(0.5, (k) => { c.rotation.z = Math.sin(k * 20) * 0.25 * (1 - k); }, ease.linear); }
@@ -564,6 +609,19 @@ export class Session {
 
   /** Ambient life each frame: passengers shift their weight and glance around. */
   idle(t: number) {
+    this.pigeons.forEach((p, k) => {
+      if (p.away) return;
+      const hd = p.o.getObjectByName('head')!;
+      const peck = Math.max(0, Math.sin(t * 3 + k * 1.7)) ** 6;
+      hd.position.set(0.09 + peck * 0.03, 0.13 - peck * 0.08, 0);
+    });
+    // Cars waiting in the bays idle: a faint shake and a puff of exhaust now and then.
+    for (const b of this.s.bays) {
+      if (!b) continue;
+      const o = this.cars[b.v];
+      o.body.position.x = Math.sin(t * 47 + b.v) * 0.004;
+      if (Math.random() < 0.012) puff(this.group, new THREE.Vector3(0, 0.25, o.length / 2 + 0.1).applyQuaternion(o.root.quaternion).add(o.root.position), 0.35);
+    }
     for (const [i, b] of this.broken) {
       if (t < b.nextPuff) continue;
       b.nextPuff = t + 0.35 + Math.random() * 0.3;
