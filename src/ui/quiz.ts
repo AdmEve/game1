@@ -4,6 +4,7 @@ import { QUIZ, type Q } from '../content/quiz';
 import { fa } from '../engine/fmt';
 import type { Life } from '../engine/types';
 import { haptic } from '../haptics';
+import { rewardedAvailable, showRewarded } from '../monetize';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
 
@@ -34,6 +35,7 @@ export function konkurQuiz(L: Life): Promise<number> {
     let i = 0;
     let score = 0;
     let timer = 0;
+    let hint = true;
     const body = h('div', { class: 'quiz' });
     const m = modal(body, { locked: true, cls: 'quiz-modal' });
 
@@ -59,20 +61,33 @@ export function konkurQuiz(L: Life): Promise<number> {
         b.addEventListener('click', () => answer(a.ok, b, buttons, answers));
         return b;
       });
+      let start = Date.now();
+      const tick = () => {
+        const left = 1 - (Date.now() - start) / (SECONDS * 1000);
+        bar.style.width = `${Math.max(0, left * 100)}%`;
+        bar.className = `fill ${left < 0.25 ? 'low' : left < 0.5 ? 'mid' : 'hi'}`;
+        if (left <= 0) answer(false, null, buttons, answers);
+      };
+      // Once per exam: watch an ad and a studious friend whispers the answer (the clock waits).
+      const help = hint && rewardedAvailable() ? btn('📞 زنگ به رفیق درس‌خون (با دیدن تبلیغ)', async () => {
+        hint = false;
+        help!.remove();
+        clearInterval(timer);
+        const t0 = Date.now();
+        const ok = await showRewarded();
+        start += Date.now() - t0;
+        if (ok) buttons[answers.findIndex((a) => a.ok)].classList.add('hint');
+        timer = window.setInterval(tick, 100);
+      }, 'btn ghost small') : null;
       body.append(
         h('div', { class: 'quiz-top' }, h('span', { class: 'quiz-n', text: `سؤال ${fa(i + 1)} از ${fa(qs.length)}` }), h('span', { class: 'quiz-s', html: `${emo('✅')} ${fa(score)}` })),
         h('span', { class: 'track quiz-t' }, bar),
         rt('div', 'quiz-q', q.q),
         h('div', { class: 'choices' }, ...buttons),
       );
-      const start = Date.now();
+      if (help) body.append(help);
       clearInterval(timer);
-      timer = window.setInterval(() => {
-        const left = 1 - (Date.now() - start) / (SECONDS * 1000);
-        bar.style.width = `${Math.max(0, left * 100)}%`;
-        bar.className = `fill ${left < 0.25 ? 'low' : left < 0.5 ? 'mid' : 'hi'}`;
-        if (left <= 0) answer(false, null, buttons, answers);
-      }, 100);
+      timer = window.setInterval(tick, 100);
     };
 
     const answer = (ok: boolean, b: HTMLElement | null, buttons: HTMLElement[], answers: { ok: boolean }[]) => {

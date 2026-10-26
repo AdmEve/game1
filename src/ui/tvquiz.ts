@@ -4,6 +4,7 @@ import { TRIVIA, TV_LADDER as LADDER, TV_SAFE as SAFE, type Trivia } from '../co
 import { fa, money } from '../engine/fmt';
 import type { Life } from '../engine/types';
 import { haptic } from '../haptics';
+import { rewardedAvailable, showRewarded } from '../monetize';
 import { btn, h, modal, rt } from './dom';
 import { emo } from './emoji';
 
@@ -37,6 +38,7 @@ export function tvQuiz(L: Life): Promise<TvResult> {
     };
     let i = 0;
     let fifty = true;
+    let call = true;
     let timer = 0;
 
     const finish = (won: number, emoji: string, title: string, text: string) => {
@@ -68,21 +70,34 @@ export function tvQuiz(L: Life): Promise<TvResult> {
           if (removed < 2 && !answers[k].ok) { buttons[k].classList.add('gone'); buttons[k].setAttribute('disabled', 'true'); removed++; }
         }
       }, 'btn ghost small') : null;
+      let start = Date.now();
+      const tick = () => {
+        const left = 1 - (Date.now() - start) / (SECONDS * 1000);
+        bar.style.width = `${Math.max(0, left * 100)}%`;
+        bar.className = `fill ${left < 0.25 ? 'low' : left < 0.5 ? 'mid' : 'hi'}`;
+        if (left <= 0) answer(false, null);
+      };
+      // Once per show: watch an ad and phone a friend (the clock waits).
+      const phone = call && rewardedAvailable() ? btn('📞 زنگ به دوست (با دیدن تبلیغ)', async () => {
+        call = false;
+        phone!.remove();
+        clearInterval(timer);
+        const t0 = Date.now();
+        const ok = await showRewarded();
+        start += Date.now() - t0;
+        if (ok) buttons[answers.findIndex((a) => a.ok)].classList.add('hint');
+        timer = window.setInterval(tick, 100);
+      }, 'btn ghost small') : null;
       put(
         h('div', { class: 'quiz-top' }, h('span', { class: 'quiz-n', text: `سؤال ${fa(i + 1)} از ${fa(qs.length)}` }), h('span', { class: 'quiz-s', html: `${emo('💰')} ${prize(i)}` })),
         h('span', { class: 'track quiz-t' }, bar),
         rt('div', 'quiz-q', q.q),
         h('div', { class: 'choices' }, ...buttons),
         half,
+        phone,
       );
-      const start = Date.now();
       clearInterval(timer);
-      timer = window.setInterval(() => {
-        const left = 1 - (Date.now() - start) / (SECONDS * 1000);
-        bar.style.width = `${Math.max(0, left * 100)}%`;
-        bar.className = `fill ${left < 0.25 ? 'low' : left < 0.5 ? 'mid' : 'hi'}`;
-        if (left <= 0) answer(false, null);
-      }, 100);
+      timer = window.setInterval(tick, 100);
 
       const answer = (ok: boolean, b: HTMLElement | null) => {
         clearInterval(timer);
