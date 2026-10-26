@@ -17,6 +17,7 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
+import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
 import { dailyLevel, today } from './game/daily';
@@ -213,7 +214,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const i = d.i >= 0 ? d.i : pick(e.clientX, e.clientY);
   if (i < 0) return;
   if (craneMode) {
-    if (session.crane(i)) { save.boosters.crane--; persist(); hud.refresh(); }
+    if (session.crane(i)) { save.boosters.crane--; helped = true; persist(); hud.refresh(); }
     craneMode = false; hud.active(null);
   } else session.tap(i);
   hand.classList.remove('show'); hintFor = -1;
@@ -240,6 +241,8 @@ function disposeSession() {
 let current = 0;
 /** Playing today's «ساعت شلوغی» instead of a Journey level. */
 let rush: Level | null = null;
+/** A booster or a continue was used this level (it then doesn't count as a clean win). */
+let helped = false;
 
 function startLevel(pick?: number, custom?: Level, swoop = true) {
   disposeSession();
@@ -253,6 +256,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true) {
   setMood(ch.light);
   craneMode = false;
   modalOpen = false;
+  helped = false;
   session = new Session(level, {
     queueLeft: (q, total) => hud.setQueue(q, total),
     toast: (t) => hud.toast(t),
@@ -303,22 +307,34 @@ function useBooster(id: BoosterId) {
   }
   const ok = id === 'bay' ? session.extraBay() : session.whistle();
   if (!ok) { hud.toast(id === 'bay' ? 'همه‌ی جاهای پارک بازه!' : 'یه لحظه صبر کن…'); return; }
-  save.boosters[id]--; persist(); hud.refresh(); hud.bump(id); haptic('medium');
+  save.boosters[id]--; helped = true; persist(); hud.refresh(); hud.bump(id); haptic('medium');
 }
 
 function reward(n: number) {
   return 20 + Math.min(40, n * 2) + (levels[n]?.tag ? 40 : 0);
 }
 
+/** Counts a win towards the achievements; returns a banner for any medal just earned. */
+function recordWin(boss: boolean) {
+  const st = save.stats;
+  st.wins++;
+  if (session) { st.people += session.s.queue.length; st.bestCombo = Math.max(st.bestCombo, session.bestCombo); }
+  if (!helped) st.clean++;
+  if (boss) st.bosses++;
+  st.bestRush = Math.max(st.bestRush, save.rush.streak);
+  const got = newlyReached();
+  return got.length ? `<div class="newach">${emo('🏅', 'emo sm')} افتخار جدید: <b>${got.map((a) => a.name).join('، ')}</b><small>جایزه‌ش تو صفحه‌ی افتخارات منتظرته</small></div>` : '';
+}
+
 function showRushWin() {
   const streak = save.rush.day === new Date(Date.now() - 864e5).toISOString().slice(0, 10) ? save.rush.streak + 1 : 1;
   save.rush = { day: today(), streak };
   const coins = 250 + Math.min(6, streak - 1) * 50;
-  save.coins += coins; addKeys(1); save.stats.wins++; persist();
+  save.coins += coins; addKeys(1); const ach = recordWin(false); persist();
   modalOpen = true; hud.show(false); hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
   const close = modal(c, 'pop');
   c.append(button('برگرد به خونه', 'primary big', () => { close(); modalOpen = false; startLevel(); showHome(); }));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
@@ -333,7 +349,7 @@ function showWin() {
   const lvl = levels[n];
   const keys = replay ? 0 : (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
   if (keys) addKeys(keys);
-  save.stats.wins++;
+  const ach = recordWin(!replay && !!lvl?.tag);
   save.coins += coins;
   if (!replay) save.level = Math.min(save.level + 1, levels.length);
   persist();
@@ -342,7 +358,7 @@ function showWin() {
   hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;
@@ -392,7 +408,7 @@ function showLose() {
   c.innerHTML = `<div class="burst">${emo('🚧', 'emo huge')}</div><h2>راه‌بندون شد!</h2><p>${why}</p>`;
   const close = modal(c, 'pop');
   const canBay = session && session.s.bays.length < 6;
-  const resume = () => { close(); modalOpen = false; session!.extraBay(); };
+  const resume = () => { close(); modalOpen = false; helped = true; session!.extraBay(); };
   if (canBay) {
     c.append(button(`${emo('🅿️', 'emo sm')} یه جای پارک دیگه، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
       if (save.coins < price) { hud.toast('سکه کافی نداری!'); showShop(() => {}, () => hud.refresh()); return; }
@@ -471,6 +487,7 @@ function showHome() {
     <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
   c.prepend(radioCard());
   const close = modal(c, 'home-card');
+
   const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
   });
@@ -486,6 +503,10 @@ function showHome() {
     startLevel(undefined, lvl); hud.show(true);
   });
   rowEl.append(rushBtn);
+  const waiting = claimable();
+  rowEl.append(button(`${emo('🏆')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
+    close(); showAchievements(() => showHome(), () => hud.refresh());
+  }));
   c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     close();
     await maybeDaily(() => hud.refresh());

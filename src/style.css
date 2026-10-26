@@ -245,3 +245,39 @@ body[data-light='night'] .vignette { background: radial-gradient(ellipse 80% 70%
 
 .people .pbar { width: 64px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; margin-right: 4px; opacity: 1; }
 .people .pbar i { display: block; height: 100%; background: linear-gradient(90deg, #86efac, #22c55e); border-radius: 4px; transition: width .3s; }
+
+/* «افتخارات» */
+.home-row:has(.ach-btn) { grid-template-columns: 1fr 1fr 58px; gap: 8px; }
+.home-row:has(.ach-btn) .btn { font-size: 15.5px; white-space: nowrap; padding-inline: 4px; }
+.home-row .btn.ach-btn { position: relative; padding: 0; display: grid; place-items: center; border-radius: 18px;
+  background: linear-gradient(180deg, #fde68a, #f59e0b); box-shadow: 0 4px 0 #b45309, 0 8px 16px rgba(0,0,0,.3); }
+.btn.ach-btn .emo { width: 34px; height: 34px; }
+.ach-btn .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; border-radius: 11px; background: #ef4444; color: #fff;
+  font: 900 13px/22px Vazirmatn, sans-serif; font-style: normal; box-shadow: 0 2px 0 #991b1b; animation: pulse 1.4s infinite; }
+.card.ach-card { max-height: 86vh; overflow-y: auto; padding: 18px 12px 12px; }
+.alist { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.arow { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; background: #f1f5f9; border-radius: 16px; padding: 8px 10px; text-align: right; }
+.arow.done { background: linear-gradient(90deg, #fef3c7, #fde68a); }
+.arow.flash { animation: pop .5s; }
+.arow .aic { width: 44px; height: 44px; border-radius: 14px; background: #fff; display: grid; place-items: center; box-shadow: 0 2px 0 #cbd5e1; }
+.arow .aic .emo { width: 28px; height: 28px; }
+.arow .atx b { display: block; font-size: 15px; }
+.arow .atx small { display: block; font-size: 12px; color: #475569; line-height: 1.5; }
+.arow .abar { display: block; height: 7px; border-radius: 4px; background: #cbd5e1; overflow: hidden; margin-top: 4px; }
+.arow .abar i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 4px; }
+.arow .anum { font-size: 11px; color: #64748b; font-weight: 800; }
+.arow .amed { display: flex; gap: 3px; }
+.arow > .btn.claim, .arow > .paid { grid-column: 1 / -1; width: auto; margin: 2px 0 0; font-size: 15px; padding: 7px; }
+.arow > .paid { text-align: center; font-weight: 900; color: #15803d; }
+.medal { width: 16px; height: 16px; border-radius: 50%; background: #e2e8f0; box-shadow: inset 0 -2px 0 rgba(0,0,0,.12); }
+.medal.on.bronze { background: radial-gradient(circle at 35% 35%, #f3c08a, #b0652c); }
+.medal.on.silver { background: radial-gradient(circle at 35% 35%, #ffffff, #94a3b8); }
+.medal.on.gold { background: radial-gradient(circle at 35% 35%, #fff3b0, #e0a800); }
+.btn.claim { color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.25); animation: claimglow 1.4s infinite; }
+@keyframes claimglow { 50% { box-shadow: 0 4px 0 rgba(0,0,0,.25), 0 0 0 5px rgba(253,224,71,.55); filter: brightness(1.08); } }
+.btn.claim.bronze { background: linear-gradient(180deg, #e2a46c, #a0522d); }
+.btn.claim.silver { background: linear-gradient(180deg, #cbd5e1, #64748b); }
+.btn.claim.gold { background: linear-gradient(180deg, #fde047, #ca8a04); color: #422006; }
+.newach { margin-top: 10px; background: linear-gradient(90deg, #fef3c7, #fde68a); border-radius: 14px; padding: 8px 10px; font-size: 14px; animation: pop .5s .4s both; }
+.newach small { display: block; font-size: 11.5px; color: #92400e; }
+@keyframes pop { 0% { transform: scale(.85); opacity: .3; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }

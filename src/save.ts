@@ -4,7 +4,10 @@ export interface Save {
   coins: number;
   boosters: { crane: number; whistle: number; bay: number };
   settings: { sound: boolean; music: boolean; haptics: boolean; colorblind: boolean };
-  stats: { wins: number; losses: number };
+  stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
+  /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
+  ach: Record<string, number>;
+  achSeen: Record<string, number>;
   owned: { starter: boolean; no_ads: boolean };
   daily: { day: string; streak: number };
   ads: { lastInterstitial: number; winsSince: number };
@@ -26,7 +29,9 @@ const fresh = (): Save => ({
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
   settings: { sound: true, music: true, haptics: true, colorblind: false },
-  stats: { wins: 0, losses: 0 },
+  stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
+  ach: {},
+  achSeen: {},
   owned: { starter: false, no_ads: false },
   daily: { day: '', streak: 0 },
   ads: { lastInterstitial: 0, winsSince: 0 },
@@ -46,7 +51,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

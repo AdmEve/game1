@@ -59,6 +59,8 @@ export class Session {
   private combo = 0;
   /** Coins earned during the level (combos), paid out with the win reward. */
   bonus = 0;
+  /** Longest chain of quick departures this level. */
+  bestCombo = 0;
   private covers = new Map<number, THREE.Object3D>();
   private broken = new Map<number, { badge: THREE.Sprite; hazard: THREE.Object3D; nextPuff: number }>();
   private plates = new Map<number, THREE.Sprite>();
@@ -638,6 +640,7 @@ export class Session {
     const now = performance.now() / 1000;
     this.combo = now - this.lastDepart < 1.8 ? this.combo + 1 : 1;
     this.lastDepart = now;
+    this.bestCombo = Math.max(this.bestCombo, this.combo);
     const at = o.root.position.clone().add(new THREE.Vector3(0, 1.6, 0));
     this.hooks.float(`+${KIND[kind].cap}`, at, 'coin');
     if (this.combo >= 2) {
