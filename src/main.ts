@@ -18,6 +18,8 @@ import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
+import { FREE_LEVELS, lives, loseLife } from './lives';
+import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
@@ -443,7 +445,15 @@ function showLose() {
       c.append(ad);
     }
   }
-  c.append(button('از اول', canBay ? 'ghost' : 'primary big', () => { close(); modalOpen = false; startLevel(current, rush ?? undefined, true, yaldaNight); }));
+  c.append(button('از اول', canBay ? 'ghost' : 'primary big', async () => {
+    close();
+    // Giving up on a Journey level costs a life (the daily challenge and events are free).
+    if (!rush && current >= FREE_LEVELS) {
+      loseLife();
+      if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { startLevel(current, undefined, false); showHome(); return; }
+    }
+    modalOpen = false; startLevel(current, rush ?? undefined, true, yaldaNight);
+  }));
 }
 
 function showSettings() {
@@ -487,7 +497,10 @@ function showLevels() {
       const open = i <= unlocked;
       const tag = levels[i].tag;
       const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
-      if (open) b.onclick = () => { close(); modalOpen = false; startLevel(i); hud.show(true); };
+      if (open) b.onclick = async () => {
+        if (i >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
+        close(); modalOpen = false; startLevel(i); hud.show(true);
+      };
       grid.append(b);
     }
     c.append(grid);
@@ -539,7 +552,9 @@ function showHome() {
   rowEl.append(button(`${emo('🏆')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
     close(); showAchievements(() => showHome(), () => hud.refresh());
   }));
+  c.querySelector('.chapter')!.append(livesPill());
   c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+    if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
     await maybeDaily(() => hud.refresh());
     modalOpen = false; hud.show(true);

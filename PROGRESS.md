@@ -69,6 +69,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   rebuild grandpa's taxi agency in a 3D diorama: 12 renovations from rubbish clearing to a new Pride, then phase 2
   «محله‌ی آقاجون» (12 more around the street: mural, sangak bakery, saqqakhaneh, kiosk, bus stop, Samand, Vanet); old saves
   are credited for levels already won
+- Lives «جون» (`src/lives.ts`, `src/ui/lives.ts`): 5 hearts, giving up on a lost Journey level from level 13 on
+  costs one, one grows back every 30 minutes; out of lives → refill for 900 coins, a rewarded ad for one, or wait.
+  The daily challenge and events are free
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)

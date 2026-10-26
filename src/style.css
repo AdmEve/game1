@@ -320,3 +320,10 @@ body[data-light='autumn'] .tint { opacity: 1; background: linear-gradient(180deg
 .btn.agency-btn small { display: block; font-size: 12.5px; font-weight: 800; opacity: .95; }
 .btn.agency-btn .sb { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.9); color: #854d0e; border-radius: 12px; padding: 2px 10px; font-size: 16px; }
 .btn.agency-btn .sb.ready { animation: pulse 1.4s infinite; }
+
+/* Lives «جون» */
+.chapter { position: relative; }
+.lives-pill { position: absolute; top: 58px; left: 14px; display: inline-flex; align-items: center; gap: 4px; background: #fee2e2; color: #991b1b; border-radius: 14px; padding: 2px 10px 2px 8px; font-weight: 900; box-shadow: 0 2px 0 #fca5a5; }
+.lives-pill b { font-size: 17px; }
+.lives-pill small { font-size: 12px; color: #b91c1c; min-width: 34px; text-align: center; }
+.nolives p b { color: #b91c1c; font-size: 20px; }
