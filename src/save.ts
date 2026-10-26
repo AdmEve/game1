@@ -11,6 +11,7 @@ export interface Save {
   firstOpen: number;
   /** Mechanic intro cards already shown. */
   seen: Record<string, boolean>;
+  rated: boolean;
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -25,6 +26,7 @@ const fresh = (): Save => ({
   ads: { lastInterstitial: 0, winsSince: 0 },
   firstOpen: Date.now(),
   seen: {},
+  rated: false,
 });
 
 function load(): Save {

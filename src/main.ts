@@ -15,7 +15,7 @@ import { Session } from './play/session';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
-import { initMonetization, maybeInterstitial, rewardedAvailable, showRewarded } from './monetize';
+import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import { click, coin } from './audio';
 import { setTension, startMusic, stopMusic } from './music';
@@ -195,6 +195,7 @@ function startLevel() {
   const n = Math.min(save.level, levels.length - 1);
   const level = levels[n];
   craneMode = false;
+  modalOpen = false;
   session = new Session(level, {
     queueLeft: (q) => hud.setQueue(q),
     toast: (t) => hud.toast(t),
@@ -258,6 +259,7 @@ function showWin() {
   const next = async () => {
     close(); modalOpen = true;
     if ((n + 1) % 5 === 0) await showChest(() => hud.refresh());
+    if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
     await maybeInterstitial(n);
     modalOpen = false; startLevel();
   };
@@ -275,6 +277,17 @@ function showWin() {
   }
   c.append(button(`مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
+}
+
+/** Ask happy players (right after a win) to rate the game on Bazaar; unhappy ones are not sent there. */
+function askRating(): Promise<void> {
+  return new Promise((done) => {
+    const c = h('div', 'rate');
+    c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div><h2>از راه‌بندون خوشت میاد؟</h2><p>با پنج ستاره تو بازار کمکمون کن تا مرحله‌های بیشتری بسازیم!</p>`;
+    const close = modal(c, 'pop');
+    c.append(button(`${emo('⭐', 'emo sm')} آره، پنج ستاره!`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
+    c.append(button('بعداً', 'ghost', () => { close(); done(); }));
+  });
 }
 
 function showLose() {
