@@ -32,6 +32,10 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.append(renderer.domElement);
+// Lens look: a tilt-shift blur on the far city (miniature feel) and a soft vignette.
+const tilt = document.createElement('div'); tilt.className = 'tiltshift';
+const vignette = document.createElement('div'); vignette.className = 'vignette';
+app.append(tilt, vignette);
 
 const scene = new THREE.Scene();
 scene.background = sky();

@@ -34,15 +34,19 @@ function extract(geo: THREE.BufferGeometry, start: number, count: number, keepUv
 export function bake(root: THREE.Object3D, opts: { shadows?: boolean } = {}): THREE.Group {
   root.updateMatrixWorld(true);
   const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
-  const put = (m: THREE.Material, g: THREE.BufferGeometry) => { if (!buckets.has(m)) buckets.set(m, []); buckets.get(m)!.push(g); };
+  const casts = new Set<THREE.Material>();
+  let caster = false;
+  const put = (m: THREE.Material, g: THREE.BufferGeometry) => { if (!buckets.has(m)) buckets.set(m, []); buckets.get(m)!.push(g); if (caster) casts.add(m); };
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+    // A part only casts if it (or its ancestors' policy) says so; flat ground never does.
+    caster = mesh.castShadow;
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const ranges = mesh.geometry.groups.length ? mesh.geometry.groups : [{ start: 0, count: src.getAttribute('position').count, materialIndex: 0 }];
     for (const r of ranges) {
-      const mat = mats[r.materialIndex ?? 0] as THREE.MeshStandardMaterial;
+      const mat = (Array.isArray(mesh.material) ? mats[r.materialIndex ?? 0] : mesh.material) as THREE.MeshStandardMaterial;
       if (!mat || !r.count) continue;
       const hasMap = !!mat.map;
       const g = extract(src, r.start, r.count, hasMap);
@@ -64,7 +68,7 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean } = {}): TH
     if (!merged) continue;
     merged.userData.keep = true;
     const m = new THREE.Mesh(merged, mat);
-    m.castShadow = (opts.shadows ?? true) && !(mat as THREE.Material).transparent;
+    m.castShadow = (opts.shadows ?? true) && casts.has(mat) && !(mat as THREE.Material).transparent;
     m.receiveShadow = true;
     out.add(m);
   }

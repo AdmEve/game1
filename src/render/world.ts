@@ -10,7 +10,7 @@ export const ROAD = 1.8; // ring road width
 export const CURB = 0.22;
 export const BAY_W = 1.36;
 export const BAY_D = 2.7;
-export const LOT_Y = 0.08;
+export const LOT_Y = 0.092;
 
 export interface Layout {
   w: number; h: number;
@@ -123,52 +123,172 @@ function chenar(s: number): THREE.Group {
   return t;
 }
 
-/** A Tehran apartment block: stone facade, window bands, balconies with railings, rooftop tanks. */
-function apartment(w: number, floors: number, tone: string, rnd: () => number): THREE.Group {
+/** Tehran roofs are sealed with silver «ایزوگام» rolls: a shared texture. */
+let isogam: THREE.Texture | null = null;
+function isogamTex() {
+  if (isogam) return isogam;
+  isogam = canvasTex(256, 256, (c) => {
+    c.fillStyle = '#b9bec4'; c.fillRect(0, 0, 256, 256);
+    for (let x = 0; x < 256; x += 32) {
+      const gr = c.createLinearGradient(x, 0, x + 32, 0); gr.addColorStop(0, '#c9ced4'); gr.addColorStop(0.5, '#aeb4bb'); gr.addColorStop(1, '#c2c7cd');
+      c.fillStyle = gr; c.fillRect(x, 0, 32, 256);
+      c.fillStyle = 'rgba(70,75,82,.35)'; c.fillRect(x + 30, 0, 2, 256);
+    }
+    for (let i = 0; i < 900; i++) { c.globalAlpha = 0.1; c.fillStyle = Math.random() < 0.5 ? '#000' : '#fff'; c.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+    c.globalAlpha = 1;
+  }, 1);
+  return isogam;
+}
+
+type Style = 'stone' | 'brick';
+/**
+ * A Tehran apartment block: travertine-stone or brick facade with framed windows, shop fronts with
+ * awnings on the ground floor, balconies, bare cement side walls, an ایزوگام roof with a parapet and the
+ * usual rooftop clutter (water tank, evaporative cooler, satellite dishes).
+ */
+function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number): THREE.Group {
   const g = new THREE.Group();
   const fh = 0.62, h = floors * fh + 0.3, d = 1.8;
-  const facade = canvasTex(256, 64 * floors, (c) => {
-    c.fillStyle = tone; c.fillRect(0, 0, 256, 64 * floors);
-    for (let i = 0; i < 1200; i++) { c.globalAlpha = 0.08; c.fillStyle = rnd() < 0.5 ? '#000' : '#fff'; c.fillRect(rnd() * 256, rnd() * 64 * floors, 3, 2); }
-    c.globalAlpha = 1;
+  const W = 384, FH = 96, cols = w > 2.8 ? 4 : 3;
+  const facade = canvasTex(W, FH * floors, (c) => {
+    if (style === 'brick') {
+      c.fillStyle = tone; c.fillRect(0, 0, W, FH * floors);
+      // Brick courses.
+      for (let y = 0; y < FH * floors; y += 6) {
+        for (let x = (y / 6) % 2 ? -8 : 0; x < W; x += 16) {
+          c.fillStyle = `rgba(${90 + rnd() * 40},${40 + rnd() * 20},${25 + rnd() * 15},${0.25 + rnd() * 0.2})`;
+          c.fillRect(x + 1, y + 1, 14, 4);
+        }
+      }
+      c.fillStyle = 'rgba(240,230,210,.35)'; for (let y = 0; y < FH * floors; y += 6) c.fillRect(0, y, W, 1);
+    } else {
+      c.fillStyle = tone; c.fillRect(0, 0, W, FH * floors);
+      // Travertine slabs with soft veining.
+      for (let y = 0; y < FH * floors; y += 24) for (let x = (y / 24) % 2 ? -32 : 0; x < W; x += 64) {
+        c.fillStyle = `rgba(${150 + rnd() * 60},${130 + rnd() * 50},${100 + rnd() * 40},.12)`; c.fillRect(x + 1, y + 1, 62, 22);
+        c.strokeStyle = 'rgba(120,100,70,.18)'; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, 63, 23);
+      }
+    }
     for (let f = 0; f < floors; f++) {
-      const y = f * 64;
-      const ground = f === floors - 1;
-      if (ground) {
-        // Shops: a roller shutter and a lit sign.
-        c.fillStyle = '#5b6470'; c.fillRect(14, y + 18, 110, 44); c.fillStyle = '#c9ccd1'; for (let k = 0; k < 9; k++) c.fillRect(14, y + 20 + k * 5, 110, 2);
-        c.fillStyle = '#20324a'; c.fillRect(140, y + 18, 100, 44); c.fillStyle = 'rgba(255,230,160,.85)'; c.fillRect(146, y + 24, 88, 32);
-        c.fillStyle = ['#0b7a3b', '#b3261e', '#1d4ed8'][Math.floor(rnd() * 3)]; c.fillRect(8, y + 4, 240, 12);
+      const y = f * FH;
+      if (f === floors - 1) {
+        // Ground floor: two shop fronts with rolling shutters or lit windows, and a sign band.
+        for (let k = 0; k < 2; k++) {
+          const x = 16 + k * (W / 2), sw = W / 2 - 32;
+          const open = rnd() < 0.7;
+          c.fillStyle = '#2a2f36'; c.fillRect(x, y + 30, sw, 62);
+          if (open) {
+            const gr = c.createLinearGradient(0, y + 34, 0, y + 92); gr.addColorStop(0, '#ffe7a8'); gr.addColorStop(1, '#f2b866');
+            c.fillStyle = gr; c.fillRect(x + 4, y + 34, sw - 8, 54);
+            c.fillStyle = 'rgba(120,70,30,.5)'; for (let j = 0; j < 6; j++) c.fillRect(x + 10 + j * ((sw - 20) / 6), y + 60 + (j % 2) * 8, 14, 22);
+          } else {
+            c.fillStyle = '#9aa3ad'; c.fillRect(x + 4, y + 34, sw - 8, 54);
+            c.fillStyle = '#7d8691'; for (let j = 0; j < 12; j++) c.fillRect(x + 4, y + 36 + j * 4.5, sw - 8, 1.5);
+          }
+          c.fillStyle = ['#0b7a3b', '#b3261e', '#1d4ed8', '#d97706', '#0f766e'][Math.floor(rnd() * 5)];
+          c.fillRect(x - 6, y + 8, sw + 12, 18);
+          c.fillStyle = '#fff'; c.fillRect(x + sw / 2 - 30, y + 13, 60, 8);
+        }
       } else {
-        for (let k = 0; k < 3; k++) {
-          const x = 14 + k * 80;
-          c.fillStyle = '#3d4f63'; c.fillRect(x, y + 12, 62, 38);
-          c.fillStyle = rnd() < 0.35 ? '#f6dfa0' : '#8fb3d2'; c.fillRect(x + 3, y + 15, 27, 32); c.fillRect(x + 32, y + 15, 27, 32);
-          if (rnd() < 0.3) { c.fillStyle = '#e7e2d6'; c.fillRect(x + 3, y + 15, 27, 16); } // curtain
+        for (let k = 0; k < cols; k++) {
+          const cw = W / cols, x = k * cw + cw * 0.14, ww = cw * 0.72;
+          // Stone surround and sill.
+          c.fillStyle = style === 'brick' ? '#efe6d4' : 'rgba(255,255,255,.55)';
+          c.fillRect(x - 5, y + 14, ww + 10, 62);
+          c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x - 7, y + 76, ww + 14, 5);
+          c.fillStyle = '#334155'; c.fillRect(x, y + 18, ww, 54);
+          const lit = rnd() < 0.3;
+          const glass = c.createLinearGradient(x, y + 18, x + ww, y + 72);
+          glass.addColorStop(0, lit ? '#ffe9b0' : '#a9c7e3'); glass.addColorStop(1, lit ? '#f7c870' : '#6e93b8');
+          c.fillStyle = glass; c.fillRect(x + 3, y + 21, ww / 2 - 4, 48); c.fillRect(x + ww / 2 + 1, y + 21, ww / 2 - 4, 48);
+          if (rnd() < 0.35) { c.fillStyle = ['#f1ece2', '#e9d8c0', '#d6e4ee'][Math.floor(rnd() * 3)]; c.fillRect(x + 3, y + 21, ww / 2 - 4, 20 + rnd() * 20); }
+          if (rnd() < 0.15) { c.fillStyle = '#5b6b7a'; c.fillRect(x + ww - 22, y + 50, 18, 16); } // window AC unit
         }
       }
     }
   });
   facade.wrapS = facade.wrapT = THREE.ClampToEdgeWrapping;
-  const side = std(0xffffff, { color: new THREE.Color(tone).multiplyScalar(0.85) });
-  const front = std(0xffffff, { map: facade });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, std(0xd8d2c4), side, front, side]);
-  body.position.y = h / 2; body.castShadow = body.receiveShadow = true; g.add(body);
-  // Balconies on alternating floors.
+  // Bare cement side walls: most Tehran blocks are only finished on the street side.
+  const cement = std(0xa8a39a, { roughness: 0.95 });
+  const roof = std(0xffffff, { map: isogamTex(), roughness: 0.45, metalness: 0.35 });
+  const front = std(0xffffff, { map: facade, roughness: 0.8 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [cement, cement, roof, cement, front, cement]);
+  body.position.y = h / 2; g.add(body);
+  // Parapet around the roof.
+  const par = std(new THREE.Color(tone).multiplyScalar(0.92).getHex());
+  for (const [pw, pd, px, pz] of [[w, 0.08, 0, d / 2 - 0.04], [w, 0.08, 0, -d / 2 + 0.04], [0.08, d, w / 2 - 0.04, 0], [0.08, d, -w / 2 + 0.04, 0]]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.16, pd), par); m.position.set(px, h + 0.08, pz); g.add(m);
+  }
+  // A cornice band between ground floor and the rest.
+  const cornice = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.06, 0.1), std(0xe8e0cf)); cornice.position.set(0, fh + 0.28, d / 2 + 0.03); g.add(cornice);
+  // Striped shop awnings.
+  const awn = canvasTex(64, 16, (c) => { const col = ['#dc2626', '#16a34a', '#2563eb', '#ea580c'][Math.floor(rnd() * 4)]; for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? '#ffffff' : col; c.fillRect(i * 8, 0, 8, 16); } });
+  for (const sx of [-w / 4, w / 4]) {
+    if (rnd() < 0.35) continue;
+    const a = new THREE.Mesh(new THREE.BoxGeometry(w / 2 - 0.2, 0.03, 0.42), std(0xffffff, { map: awn }));
+    a.position.set(sx, fh * 0.62, d / 2 + 0.2); a.rotation.x = 0.35; g.add(a);
+  }
+  // Balconies with railings and pot plants.
   const rail = std(0x39424d, { metalness: 0.4, roughness: 0.5 });
   for (let f = 1; f < floors - 1; f++) {
-    if (rnd() < 0.45) continue;
+    if (rnd() < 0.5) continue;
     const y = (floors - 1 - f) * fh + 0.3;
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.05, 0.35), std(0xcfc8b8)); slab.position.set((rnd() - 0.5) * w * 0.3, y, d / 2 + 0.17); g.add(slab);
-    const r = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.22, 0.02), rail); r.position.set(slab.position.x, y + 0.13, d / 2 + 0.34); g.add(r);
-    if (rnd() < 0.5) { const pot = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), std(0x4f8f3a, { flatShading: true })); pot.position.set(slab.position.x + 0.2, y + 0.1, d / 2 + 0.22); g.add(pot); }
+    const bx = (rnd() - 0.5) * w * 0.3;
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.05, 0.35), std(0xd8d0bf)); slab.position.set(bx, y, d / 2 + 0.17); g.add(slab);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.22, 0.02), rail); r.position.set(bx, y + 0.13, d / 2 + 0.34); g.add(r);
+    if (rnd() < 0.6) { const pot = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), std(0x4f8f3a, { flatShading: true })); pot.position.set(bx + 0.2, y + 0.1, d / 2 + 0.22); g.add(pot); }
   }
-  // Rooftop: water tank, cooler «کولر آبی», satellite dish.
-  const roofY = h;
-  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.4, 12), std(0xd9dde2, { metalness: 0.5, roughness: 0.4 })); tank.rotation.z = Math.PI / 2; tank.position.set(-w * 0.25, roofY + 0.2, 0); g.add(tank);
-  const cooler = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), std(0xb7bdc4, { metalness: 0.3 })); cooler.position.set(w * 0.2, roofY + 0.15, 0.2); g.add(cooler);
-  if (rnd() < 0.6) { const dish = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 6, 0, Math.PI * 2, 0, 0.9), std(0xeeeeee)); dish.rotation.x = -1.0; dish.position.set(w * 0.3, roofY + 0.25, -0.3); g.add(dish); }
-  g.traverse((m) => { (m as THREE.Mesh).castShadow = true; });
+  // Rooftop clutter.
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.42, 12), std(0xe3e6ea, { metalness: 0.5, roughness: 0.35 })); tank.rotation.z = Math.PI / 2; tank.position.set(-w * 0.25, h + 0.2, -0.2); g.add(tank);
+  const cooler = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.32, 0.36), std(0xbfc5cc, { metalness: 0.3 })); cooler.position.set(w * 0.2, h + 0.16, 0.25); g.add(cooler);
+  const duct = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.7), std(0xc9ced4, { metalness: 0.4 })); duct.position.set(w * 0.2, h + 0.08, 0.7); g.add(duct);
+  for (let k = 0; k < 1 + Math.floor(rnd() * 3); k++) {
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 5, 0, Math.PI * 2, 0, 0.9), std(0xf1f1ee)); dish.rotation.x = -1.0; dish.position.set((rnd() - 0.5) * w * 0.7, h + 0.24, -0.5 + rnd() * 0.4); g.add(dish);
+  }
+  if (rnd() < 0.4) { // a penthouse setback
+    const ph = new THREE.Mesh(new THREE.BoxGeometry(w * 0.45, 0.5, d * 0.5), [cement, cement, roof, cement, std(0xe9e2d3), cement]); ph.position.set(-w * 0.15, h + 0.25, -d * 0.2); g.add(ph);
+  }
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
+/** Tehran's green street lamp. */
+function streetLamp(): THREE.Group {
+  const g = new THREE.Group();
+  const m = std(0x2f5d4a, { metalness: 0.5, roughness: 0.45 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 2.6, 8), m); pole.position.y = 1.3; g.add(pole);
+  const arm = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 12, Math.PI / 2), m); arm.position.set(0.3, 2.6, 0); arm.rotation.z = Math.PI / 2; g.add(arm);
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.12, 10), m); head.position.set(0.6, 2.86, 0); g.add(head);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), std(0xfff4d0, { emissive: 0xffe8a8, emissiveIntensity: 0.4 })); bulb.position.set(0.6, 2.79, 0); g.add(bulb);
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
+/** A Honda 125 «موتور هوندا», the courier's workhorse. */
+function motorbike(color: number): THREE.Group {
+  const g = new THREE.Group();
+  const tire = std(0x1a1b1d), body = std(color, { roughness: 0.35, metalness: 0.2 }), chrome = std(0xdfe3e8, { metalness: 0.9, roughness: 0.2 });
+  for (const x of [-0.42, 0.42]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 6, 14), tire); w.position.set(x, 0.2, 0); g.add(w); }
+  const tank = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.18, 0.2, 2, 0.06), body); tank.position.set(0.05, 0.52, 0); g.add(tank);
+  const seat = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.08, 0.2, 2, 0.04), std(0x111111)); seat.position.set(-0.28, 0.58, 0); g.add(seat);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.06), chrome); frame.position.set(0, 0.34, 0); frame.rotation.z = -0.15; g.add(frame);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), chrome); bar.rotation.x = Math.PI / 2; bar.position.set(0.36, 0.72, 0); g.add(bar);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), std(0xfff6dc, { emissive: 0xfff0c0, emissiveIntensity: 0.3 })); lamp.position.set(0.46, 0.62, 0); g.add(lamp);
+  const box = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.26, 0.3, 2, 0.03), std(0xf59e0b, { roughness: 0.5 })); box.position.set(-0.5, 0.74, 0); g.add(box); // delivery box
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
+/** Traffic light on a pole. */
+function trafficLight(): THREE.Group {
+  const g = new THREE.Group();
+  const m = std(0x2b2f36, { metalness: 0.5, roughness: 0.4 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.0, 8), m); pole.position.y = 1.0; g.add(pole);
+  const box = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.6, 0.18, 2, 0.04), m); box.position.y = 2.2; g.add(box);
+  [[0xff3b30, 0.18, 0.15], [0xffcc00, 0, 0.05], [0x22c55e, -0.18, 0.9]].forEach(([c, y, e]) => {
+    const l = new THREE.Mesh(new THREE.CircleGeometry(0.065, 12), std(c, { emissive: c, emissiveIntensity: e })); l.position.set(0, 2.2 + y, 0.095); g.add(l);
+  });
+  g.traverse((m) => { m.castShadow = true; });
   return g;
 }
 
@@ -220,12 +340,12 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
 
   // The lot: a raised slab with a curb and painted bays.
   const curbMat = std(0xd4d8dd, { roughness: 0.7 });
-  add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.06, lotCZ, 0.04));
+  add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.077, lotCZ, 0.04)).castShadow = false;
   const lotTex = asphaltTex(); lotTex.repeat.set(L.lotW / 3, L.lotH / 3);
-  add(plane(L.lotW, L.lotH, std(0xffffff, { map: lotTex, color: 0xb9bec8 }), cx, LOT_Y + 0.001, lotCZ));
+  add(plane(L.lotW, L.lotH, std(0xffffff, { map: lotTex, color: 0xb9bec8 }), cx, LOT_Y, lotCZ));
   const gridMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16 });
-  for (let i = 1; i < w; i++) add(plane(0.035, L.lotH - 0.1, gridMat, L.lotX0 + i * CELL, LOT_Y + 0.004, lotCZ));
-  for (let i = 1; i < h; i++) add(plane(L.lotW - 0.1, 0.035, gridMat, cx, LOT_Y + 0.004, i * CELL));
+  for (let i = 1; i < w; i++) add(plane(0.035, L.lotH - 0.1, gridMat, L.lotX0 + i * CELL, LOT_Y + 0.008, lotCZ));
+  for (let i = 1; i < h; i++) add(plane(L.lotW - 0.1, 0.035, gridMat, cx, LOT_Y + 0.008, i * CELL));
 
   // Pickup bays: a darker strip with white separators and numbered pavement.
   const bayStrip = asphaltTex(); bayStrip.repeat.set(6, 1);
@@ -266,10 +386,13 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
     if (Math.abs(x - shelter.position.x) < 1.8 || Math.abs(x - kiosk.position.x) < 1.3) continue;
     const t = chenar(0.85 + rnd() * 0.3); t.position.set(x, 0.18, L.walkZ - 0.85 + rnd() * 0.2); add(t);
   }
-  const tones = ['#e6dccb', '#d9cbb3', '#cfd3d8', '#efe2c8', '#c9b9a0', '#e2d2bd'];
+  const tones = ['#e6dccb', '#d9cbb3', '#efe2c8', '#e2d2bd', '#d8d0c4'];
+  const bricks = ['#a8613f', '#b5714d', '#9c5638', '#c07f5a'];
+  const facadeOf = (i: number): [string, Style] => (rnd() < 0.4 ? [bricks[i % bricks.length], 'brick'] : [tones[i % tones.length], 'stone']);
   for (let x = -18, i = 0; x < 18; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
-    const b = apartment(bw, floors, tones[i % tones.length], rnd);
+    const [tone, style] = facadeOf(i);
+    const b = apartment(bw, floors, tone, style, rnd);
     b.position.set(x + bw / 2, 0, L.walkZ - 3.2 - rnd() * 0.6);
     add(b);
     x += bw + 0.15;
@@ -277,7 +400,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
   // Second row and the skyline.
   for (let x = -24, i = 0; x < 24; i++) {
     const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
-    const b = apartment(bw, floors, tones[(i + 3) % tones.length], rnd);
+    const [tone, style] = facadeOf(i + 3);
+    const b = apartment(bw, floors, tone, style, rnd);
     b.position.set(x + bw / 2, 0, L.walkZ - 7.5 - rnd() * 2); add(b);
     x += bw + 0.4;
   }
@@ -288,6 +412,16 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1): World 
     const m = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 7), mtn); m.position.set(x, hh / 2, L.walkZ - 52); g.add(m);
     const sn = new THREE.Mesh(new THREE.ConeGeometry(r * 0.34, hh * 0.34, 7), snow); sn.position.set(x, hh - hh * 0.17 + 0.05, L.walkZ - 52); g.add(sn);
   }
+  // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
+  for (let x = -15; x <= 15; x += 4.2) {
+    if (Math.abs(x - shelter.position.x) < 1.6) continue;
+    const l = streetLamp(); l.position.set(x + 1.3, 0.18, L.walkZ - 0.75); l.rotation.y = -Math.PI / 2; add(l);
+  }
+  [[0xb91c1c, 0], [0x1d4ed8, 0.55], [0x111827, 1.1]].forEach(([c, dx]) => {
+    const m = motorbike(c); m.position.set(kiosk.position.x - 1.3 - dx, 0.18, L.walkZ + 0.15); m.rotation.y = Math.PI / 2 + 0.25; add(m);
+  });
+  const tl = trafficLight(); tl.position.set(L.bayX[0] + 3.0, 0.18, L.walkZ + 0.85); add(tl);
+
   // Trees on the grass around the lot.
   for (let i = 0; i < 18; i++) {
     const side = i % 2 ? 1 : -1, z = rnd() * (L.lotH + 6) - 1;
