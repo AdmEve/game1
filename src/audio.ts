@@ -8,8 +8,10 @@ let ctx: AudioContext | null = null;
 let master: GainNode;
 let noiseBuf: AudioBuffer;
 
-function ac(): AudioContext | null {
-  if (!save.settings.sound) return null;
+let out: AudioNode;
+
+/** The shared audio context and output (also used by the music), created on first use. */
+export function audioOut(): { c: AudioContext; out: AudioNode } | null {
   if (!ctx) {
     try {
       ctx = new AudioContext();
@@ -18,13 +20,19 @@ function ac(): AudioContext | null {
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       master.connect(comp).connect(ctx.destination);
+      out = comp;
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     } catch { return null; }
   }
   if (ctx.state === 'suspended') void ctx.resume();
-  return ctx;
+  return { c: ctx, out };
+}
+
+function ac(): AudioContext | null {
+  if (!save.settings.sound) return null;
+  return audioOut()?.c ?? null;
 }
 
 function env(c: AudioContext, t: number, a: number, peak: number, d: number) {
@@ -124,18 +132,25 @@ export function craneSound() {
   noise(c, t + 1.0, 0.1).connect(bp).connect(env(c, t + 1.0, 0.002, 0.2, 0.1)).connect(master);
 }
 
-/** A plucked string (Karplus–Strong), close to a santur. */
-function pluck(f: number, delay: number, vol = 0.2) {
-  const c = ac(); if (!c) return;
-  const sr = c.sampleRate, len = Math.floor(sr * 1.4), buf = c.createBuffer(1, len, sr), d = buf.getChannelData(0);
+/** A plucked string (Karplus–Strong), close to a santur. Buffers are cached per pitch. */
+const plucks = new Map<string, AudioBuffer>();
+export function pluckBuffer(c: AudioContext, f: number, decay = 0.4985, dur = 1.4): AudioBuffer {
+  const key = `${Math.round(f * 10)}:${decay}:${dur}`;
+  const hit = plucks.get(key); if (hit) return hit;
+  const sr = c.sampleRate, len = Math.floor(sr * dur), buf = c.createBuffer(1, len, sr), d = buf.getChannelData(0);
   const p = Math.max(2, Math.round(sr / f)), ring = new Float32Array(p);
   for (let i = 0; i < p; i++) ring[i] = Math.random() * 2 - 1;
   for (let i = 0, k = 0; i < len; i++, k = (k + 1) % p) {
     const nx = (k + 1) % p;
     d[i] = ring[k];
-    ring[k] = 0.4985 * (ring[k] + ring[nx]);
+    ring[k] = decay * (ring[k] + ring[nx]);
   }
-  const s = c.createBufferSource(); s.buffer = buf;
+  plucks.set(key, buf);
+  return buf;
+}
+function pluck(f: number, delay: number, vol = 0.2) {
+  const c = ac(); if (!c) return;
+  const s = c.createBufferSource(); s.buffer = pluckBuffer(c, f);
   const g = c.createGain(); g.gain.value = vol;
   s.connect(g).connect(master);
   s.start(c.currentTime + delay);

@@ -16,6 +16,7 @@ import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui
 import { emo } from './ui/emoji';
 import { persist, save } from './save';
 import { coin } from './audio';
+import { setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
 const levels = LEVELS as Level[];
@@ -263,10 +264,13 @@ function showSettings() {
   const row = (label: string, key: keyof typeof save.settings) => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
-    t.onchange = () => { save.settings[key] = t.checked; persist(); };
+    t.onchange = () => {
+      save.settings[key] = t.checked; persist();
+      if (key === 'music') { if (t.checked) startMusic(); else stopMusic(); }
+    };
     r.append(t); c.append(r);
   };
-  row('صدا', 'sound'); row('لرزش', 'haptics');
+  row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics');
   const close = modal(c, 'pop');
   c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(); }));
   c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; }));
@@ -293,11 +297,18 @@ async function boot() {
   startLevel();
   if (!debug.has('play')) showHome();
   window.addEventListener('resize', fitCamera);
+  // Browsers only allow audio after a gesture: start the music on the first touch.
+  window.addEventListener('pointerdown', () => startMusic(), { once: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
   let last = performance.now();
   const loop = (t: number) => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     tick(dt);
     session?.idle(t / 1000);
+    if (session) {
+      const bays = session.s.bays, used = bays.filter(Boolean).length;
+      setTension(session.s.over ? 0 : Math.max(0, (used - 2) / Math.max(1, bays.length - 2)));
+    }
     applyShake(dt);
     updateHand();
     renderer.render(scene, camera);
