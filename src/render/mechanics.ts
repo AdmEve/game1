@@ -135,6 +135,16 @@ export function vipMarker(): THREE.Group {
   return g;
 }
 
+/** A small pill over a passenger who takes more than one seat. */
+export function seatsBadge(n: number): THREE.Sprite {
+  return badge((c) => {
+    c.fillStyle = '#7c2d12'; c.beginPath(); c.roundRect(8, 26, 240, 96, 44); c.fill();
+    c.strokeStyle = '#fde68a'; c.lineWidth = 6; c.stroke();
+    c.fillStyle = '#fde68a'; c.font = '900 52px Vazirmatn'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+    c.fillText(`${fa(n)} صندلی`, 128, 78);
+  }, 0.72, 0.42);
+}
+
 const mstd = (color: number, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...o });
 
 /** A Honda 125 «موتور هوندا», the courier's workhorse. */

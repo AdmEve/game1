@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
     const res = await p.evaluate(async (n) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
-      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true };
+      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true };
       if (n.startsWith('y')) {
         const night = Number(n.slice(1)) - 1;
         const { yaldaLevel } = await import('/src/game/events.ts');

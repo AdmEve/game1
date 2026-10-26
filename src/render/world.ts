@@ -89,7 +89,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -418,6 +418,78 @@ function darbandSlope(z: number, rnd: () => number, night: boolean): THREE.Group
   return g;
 }
 
+/** A blossoming tree for spring: pink or white puffs on a dark trunk. */
+function blossom(s: number, white = false): THREE.Group {
+  const t = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.13, 1.3, 7), std(0x5b4636, { roughness: 0.9 })); trunk.position.y = 0.65; t.add(trunk);
+  const a = std(white ? 0xfdf2f8 : 0xf9a8d4, { roughness: 0.75, flatShading: true }), b = std(white ? 0xffffff : 0xfbcfe8, { roughness: 0.75, flatShading: true });
+  for (const [x, y, z, r, k] of [[0, 1.6, 0, 0.7, 0], [0.45, 1.4, 0.15, 0.5, 1], [-0.42, 1.45, -0.1, 0.52, 1], [0.05, 1.95, 0.05, 0.48, 0]]) {
+    const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), k ? b : a); p.position.set(x, y, z); t.add(p);
+  }
+  t.traverse((m) => { m.castShadow = true; });
+  t.scale.setScalar(s);
+  return t;
+}
+
+/**
+ * «پل طبیعت»: Tehran's Tabiat Bridge, a curving two-deck steel and timber walkway on branching
+ * tree-like columns, spanning the Modares highway between two parks.
+ */
+function tabiatBridge(z0: number, rnd: () => number): THREE.Group {
+  const g = new THREE.Group();
+  const steel = std(0xdfe3e8, { metalness: 0.55, roughness: 0.35 }), timber = std(0xb08a5a, { roughness: 0.7 }), dark = std(0x8b949e, { metalness: 0.5, roughness: 0.4 });
+  const N = 40, span = 40;
+  const path = (u: number, level: number) => new THREE.Vector3(-span / 2 + u * span, level, z0 + Math.sin(u * Math.PI * 1.6 + 0.4) * 2.2);
+  for (const [level, from, to, wdt] of [[5.2, 0, 1, 2.4], [3.2, 0.18, 0.82, 2.0]] as const) {
+    for (let k = 0; k < N; k++) {
+      const u0 = k / N, u1 = (k + 1) / N;
+      if (u1 < from || u0 > to) continue;
+      const a = path(u0, level), b = path(u1, level), mid = a.clone().add(b).multiplyScalar(0.5), len = a.distanceTo(b);
+      const yaw = Math.atan2(-(b.z - a.z), b.x - a.x);
+      const seg = new THREE.Group(); seg.position.copy(mid); seg.rotation.y = yaw;
+      seg.add(box(len + 0.05, 0.14, wdt, timber, 0, 0, 0));
+      seg.add(box(len + 0.05, 0.3, wdt + 0.2, steel, 0, -0.22, 0));
+      // Truss railings: a top rail and diagonals.
+      for (const sz of [-wdt / 2, wdt / 2]) {
+        seg.add(box(len + 0.05, 0.06, 0.06, steel, 0, 1.0, sz));
+        const d = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.15, 0.05), dark); d.position.set(0, 0.5, sz); d.rotation.z = k % 2 ? 0.6 : -0.6; seg.add(d);
+      }
+      g.add(seg);
+    }
+  }
+  // Canopy on the top deck at the middle, and planters.
+  const c0 = path(0.5, 5.2);
+  const canopy = box(6, 0.12, 3.2, std(0xf1f5f9, { roughness: 0.4 }), c0.x, 7.4, c0.z); g.add(canopy);
+  for (const dx of [-2.6, 2.6]) for (const dz of [-1.3, 1.3]) g.add(box(0.1, 2.2, 0.1, steel, c0.x + dx, 6.3, c0.z + dz));
+  // Branching "tree" columns.
+  for (let k = 1; k < 8; k++) {
+    const u = k / 8, top = path(u, 5.0), base = new THREE.Vector3(top.x, 0, top.z);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 2.2, 10), steel); trunk.position.set(base.x, 1.1, base.z); g.add(trunk);
+    for (let b = 0; b < 4; b++) {
+      const a = (b / 4) * Math.PI * 2 + 0.4, end = new THREE.Vector3(top.x + Math.cos(a) * 1.4, top.y - 0.35, top.z + Math.sin(a) * 1.0), st = new THREE.Vector3(base.x, 2.1, base.z);
+      const dir = end.clone().sub(st), br = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, dir.length(), 8), steel);
+      br.position.copy(st.clone().add(end).multiplyScalar(0.5)); br.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()); g.add(br);
+    }
+  }
+  // Ramps down to the parks at both ends.
+  for (const u of [0, 1]) {
+    const p = path(u, 0), r2 = box(3, 0.2, 2.4, timber, p.x + (u ? 1.4 : -1.4), 2.6, p.z); r2.rotation.z = u ? -0.9 : 0.9; g.add(r2);
+  }
+  // The highway underneath, with traffic.
+  const hw = new THREE.Mesh(new THREE.PlaneGeometry(6, 16), std(0x3d4249, { roughness: 0.95 })); hw.rotation.x = -Math.PI / 2; hw.position.set(2, 0.04, z0 - 5); g.add(hw);
+  const carCols = [0xffffff, 0xd32f2f, 0xf2c230, 0x1565c0, 0x9e9e9e];
+  for (let k = 0; k < 6; k++) { const c = box(0.8, 0.5, 1.7, std(carCols[k % 5], { roughness: 0.4, metalness: 0.3 }), 2 + (k % 2 ? 1.3 : -1.3), 0.3, z0 - 12 + k * 2.6 + rnd(), 0.12); g.add(c); }
+  // The parks: lawns and blossoms.
+  for (let k = 0; k < 22; k++) {
+    const x = -20 + rnd() * 40;
+    if (Math.abs(x - 2) < 4) continue;
+    const t = rnd() < 0.55 ? blossom(0.9 + rnd() * 0.5, rnd() < 0.35) : chenar(0.9 + rnd() * 0.4);
+    t.position.set(x, 0, z0 + (rnd() < 0.5 ? 3.2 : -3.5) - rnd() * 3); g.add(t);
+  }
+  g.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.castShadow = true; mm.receiveShadow = true; } });
+  return g;
+}
+
 /** «شب یلدا» fruit stand: a pyramid of pomegranates, watermelons (one cut open) and a lantern. */
 function yaldaStand(rnd: () => number): THREE.Group {
   const g = new THREE.Group();
@@ -592,9 +664,15 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     add(bazaarRow(L.walkZ - 3.0, rnd));
     for (let k = 0; k < 4; k++) { const st = streetStall(k % 2); st.position.set(-9 + k * 2.6 + (k > 1 ? 6 : 0), 0.18, L.walkZ - 0.9); add(st); }
   }
-  const darband = opts.landmark === 'darband';
+  const darband = opts.landmark === 'darband', tabiat = opts.landmark === 'tabiat';
+  if (tabiat) {
+    // A lawn behind the sidewalk with a row of blossoms, the bridge beyond.
+    const lawn = canvasTex(256, 256, (c) => speckle(c, 256, 256, '#6fae4f', ['#5f9a42', '#84c062', '#4f8a38'], 5000, 2), 1); lawn.repeat.set(10, 3);
+    add(plane(60, 7, std(0xffffff, { map: lawn }), 0, 0.03, L.walkZ - 4.6));
+    add(tabiatBridge(L.walkZ - 6.5, rnd));
+  }
   if (darband) add(darbandSlope(L.walkZ - 1.9, rnd, night));
-  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar' && !darband; i++) {
+  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar' && !darband && !tabiat; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
@@ -607,17 +685,19 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
     const [tone, style] = facadeOf(i + 3);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
-    b.position.set(x + bw / 2, 0, L.walkZ - 7.5 - rnd() * 2); add(b);
+    b.position.set(x + bw / 2, 0, L.walkZ - (tabiat ? 21 : 7.5) - rnd() * 2); add(b);
     x += bw + 0.4;
   }
   const lm = opts.landmark ?? 'both';
   const milad = miladTower();
   if (lm === 'tochal' || lm === 'darband') milad.visible = false;
+  if (lm === 'tabiat') { milad.scale.setScalar(1.1); milad.position.set(-12, 0, L.walkZ - 30); }
   if (lm === 'milad') { milad.scale.setScalar(1.25); milad.position.set(2.5, 0, L.walkZ - 24); } else { milad.scale.setScalar(0.9); milad.position.set(7, 0, L.walkZ - 26); }
   add(milad);
   const azadi = azadiTower();
   if (lm === 'azadi') { azadi.scale.setScalar(2.4); azadi.position.set(0, 0, L.walkZ - 19); azadi.rotation.y = 0; } else { azadi.scale.setScalar(1.1); azadi.position.set(-8, 0, L.walkZ - 22); azadi.rotation.y = 0.35; }
   add(azadi);
+  if (lm === 'tabiat') azadi.visible = false;
   if (lm === 'darband') {
     azadi.visible = false;
     // The valley closes in: steep autumn slopes on both sides, the peaks behind.

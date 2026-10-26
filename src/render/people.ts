@@ -32,7 +32,7 @@ const shirt = (c: Color) => {
   return mats.get(k)!;
 };
 
-export interface Person { root: THREE.Group; body: THREE.Group; color: Color; }
+export interface Person { root: THREE.Group; body: THREE.Group; color: Color; userData?: { vip: boolean; gran: boolean } }
 
 /** i varies look (man / woman with headscarf, skin, hair, a bag). */
 export function person(color: Color, i: number): Person {
@@ -54,6 +54,58 @@ export function person(color: Color, i: number): Person {
   const baked = bake(body);
   root.remove(body);
   const merged = new THREE.Group();
+  merged.add(...baked.children);
+  root.add(merged);
+  root.scale.setScalar(1.12);
+  return { root, body: merged, color };
+}
+
+/** A floral prayer chador «چادر نماز» in a light tint of the ride color, shared per color. */
+const chadors = new Map<Color, THREE.Material>();
+function chadorMat(color: Color) {
+  if (chadors.has(color)) return chadors.get(color)!;
+  const base = new THREE.Color(PAINT[color]).offsetHSL(0, -0.05, 0.12);
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = `#${base.getHexString()}`; g.fillRect(0, 0, 128, 128);
+  for (let k = 0; k < 60; k++) {
+    const x = Math.random() * 128, y = Math.random() * 128;
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    for (let p = 0; p < 5; p++) { g.beginPath(); g.arc(x + Math.cos(p * 1.256) * 2.6, y + Math.sin(p * 1.256) * 2.6, 2, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#fde047'; g.beginPath(); g.arc(x, y, 1.4, 0, Math.PI * 2); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.75, side: THREE.DoubleSide });
+  chadors.set(color, m);
+  return m;
+}
+
+/** «حاج‌خانم با خرید»: a grandma in a floral chador with two full shopping bags (she takes two seats). */
+export function granny(color: Color, i: number): Person {
+  const root = new THREE.Group(), body = new THREE.Group();
+  const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; body.add(o); return o; };
+  const ch = chadorMat(color);
+  // The chador falls from the head to the ground; she leans forward a little.
+  add(new THREE.CylinderGeometry(0.16, 0.3, 0.86, 16), ch, 0, 0.43);
+  // The hood is open at the front (+z) so her face shows.
+  const hood = new THREE.SphereGeometry(0.17, 16, 12, Math.PI * 0.85, Math.PI * 1.3, 0, Math.PI * 0.7);
+  add(hood, ch, 0, 0.9, -0.02);
+  add(geo.head, mat(SKIN[(i + 1) % SKIN.length], { roughness: 0.55 }), 0, 0.89, 0.02).scale.setScalar(0.88);
+  add(new THREE.SphereGeometry(0.055, 8, 6), mat(0xe5e7eb, { roughness: 0.8 }), 0, 0.99, 0.08).scale.set(1.6, 0.5, 0.6); // white hair at the hood's edge
+  // Two string bags «زنبیل»: herbs and a long «سنگک» bread on one side, oranges on the other.
+  const bag = mat(0x2f6b3a, { roughness: 0.8 }), bag2 = mat(0x8b5a2b, { roughness: 0.8 });
+  add(new THREE.CylinderGeometry(0.1, 0.085, 0.2, 10), bag, -0.3, 0.3);
+  add(new THREE.IcosahedronGeometry(0.08, 0), mat(0x4caf50, { roughness: 0.7 }), -0.3, 0.45);
+  add(new RoundedBoxGeometry(0.05, 0.36, 0.14, 2, 0.02), mat(0xc8935a, { roughness: 0.8 }), -0.36, 0.5).rotation.z = 0.25;
+  add(new THREE.CylinderGeometry(0.1, 0.085, 0.2, 10), bag2, 0.3, 0.3);
+  for (let k = 0; k < 3; k++) add(new THREE.SphereGeometry(0.05, 8, 6), mat(0xf59e0b, { roughness: 0.5 }), 0.27 + (k % 2) * 0.06, 0.43 + (k === 2 ? 0.05 : 0), (k - 1) * 0.04);
+  for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.07, 0.01, 4, 10, Math.PI), mat(0x3f3f46), s * 0.3, 0.42).rotation.y = Math.PI / 2;
+  body.rotation.x = 0.06;
+  root.add(body);
+  const baked = bake(body);
+  root.remove(body);
+  const merged = new THREE.Group();
+  merged.rotation.x = 0.06;
   merged.add(...baked.children);
   root.add(merged);
   root.scale.setScalar(1.12);

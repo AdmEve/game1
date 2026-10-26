@@ -145,6 +145,32 @@ for (let i = 0; i < 30; i++) {
   SPECS.push(spec);
 }
 
+// Chapter 7 (Tabiat Bridge, spring): grandmas with shopping «حاج‌خانم» from level 182.
+for (let i = 0; i < 30; i++) {
+  const n = 181 + i, inCh = i;
+  const hard = n % 5 === 0, boss = n === 210;
+  const r = rng(n * 192161);
+  const spec: Spec = {
+    w: 7, h: inCh < 8 ? 8 : inCh < 20 ? 9 : 10, fill: 0.85 + (inCh / 29) * 0.06 + (hard ? 0.02 : 0),
+    colors: 6, mix: Math.round(9 + inCh / 4 + (hard ? 4 : 0)),
+    target: boss ? 0.15 : hard ? 0.3 : Math.max(0.42, 0.75 - 0.25 * (inCh / 29)),
+    zamyad: 0.14, bus: 0.08, cones: Math.floor(r() * 2),
+  };
+  if (r() < 0.3) spec.cover = 0.2 + r() * 0.15;
+  if (r() < 0.25) spec.broken = 1;
+  if (r() < 0.2) spec.vip = 1;
+  if (r() < 0.25) spec.bikes = 1;
+  if (r() < 0.3) spec.wedding = 1;
+  const rule = r();
+  if (rule < 0.15) spec.oddEven = 3; else if (rule < 0.3) spec.officer = true; else if (rule < 0.45) spec.carts = 1;
+  if (n === 182) Object.assign(spec, { granny: 2, intro: 'granny', oddEven: undefined, officer: undefined, carts: undefined, vip: undefined, cover: undefined, broken: undefined, wedding: undefined, bikes: undefined });
+  else if (n > 182 && r() < 0.75) spec.granny = 2 + Math.floor(r() * 3);
+  if (boss) Object.assign(spec, { cover: 0.3, broken: 1, vip: 1, wedding: 1, granny: 4, bikes: 1 });
+  if (hard) spec.tag = 'hard';
+  if (boss) spec.tag = 'boss';
+  SPECS.push(spec);
+}
+
 // `--from N` keeps the first N levels as they are and only generates the rest.
 const fromArg = process.argv.indexOf('--from');
 const keepN = fromArg > 0 ? Number(process.argv[fromArg + 1]) : 0;

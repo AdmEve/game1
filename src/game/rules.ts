@@ -49,12 +49,14 @@ export interface Level {
   tag?: string;
   /** «دربست!» passengers (queue indices): they ride alone in an empty car, which leaves at once. */
   vip?: number[];
+  /** «حاج‌خانم با خرید» (queue indices): a grandma with shopping who takes two seats, so she needs two free in one car. */
+  granny?: number[];
   /** «طرح زوج و فرد»: only even plates may leave, then odd, switching after this many exits. */
   oddEven?: number;
   /** «پلیس راهور»: an officer lets only vertical or only horizontal cars go, switching after each exit. */
   officer?: boolean;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart' | 'wedding';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart' | 'wedding' | 'granny';
 }
 
 export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
@@ -67,6 +69,7 @@ export interface State {
   /** The passenger queue (a copy: boosters may reorder it) and which of them are «دربست». */
   queue: Color[];
   vip: boolean[];
+  granny: boolean[];
   /** Vehicles that have left the lot so far. */
   exits: number;
   /** Covered vehicles whose color has been revealed. */
@@ -123,8 +126,10 @@ export function frontCell(v: VehicleDef): [number, number] {
 export function newState(level: Level): State {
   const vip = level.queue.map(() => false);
   for (const i of level.vip ?? []) vip[i] = true;
+  const granny = level.queue.map(() => false);
+  for (const i of level.granny ?? []) granny[i] = true;
   return {
-    level, inLot: level.vehicles.map(() => true), bays: Array(level.bays ?? 5).fill(null), queue: [...level.queue], vip, q: 0, over: false,
+    level, inLot: level.vehicles.map(() => true), bays: Array(level.bays ?? 5).fill(null), queue: [...level.queue], vip, granny, q: 0, over: false,
     exits: 0, late: level.vehicles.map(() => false), revealed: level.vehicles.map((v) => !v.covered), parity: 0, sinceSwitch: 0, axis: 'v', sinceSwitchAxis: 0,
     carts: (level.obstacles ?? []).filter((o) => o.kind === 'cart').map((o) => ({ col: o.col, row: o.row, dir: o.dir ?? 'right' })),
   };
@@ -171,7 +176,7 @@ export function startState(level: Level): State {
 }
 
 export function cloneState(s: State): State {
-  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, q: s.q, over: s.over, exits: s.exits, late: s.late, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis, carts: s.carts.map((c) => ({ ...c })) };
+  return { level: s.level, inLot: [...s.inLot], bays: s.bays.map((b) => (b ? { ...b } : null)), queue: s.queue, vip: s.vip, granny: s.granny, q: s.q, over: s.over, exits: s.exits, late: s.late, revealed: [...s.revealed], parity: s.parity, sinceSwitch: s.sinceSwitch, axis: s.axis, sinceSwitchAxis: s.sinceSwitchAxis, carts: s.carts.map((c) => ({ ...c })) };
 }
 
 /** «طرح زوج و فرد»: which plate parity may leave now (0 = even, 1 = odd), or null if the rule is off. */
@@ -242,19 +247,19 @@ function settle(s: State, ev: Event[]) {
   const { queue } = s;
   for (;;) {
     if (s.q >= queue.length) break;
-    const color = queue[s.q], vip = s.vip[s.q];
+    const color = queue[s.q], vip = s.vip[s.q], seats = s.granny[s.q] ? 2 : 1;
     // A «دربست» passenger needs an empty car of their color; others take the fullest matching car.
     let best = -1;
     s.bays.forEach((b, k) => {
-      if (!b || b.wild || b.color !== color || b.boarded >= b.cap) return;
+      if (!b || b.wild || b.color !== color || b.cap - b.boarded < seats) return;
       if (vip && b.boarded > 0) return;
       if (best < 0 || b.boarded > s.bays[best]!.boarded) best = k;
     });
     // Nobody's car is here: a waiting courier bike takes them (a VIP insists on a whole car).
-    if (best < 0 && !vip) best = s.bays.findIndex((b) => !!b && !!b.wild && b.boarded < b.cap);
+    if (best < 0 && !vip) best = s.bays.findIndex((b) => !!b && !!b.wild && b.cap - b.boarded >= seats);
     if (best < 0) break;
     const b = s.bays[best]!;
-    b.boarded++;
+    b.boarded += seats;
     ev.push({ t: 'board', bay: best, v: b.v, color, passenger: s.q });
     s.q++;
     if (b.boarded === b.cap || vip) { ev.push({ t: 'depart', bay: best, v: b.v }); s.bays[best] = null; }
@@ -313,7 +318,7 @@ export function addBay(s: State) {
  */
 export function whistle(s: State, span = 12): Event[] {
   if (s.over) return [];
-  const head = s.queue.slice(s.q, s.q + span), headVip = s.vip.slice(s.q, s.q + span);
+  const head = s.queue.slice(s.q, s.q + span), headVip = s.vip.slice(s.q, s.q + span), headGran = s.granny.slice(s.q, s.q + span);
   const rank = (c: Color) => {
     let best = -1;
     for (const b of s.bays) if (b && b.color === c) best = Math.max(best, b.boarded);
@@ -323,6 +328,7 @@ export function whistle(s: State, span = 12): Event[] {
   const order = head.map((c, i) => ({ c, i, r: headVip[i] ? -1 : rank(c) })).sort((a, b) => (b.r >= 0 ? 1 : 0) - (a.r >= 0 ? 1 : 0) || b.r - a.r || a.i - b.i);
   s.queue = [...s.queue.slice(0, s.q), ...order.map((x) => x.c), ...s.queue.slice(s.q + span)];
   s.vip = [...s.vip.slice(0, s.q), ...order.map((x) => headVip[x.i]), ...s.vip.slice(s.q + span)];
+  s.granny = [...s.granny.slice(0, s.q), ...order.map((x) => headGran[x.i]), ...s.granny.slice(s.q + span)];
   const ev: Event[] = [];
   settle(s, ev);
   return ev;
@@ -341,12 +347,12 @@ export function validate(level: Level): string[] {
     }
   });
   for (const o of level.obstacles ?? []) if (seen.has(o.row * level.w + o.col)) errs.push(`obstacle overlaps at ${o.col},${o.row}`);
-  const vips = new Set(level.vip ?? []);
+  const vips = new Set(level.vip ?? []), grans = new Set(level.granny ?? []);
   const bikes = level.vehicles.filter((v) => v.kind === 'bike').length;
   if (bikes) {
     // Couriers take anyone, so only the totals must agree (the solver checks the rest).
     const seats = level.vehicles.reduce((a, v) => a + KIND[v.kind].cap, 0);
-    if (!vips.size && seats !== level.queue.length) errs.push(`${seats} seats vs ${level.queue.length} passengers`);
+    if (!vips.size && seats !== level.queue.length + grans.size) errs.push(`${seats} seats vs ${level.queue.length} passengers`);
     return errs;
   }
   const colors = new Set<Color>([...level.vehicles.map((v) => v.color), ...level.queue]);
@@ -354,7 +360,7 @@ export function validate(level: Level): string[] {
     const caps = level.vehicles.filter((v) => v.color === c).map((v) => KIND[v.kind].cap);
     const seats = caps.reduce((a, x) => a + x, 0);
     let regular = 0, vip = 0;
-    level.queue.forEach((q, i) => { if (q === c) { if (vips.has(i)) vip++; else regular++; } });
+    level.queue.forEach((q, i) => { if (q === c) { if (vips.has(i)) vip++; else regular += grans.has(i) ? 2 : 1; } });
     // Each «دربست» passenger empties one whole car: some `vip` of this color's cars must hold exactly the rest.
     const spare = seats - regular;
     const pick = (from: number, n: number, sum: number): boolean => n === 0 ? sum === 0 : from < caps.length && (pick(from + 1, n - 1, sum - caps[from]) || pick(from + 1, n, sum));

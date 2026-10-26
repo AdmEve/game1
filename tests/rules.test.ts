@@ -161,6 +161,30 @@ describe('wedding car', () => {
   });
 });
 
+describe('granny', () => {
+  it('«حاج‌خانم» takes two seats and waits for a car with two free', () => {
+    const l: Level = {
+      w: 2, h: 2,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 0, dir: 'up' },
+        { kind: 'pride', color: 'red', col: 1, row: 0, dir: 'up' },
+      ],
+      // 1 + 1 + 1, then a grandma (2) who can't fit in the last seat, then 1 + 1 + 1.
+      queue: ['red', 'red', 'red', 'red', 'red', 'red', 'red'],
+      granny: [3],
+    };
+    expect(validate(l)).toEqual([]);
+    const s = newState(l);
+    tap(s, 0);
+    expect(s.q).toBe(3);
+    expect(s.bays[0]!.boarded).toBe(3);
+    const ev = tap(s, 1);
+    // She rides the second car; the next passenger fills the first.
+    expect(ev.filter((e) => e.t === 'board').map((e) => (e as { bay: number }).bay)).toEqual([1, 0, 1, 1]);
+    expect(s.over).toBe('won');
+  });
+});
+
 describe('officer', () => {
   it('«پلیس راهور» lets one direction go at a time', () => {
     const l: Level = {
@@ -203,7 +227,7 @@ describe('courier', () => {
 });
 
 describe('journey levels', () => {
-  it('has 180 levels', () => expect(levels.length).toBe(180));
+  it('has 210 levels', () => expect(levels.length).toBe(210));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

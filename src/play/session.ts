@@ -7,9 +7,9 @@ import * as sfx from '../audio';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
+import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
-import { person, type Person } from '../render/people';
+import { granny, person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
@@ -255,12 +255,21 @@ export class Session {
   private slot(k: number) {
     return new THREE.Vector3(this.L.queueX0 - k * 0.56, 0.18, this.L.walkZ + 0.3 + (k % 2 ? 0.07 : -0.05));
   }
+  /** Passenger `idx` of the queue, with the markers they need («دربست», two seats, colour symbol). */
+  private passenger(idx: number) {
+    const gran = this.s.granny[idx];
+    const p = gran ? granny(this.s.queue[idx], idx) : person(this.s.queue[idx], idx);
+    if (this.s.vip[idx]) { const m = vipMarker(); m.scale.setScalar(1 / 1.12); p.root.add(m); }
+    if (gran) { const m = seatsBadge(2); m.position.y = 1.32; m.scale.multiplyScalar(1 / 1.12); p.root.add(m); }
+    if (this.colorblind) { const sym = colorSymbol(this.s.queue[idx], 0.3); sym.position.y = this.s.vip[idx] || gran ? 1.75 : 1.32; p.root.add(sym); }
+    p.userData = { vip: this.s.vip[idx], gran };
+    return p;
+  }
+
   private spawn(k: number, animate: boolean) {
     const idx = this.vq + k;
     if (idx >= this.s.queue.length) return;
-    const p = person(this.s.queue[idx], idx);
-    if (this.s.vip[idx]) { const m = vipMarker(); m.scale.setScalar(1 / 1.12); p.root.add(m); }
-    if (this.colorblind) { const sym = colorSymbol(this.s.queue[idx], 0.3); sym.position.y = this.s.vip[idx] ? 1.75 : 1.32; p.root.add(sym); }
+    const p = this.passenger(idx);
     p.root.position.copy(this.slot(k));
     p.root.rotation.y = Math.PI / 2 + (((idx * 37) % 10) - 5) * 0.04;
     this.group.add(p.root);
@@ -407,8 +416,8 @@ export class Session {
     // Recolor the visible queue to the new order with a little shuffle hop.
     this.queue.forEach((p, k) => {
       const idx = this.vq + k;
-      if (!p || idx >= this.s.queue.length || p.color === this.s.queue[idx]) return;
-      const np = person(this.s.queue[idx], idx);
+      if (!p || idx >= this.s.queue.length || (p.color === this.s.queue[idx] && p.userData?.gran === this.s.granny[idx] && p.userData?.vip === this.s.vip[idx])) return;
+      const np = this.passenger(idx);
       np.root.position.copy(p.root.position); np.root.rotation.copy(p.root.rotation);
       this.group.remove(p.root); this.group.add(np.root); this.queue[k] = np;
       void tween(0.35, (e) => { np.root.position.y = 0.18 + Math.sin(e * Math.PI) * 0.35; }, ease.linear);
@@ -657,7 +666,7 @@ export class Session {
       this.group.remove(p.root);
       // The rules may already have sent this car off; count seats from the animation instead.
       const st = this.seats.get(bay);
-      const boarded = (st?.sprite.userData.boarded ?? 0) + 1;
+      const boarded = (st?.sprite.userData.boarded ?? 0) + (this.s.granny[idx] ? 2 : 1);
       if (st) st.sprite.userData.boarded = boarded;
       this.drawSeat(bay, boarded, cap, this.level.vehicles[v].color);
       sfx.pop(boarded / cap); haptic('light');

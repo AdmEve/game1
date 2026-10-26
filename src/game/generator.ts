@@ -9,6 +9,8 @@ export interface Spec {
   cover?: number; broken?: number; vip?: number; oddEven?: number; bikes?: number; officer?: boolean; carts?: number;
   /** «ماشین عروس»: how many wedding cars (each with a deadline a little after its place in a natural exit order). */
   wedding?: number;
+  /** «حاج‌خانم با خرید»: how many pairs of passengers become one grandma who takes both seats. */
+  granny?: number;
   intro?: Level['intro'];
 }
 
@@ -112,21 +114,29 @@ export function generate(spec: Spec, seed: number): Level | null {
     if (cands.length) vipCars.add(pick(cands));
   }
   // The queue follows the exit order, then gets mixed: each mix step swaps two passenger groups nearby.
-  const groups: { c: Color[]; vip?: boolean }[] = [];
+  const groups: { c: Color[]; vip?: boolean; granny?: boolean }[] = [];
   for (const i of seq) {
     const v = keep[i], cap = KIND[v.kind].cap;
     if (vipCars.has(i)) { groups.push({ c: [v.color], vip: true }); continue; }
     if (v.kind === 'bike') { groups.push({ c: [pick(palette)] }); continue; }
     for (let k = 0; k < cap; k += 2) groups.push({ c: Array(Math.min(2, cap - k)).fill(v.color) });
   }
+  // Grandmas: some pairs of the same color become one passenger with shopping who needs both seats.
+  for (let k = 0, tries = 0; k < (spec.granny ?? 0) && tries < 40; tries++) {
+    const gi = Math.floor(r() * groups.length), g = groups[gi];
+    if (g.vip || g.granny || g.c.length !== 2) continue;
+    groups[gi] = { c: [g.c[0]], granny: true };
+    k++;
+  }
   for (let m = 0; m < spec.mix * 3; m++) {
     const a = Math.floor(r() * groups.length), b = Math.min(groups.length - 1, a + 1 + Math.floor(r() * 6));
     [groups[a], groups[b]] = [groups[b], groups[a]];
   }
-  const queue: Color[] = [], vip: number[] = [];
-  for (const g of groups) { if (g.vip) vip.push(queue.length); queue.push(...g.c); }
+  const queue: Color[] = [], vip: number[] = [], granny: number[] = [];
+  for (const g of groups) { if (g.vip) vip.push(queue.length); if (g.granny) granny.push(queue.length); queue.push(...g.c); }
   const level: Level = { w, h, vehicles: keep, obstacles: cones.length ? cones : undefined, queue };
   if (vip.length) level.vip = vip;
+  if (granny.length) level.granny = granny;
   if (spec.oddEven) level.oddEven = spec.oddEven;
   if (spec.officer) level.officer = true;
   if (spec.intro) level.intro = spec.intro;

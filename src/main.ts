@@ -71,6 +71,7 @@ const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [numbe
   day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32 },
   sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0 },
   bazaar: { sky: [[0, '#5a8fd0'], [0.5, '#bcd6ee'], [0.85, '#f3e6cf'], [1, '#f6d9a8']], fog: 0xf0e2c8, hemi: [0xfff1d8, 0x7a5a3a, 0.62], sun: [0xffd49a, 2.8, [-14, 16, 9]], exposure: 0.95, env: 0.7, lamps: 0.4 },
+  spring: { sky: [[0, '#3f8fe0'], [0.5, '#9fd3fb'], [0.85, '#e9f5f2'], [1, '#fdf0f5']], fog: 0xe4f1f6, hemi: [0xeaf6ff, 0x5f7a45, 0.75], sun: [0xfff6e6, 2.7, [-10, 20, 12]], exposure: 0.96, env: 0.85, lamps: 0.3 },
   autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8 },
   snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5 },
   night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6 },
@@ -291,8 +292,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
     modalOpen = true;
     const c = h('div', 'newch');
-    const blurb = { night: 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!', sunset: 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!', snow: 'برف اومده! همه دارن می‌رن توچال اسکی. پلیس راهور هم سر چهارراه وایستاده.', bazaar: 'بازار بزرگ تهران! گاری‌های میوه همه‌جا هستن و جای پارک پیدا نمی‌شه.', autumn: 'پاییز دربند! برگ‌های نارنجی، چای و قلیون کنار رودخونه… و ماشین‌های عروس که عجله دارن.', day: '' }[ch.light];
-    c.innerHTML = `<div class="burst">${emo({ night: '🌙', sunset: '🌇', snow: '❄️', bazaar: '🕌', autumn: '🍁', day: '🌄' }[ch.light], 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${blurb}</p>`;
+    const blurb = { night: 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!', sunset: 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!', snow: 'برف اومده! همه دارن می‌رن توچال اسکی. پلیس راهور هم سر چهارراه وایستاده.', bazaar: 'بازار بزرگ تهران! گاری‌های میوه همه‌جا هستن و جای پارک پیدا نمی‌شه.', spring: 'بهار اومده! پل طبیعت پر از شکوفه‌ست و حاج‌خانم‌ها با کیسه‌های خرید عید منتظر ماشینن.', autumn: 'پاییز دربند! برگ‌های نارنجی، چای و قلیون کنار رودخونه… و ماشین‌های عروس که عجله دارن.', day: '' }[ch.light];
+    c.innerHTML = `<div class="burst">${emo({ night: '🌙', sunset: '🌇', snow: '❄️', bazaar: '🕌', autumn: '🍁', spring: '🌸', day: '🌄' }[ch.light], 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${blurb}</p>`;
     const close = modal(c, 'pop');
     c.append(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; }));
   } else if (level.intro && !save.seen[level.intro]) {
