@@ -39,8 +39,10 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 ## Status
 
 ### Done
-- Rules, solver (with locks, reveals, VIP, plate camera), 90 solver-verified levels in 3 chapters
-- Chapters: 1 Tajrish (day), 2 Valiasr (sunset, plane-tree boulevard), 3 Azadi Square (night, lit windows)
+- Rules, solver (with locks, reveals, VIP, plate camera, officer), 120 solver-verified levels in 4 chapters
+- Chapters: 1 Tajrish (day), 2 Valiasr (sunset, plane-tree boulevard), 3 Azadi Square (night, lit windows),
+  4 Tochal in snow (snowy world, falling snow, cable car; «پلیس راهور» traffic officer from level 93)
+- «ساعت شلوغی» daily challenge generated on the phone from the date (`src/game/daily.ts`, `src/game/generator.ts`)
 - Mechanics: «چادر ماشین» covers, «پیکان خراب» wait counter, «دربست» VIP passengers, «طرح زوج و فرد» plates
   with an auto-switching camera (never wedges); Mash Rahim intro cards
 - Real 3D Iranian cars, driving around the ring road into bays, boarding, departure with coins and combos
@@ -58,12 +60,12 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
 
 ### Next
-- Traffic officer mechanic; chapter 4+ (Grand Bazaar, Tochal snow)
+- Chapter 5+ (Grand Bazaar), district league (needs a backend), more garage classics (Jeep Willys, Benz bus)
 - «رادیو راه‌بندون» bulletins, district league (needs a backend), chapter 4+ (Grand Bazaar, Tochal)
 - Real-device performance check (owner), real recorded horns and voice lines
 - Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`
 
 ## Gotchas
 - Never `pkill -f` a pattern that also appears in your own command line: it kills your shell.
-- `scripts/copy-emoji.mjs` wipes `public/emoji`; restart the vite dev server afterwards.
+- `scripts/copy-emoji.mjs` only adds missing emoji SVGs (safe while the dev server runs).
 - In `?shot` mode the render loop is off: call `window.__rb.advance(sec)` to step animations.
