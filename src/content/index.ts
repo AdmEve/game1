@@ -25,5 +25,6 @@ import './events/prison';
 import './events/calendar';
 import './events/everyday';
 import './events/tvshow';
+import './events/middle2';
 
 export { GROUPS } from './actions/core';
