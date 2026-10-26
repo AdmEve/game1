@@ -579,6 +579,24 @@ export class Session {
     });
   }
 
+  /** After a loss: the car (still in the lot) the front passenger was waiting for, if any. */
+  culprit(): number {
+    const want = this.s.queue[this.s.q];
+    let best = -1;
+    this.level.vehicles.forEach((v, i) => { if (this.s.inLot[i] && v.color === want && (best < 0 || i < best)) best = i; });
+    return best;
+  }
+
+  /** A pulsing ring under a vehicle, to point it out. */
+  highlight(i: number) {
+    const o = this.cars[i];
+    if (!o) return;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 40), new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.scale.set(1, o.length / 1.6, 1);
+    o.root.add(ring);
+    void tween(3, (k) => { const p = 1 + 0.15 * Math.sin(k * Math.PI * 8); ring.scale.set(p, (o.length / 1.6) * p, 1); (ring.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k * 0.3); }, ease.linear).then(() => o.root.remove(ring));
+  }
+
   /** Where the camera should look and what it must keep in view. */
   focus() { return this.L.focus; }
 }

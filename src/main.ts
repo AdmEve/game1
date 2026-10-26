@@ -243,6 +243,8 @@ function startLevel() {
   hud.active(null);
   hud.show(true);
   fitCamera();
+  const TIPS = ['روی ماشینی بزن که مسافرهای جلوی صف رنگش رو می‌خوان!', 'فلش روی ماشین جهت حرکتشه. اول ماشین‌های جلویی رو رد کن!', 'جای پارک ایستگاه محدوده؛ ماشینی رو بفرست که مسافرش تو صف نزدیکه.'];
+  if (n < TIPS.length) hud.toast(TIPS[n], 5500);
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
     modalOpen = true;
     const c = h('div', 'newch');
@@ -335,7 +337,12 @@ function showLose() {
   modalOpen = true;
   const c = h('div', 'result lose');
   const price = 300;
-  c.innerHTML = `<div class="burst">${emo('🚧', 'emo huge')}</div><h2>راه‌بندون شد!</h2><p>همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.</p>`;
+  const COLOR_FA: Record<string, string> = { red: 'قرمز', yellow: 'زرد', blue: 'آبی', green: 'سبز', purple: 'بنفش', orange: 'نارنجی', white: 'سفید', pink: 'صورتی' };
+  const want = session ? session.s.queue[session.s.q] : undefined;
+  const culprit = session ? session.culprit() : -1;
+  if (culprit >= 0) session!.highlight(culprit);
+  const why = want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
+  c.innerHTML = `<div class="burst">${emo('🚧', 'emo huge')}</div><h2>راه‌بندون شد!</h2><p>${why}</p>`;
   const close = modal(c, 'pop');
   const canBay = session && session.s.bays.length < 6;
   const resume = () => { close(); modalOpen = false; session!.extraBay(); };

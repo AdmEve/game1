@@ -68,7 +68,7 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 @keyframes pulse { 40% { transform: scale(1.18); } }
 
 .toast { position: absolute; left: 50%; top: calc(120px + var(--sat)); transform: translate(-50%, -12px); opacity: 0; transition: .25s; background: rgba(15,23,42,.86); color: #fff;
-  font-weight: 800; font-size: 15px; padding: 9px 18px; border-radius: 14px; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  font-weight: 800; font-size: 15px; padding: 9px 18px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); width: max-content; max-width: calc(100vw - 40px); text-align: center; line-height: 1.7; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ───── Modals ───── */
