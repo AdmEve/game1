@@ -265,6 +265,7 @@ async function boot() {
   const loop = (t: number) => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     tick(dt);
+    session?.idle(t / 1000);
     updateHand();
     renderer.render(scene, camera);
     requestAnimationFrame(loop);

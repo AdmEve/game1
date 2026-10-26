@@ -418,6 +418,16 @@ export class Session {
     await wait(1.1);
   }
 
+  /** Ambient life each frame: passengers shift their weight and glance around. */
+  idle(t: number) {
+    this.queue.forEach((p, k) => {
+      if (!p) return;
+      const ph = t * 2.2 + (this.vq + k) * 1.7;
+      p.body.position.y = Math.max(0, Math.sin(ph)) * 0.025;
+      p.body.rotation.y = Math.sin(ph * 0.31) * 0.35;
+    });
+  }
+
   /** Where the camera should look and what it must keep in view. */
   focus() { return this.L.focus; }
 }
