@@ -5,9 +5,9 @@
 import * as THREE from 'three';
 import * as sfx from '../audio';
 import { haptic } from '../haptics';
-import { KIND, DELTA, addBay, cellsOf, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
+import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
-import { blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
+import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
@@ -120,7 +120,16 @@ export class Session {
         const pb = plateBadge(v.plate); pb.scale.set(0.74, 0.43, 1); pb.position.set(0, 1.25, o.length * 0.32); o.root.add(pb); this.plates.set(i, pb);
       }
     });
+    (level.obstacles ?? []).forEach((c, k) => {
+      if (c.kind !== 'tunnel') return;
+      // Both mouths of a pair share a color and a letter.
+      const pairNo = (level.obstacles ?? []).slice(0, Math.min(k, c.pair!) + 1).filter((o) => o.kind === 'tunnel').length - 1;
+      const m = tunnelMouth(TUNNEL_COLORS[pairNo % TUNNEL_COLORS.length], `تونل ${'آبپت'[pairNo] ?? ''}`.trim());
+      m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y - 0.1);
+      this.group.add(m);
+    });
     for (const c of level.obstacles ?? []) {
+      if (c.kind === 'tunnel') continue;
       if (c.kind === 'cart') {
         const m = fruitCart(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y);
         m.rotation.y = c.dir === 'up' || c.dir === 'down' ? Math.PI / 2 : 0;
@@ -557,8 +566,8 @@ export class Session {
   }
 
   /** Route from the vehicle's spot to its bay, around the ring road. */
-  private route(i: number, bay: number): THREE.Vector3[] {
-    const v = this.level.vehicles[i], L = this.L, p = this.cars[i].root.position.clone().setY(0);
+  private route(i: number, bay: number, from?: THREE.Vector3): THREE.Vector3[] {
+    const v = this.level.vehicles[i], L = this.L, p = (from ?? this.cars[i].root.position).clone().setY(0);
     const bx = L.bayX[bay], top = L.topRoadZ, V = (x: number, z: number) => new THREE.Vector3(x, 0, z);
     const intoBay = [V(bx, top), V(bx, L.bayZ + 0.05)];
     switch (v.dir) {
@@ -577,9 +586,20 @@ export class Session {
     this.uncover(i);
     const sy = this.symbols.get(i); if (sy) { o.root.remove(sy); this.symbols.delete(i); }
     const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
-    const pts = this.route(i, bay);
     const heavy = v.kind === 'bus' || v.kind === 'zamyad';
     sfx.engine(0, heavy); sfx.chirp(0.05);
+    // «تونل نیایش»: drive into the mouth, drop out of sight, come up out of its twin.
+    for (const [a, b] of lane(this.s, i).hops) {
+      const into = this.L.cell(a[0], a[1]).setY(LOT_Y), out = this.L.cell(b[0], b[1]).setY(LOT_Y);
+      const from = o.root.position.clone();
+      await drive(o.root, o.body, roundedPath([from, into], 0.3), { vmax: 6 });
+      sfx.chirp(0, 0.04);
+      await tween(0.22, (k) => { o.root.position.y = LOT_Y - k * 0.9; o.root.scale.setScalar(1 - k * 0.5); }, ease.in);
+      o.root.position.set(out.x, LOT_Y - 0.9, out.z);
+      await tween(0.26, (k) => { o.root.position.y = LOT_Y - 0.9 * (1 - k); o.root.scale.setScalar(0.5 + k * 0.5); }, ease.out);
+      puff(this.group, out, 0.5);
+    }
+    const pts = this.route(i, bay);
     // Drop off the lot curb onto the road during the first stretch.
     const exitFrac = (() => { const path = roundedPath(pts); const d0 = pts[0].distanceTo(pts[1]); return Math.min(0.5, (d0 * 0.6) / path.getLength()); })();
     const smoke = setInterval(() => puff(this.group, o.root.position, 0.5), 90);

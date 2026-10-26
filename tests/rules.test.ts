@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import LEVELS from '../src/game/levels.json';
-import { addBay, newState, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
+import { addBay, lane, newState, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
 import { solve } from '../src/game/solver';
 
 const levels = LEVELS as Level[];
@@ -185,6 +185,28 @@ describe('granny', () => {
   });
 });
 
+describe('tunnel', () => {
+  it('«تونل نیایش» carries a car to the other mouth, where its lane continues', () => {
+    // A car at the bottom left drives up into a mouth at (0,1) and comes out of (2,2), heading up.
+    const l: Level = {
+      w: 3, h: 4,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 2, dir: 'up' },
+        { kind: 'pride', color: 'blue', col: 2, row: 0, dir: 'up' },
+      ],
+      obstacles: [{ kind: 'tunnel', col: 0, row: 1, pair: 1 }, { kind: 'tunnel', col: 2, row: 2, pair: 0 }],
+      queue: [...Array(4).fill('blue'), ...Array(4).fill('red')],
+    };
+    const s = newState(l);
+    // The blue car sits in the red car's way out of the tunnel.
+    expect(tap(s, 0)[0]).toMatchObject({ t: 'blocked', by: { v: 1 } });
+    expect(lane(s, 0).hops).toEqual([[[0, 1], [2, 2]]]);
+    tap(s, 1);
+    expect(tap(s, 0)[0]).toMatchObject({ t: 'exit', v: 0 });
+    expect(s.over).toBe('won');
+  });
+});
+
 describe('officer', () => {
   it('«پلیس راهور» lets one direction go at a time', () => {
     const l: Level = {
@@ -227,7 +249,7 @@ describe('courier', () => {
 });
 
 describe('journey levels', () => {
-  it('has 210 levels', () => expect(levels.length).toBe(210));
+  it('has 240 levels', () => expect(levels.length).toBe(240));
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

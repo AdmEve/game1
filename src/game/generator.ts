@@ -11,6 +11,8 @@ export interface Spec {
   wedding?: number;
   /** «حاج‌خانم با خرید»: how many pairs of passengers become one grandma who takes both seats. */
   granny?: number;
+  /** «تونل نیایش»: pairs of tunnel mouths. */
+  tunnels?: number;
   intro?: Level['intro'];
 }
 
@@ -22,7 +24,7 @@ export function generate(spec: Spec, seed: number): Level | null {
   const { w, h } = spec;
   const occ = new Set<number>();
   const vehicles: VehicleDef[] = [];
-  const cones: { kind: 'cone' | 'cart'; col: number; row: number; dir?: Dir; every?: number }[] = [];
+  const cones: { kind: 'cone' | 'cart' | 'tunnel'; col: number; row: number; dir?: Dir; every?: number; pair?: number }[] = [];
   const target = spec.fill * w * h;
   let used = 0;
   for (let tries = 0; tries < 4000 && used < target; tries++) {
@@ -41,6 +43,15 @@ export function generate(spec: Spec, seed: number): Level | null {
     const c = Math.floor(r() * w), rr = Math.floor(r() * h);
     if (occ.has(rr * w + c)) continue;
     occ.add(rr * w + c); cones.push({ kind: 'cone', col: c, row: rr }); i++;
+  }
+  // Tunnel mouths come in pairs, in different rows and columns so a hop really goes somewhere.
+  for (let t = 0, tries = 0; t < (spec.tunnels ?? 0) && tries < 300; tries++) {
+    const a = [Math.floor(r() * w), Math.floor(r() * h)], b = [Math.floor(r() * w), Math.floor(r() * h)];
+    if (a[0] === b[0] || a[1] === b[1] || occ.has(a[1] * w + a[0]) || occ.has(b[1] * w + b[0])) continue;
+    occ.add(a[1] * w + a[0]); occ.add(b[1] * w + b[0]);
+    const k = cones.length;
+    cones.push({ kind: 'tunnel', col: a[0], row: a[1], pair: k + 1 }, { kind: 'tunnel', col: b[0], row: b[1], pair: k });
+    t++;
   }
   // Fruit carts take a free cell and roll along a row or column.
   for (let i = 0, tries = 0; i < (spec.carts ?? 0) && tries < 200; tries++) {

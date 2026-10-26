@@ -339,3 +339,37 @@ export function setWeddingBadge(s: THREE.Sprite, left: number) {
   g.fillText(late ? '×' : fa(left), 170, 82);
   tex.needsUpdate = true;
 }
+
+/** Pair colors for tunnel mouths, so you can tell which mouth leads where. */
+export const TUNNEL_COLORS = [0xf59e0b, 0x22d3ee, 0xa855f7, 0x84cc16];
+
+/**
+ * «تونل نیایش» mouth: a tiled portal ramp sinking into darkness, ringed in its pair color, with a
+ * little sign. Cars driving in from any side drop into it and come up out of its twin.
+ */
+export function tunnelMouth(color: number, label: string): THREE.Group {
+  const g = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.6, 0.12, 28, 1, true), mstd(0x9ca3af, { roughness: 0.6 }));
+  rim.position.y = 0.06; g.add(rim);
+  const lip = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.56, 28), mstd(0xb8bec6, { roughness: 0.6, side: THREE.DoubleSide }));
+  lip.rotation.x = -Math.PI / 2; lip.position.y = 0.121; g.add(lip);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 8, 32), mstd(color, { emissive: color, emissiveIntensity: 0.9, roughness: 0.4 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.125; g.add(ring);
+  // The dark throat, with a hint of tunnel lights going down.
+  const throat = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.3, 0.5, 24, 1, true), mstd(0x0b0f17, { side: THREE.BackSide, roughness: 1 }));
+  throat.position.y = -0.12; g.add(throat);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24), new THREE.MeshBasicMaterial({ color: 0x05070c }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = 0.118; g.add(floor);
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2, l = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 4), mstd(0xffd27a, { emissive: 0xffb347, emissiveIntensity: 3 }));
+    l.position.set(Math.cos(a) * 0.34, 0.1, Math.sin(a) * 0.34); g.add(l);
+  }
+  const sign = badge((c) => {
+    c.fillStyle = '#1e3a8a'; c.beginPath(); c.roundRect(10, 30, 236, 88, 16); c.fill();
+    c.strokeStyle = `#${color.toString(16).padStart(6, '0')}`; c.lineWidth = 10; c.stroke();
+    c.fillStyle = '#fff'; c.font = '900 50px Vazirmatn'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl'; c.fillText(label, 128, 76);
+  }, 0.62, 0.36);
+  sign.position.y = 0.75; g.add(sign);
+  g.traverse((m) => { if ((m as THREE.Mesh).isMesh) m.castShadow = false; });
+  return g;
+}

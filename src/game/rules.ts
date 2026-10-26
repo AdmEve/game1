@@ -31,7 +31,9 @@ export interface VehicleDef {
   wedding?: number;
 }
 export interface ObstacleDef {
-  kind: 'cone' | 'cart'; col: number; row: number;
+  kind: 'cone' | 'cart' | 'tunnel'; col: number; row: number;
+  /** «تونل نیایش»: index (in `obstacles`) of the other mouth; a car driving in comes out there, same heading. */
+  pair?: number;
   /** «گاری میوه»: a fruit cart rolls one cell this way every `every` exits, turning back at walls. */
   dir?: Dir; every?: number;
 }
@@ -56,7 +58,7 @@ export interface Level {
   /** «پلیس راهور»: an officer lets only vertical or only horizontal cars go, switching after each exit. */
   officer?: boolean;
   /** The first level with a new mechanic shows its intro card. */
-  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart' | 'wedding' | 'granny';
+  intro?: 'cover' | 'broken' | 'vip' | 'oddEven' | 'courier' | 'officer' | 'cart' | 'wedding' | 'granny' | 'tunnel';
 }
 
 export interface Bay { v: number; color: Color; cap: number; boarded: number; /** A courier bike takes anyone. */ wild?: boolean; }
@@ -219,25 +221,45 @@ export function lock(s: State, i: number): { why: 'broken' | 'plate' | 'officer'
   return null;
 }
 
-/** Occupancy grid: vehicle index, -2 for an obstacle, -1 for empty. */
+/** Occupancy grid: vehicle index, -2 for an obstacle, -3 for a tunnel mouth, -1 for empty. */
 export function grid(s: State): Int16Array {
   const { w, h } = s.level, g = new Int16Array(w * h).fill(-1);
   s.level.vehicles.forEach((v, i) => { if (s.inLot[i]) for (const [c, r] of cellsOf(v)) g[r * w + c] = i; });
-  for (const o of s.level.obstacles ?? []) if (o.kind !== 'cart') g[o.row * s.level.w + o.col] = -2;
+  for (const o of s.level.obstacles ?? []) if (o.kind !== 'cart') g[o.row * s.level.w + o.col] = o.kind === 'tunnel' ? -3 : -2;
   for (const c of s.carts) g[c.row * s.level.w + c.col] = -2;
   return g;
 }
 
-/** First thing in the vehicle's way, or null if its lane to the edge is clear. */
-export function blocker(s: State, i: number, g = grid(s)): { v?: number; cell: [number, number] } | null {
+/** The tunnel mouth at a cell, if any. */
+const tunnelAt = (s: State, c: number, r: number) => (s.level.obstacles ?? []).find((o) => o.kind === 'tunnel' && o.col === c && o.row === r);
+
+/**
+ * The vehicle's way out: the cells it drives through, hopping through any tunnel, and the first thing
+ * in its way (null when it reaches the edge). `hops` lists the tunnel mouths it went in and came out of.
+ */
+export function lane(s: State, i: number, g = grid(s)): { by: { v?: number; cell: [number, number] } | null; hops: [[number, number], [number, number]][] } {
   const v = s.level.vehicles[i], [dc, dr] = DELTA[v.dir], { w, h } = s.level;
   let [c, r] = frontCell(v);
+  const hops: [[number, number], [number, number]][] = [];
   while (c >= 0 && r >= 0 && c < w && r < h) {
     const x = g[r * w + c];
-    if (x !== -1) return x >= 0 ? { v: x, cell: [c, r] } : { cell: [c, r] };
+    if (x === -3) {
+      const a = tunnelAt(s, c, r)!, b = s.level.obstacles![a.pair!];
+      // A tunnel that leads back into itself counts as a wall.
+      if (hops.length > 3) return { by: { cell: [c, r] }, hops };
+      hops.push([[c, r], [b.col, b.row]]);
+      c = b.col + dc; r = b.row + dr;
+      continue;
+    }
+    if (x !== -1) return { by: x >= 0 ? { v: x, cell: [c, r] } : { cell: [c, r] }, hops };
     c += dc; r += dr;
   }
-  return null;
+  return { by: null, hops };
+}
+
+/** First thing in the vehicle's way, or null if its lane to the edge is clear. */
+export function blocker(s: State, i: number, g = grid(s)): { v?: number; cell: [number, number] } | null {
+  return lane(s, i, g).by;
 }
 
 export const canExit = (s: State, i: number, g?: Int16Array) => s.inLot[i] && !lock(s, i) && !blocker(s, i, g);

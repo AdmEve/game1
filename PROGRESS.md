@@ -13,7 +13,7 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - `node scripts/shot.cjs "<query>" out.png <ms> "<js to run first>"` takes a 390×844@3x screenshot from the
   dev server with SwiftShader. Example: `node scripts/shot.cjs play /tmp/a.png 2000 "window.__rb.session().tap(3)"`.
 - `npm test` checks the rules and that all levels are valid and solvable (solver replay).
-- `npm run levels -- --from 180` keeps the first 180 levels and only regenerates the rest. `npm run levels` regenerates `src/game/levels.json` from the specs in `scripts/gen-levels.ts`. It picks
+- `npm run levels -- --from 210` keeps the first 210 levels and only regenerates the rest. `npm run levels` regenerates `src/game/levels.json` from the specs in `scripts/gen-levels.ts`. It picks
   each level from many seeds to hit a target win rate for a simulated casual player.
 - Icons and splash: render the hero car with `scripts/icon-car.html` (served by the dev server, captured with
   an omitBackground screenshot into `scripts/art/hero-taxi.png`), then run `node scripts/make-icons.mjs`.
@@ -25,7 +25,7 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 |---|---|
 | `src/game/rules.ts` | Pure rules: grid, exits, bays, boarding, win/lose, boosters (crane = force exit, whistle = reorder queue head, extra bay) |
 | `src/game/solver.ts` | DFS solver with dead-state memo, and simulated random/greedy players for difficulty |
-| `src/game/levels.json` | The 210 Journey levels (generated) |
+| `src/game/levels.json` | The 240 Journey levels (generated) |
 | `src/render/cars.js` | Parametric Iranian cars (Peykan, Pride, 405, Samand taxi, Zamyad, BRT bus): swept bodies, exact glass/trim edges via marching-triangle clipping, decals by raycast, Iranian plates |
 | `src/render/fleet.ts` | Bakes each model+color into a few merged meshes, caches it, wraps it for the board (faces −z, `body` child for suspension) |
 | `src/render/world.ts` | The Tajrish diorama: lot, ring road, bays, sidewalk, جوی, shelter, kiosk, plane trees, apartments, Milad/Azadi, Alborz |
@@ -39,14 +39,16 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 ## Status
 
 ### Done
-- Rules, solver (with locks, reveals, VIP, plate camera, officer, fruit carts, wedding cars, grandmas), 210 solver-verified levels in 7 chapters
+- Rules, solver (with locks, reveals, VIP, plate camera, officer, fruit carts, wedding cars, grandmas, tunnels), 240 solver-verified levels in 8 chapters
 - Chapters: 1 Tajrish (day), 2 Valiasr (sunset, plane-tree boulevard), 3 Azadi Square (night, lit windows),
   4 Tochal in snow (snowy world, falling snow, cable car; «پلیس راهور» traffic officer from level 93),
   5 Grand Bazaar (domes, arcade, tiled portal; «گاری میوه» rolling fruit carts from level 122),
   6 Darband in autumn (stream, teahouse terraces with daybeds and samovars; «ماشین عروس» wedding cars from level 152:
   a flower-decked car that must be among the first N to leave, with a honking convoy bonus),
   7 Tabiat Bridge in spring (the curving two-deck bridge on tree columns, blossoms; «حاج‌خانم با خرید» from 182:
-  a grandma in a floral chador who takes two seats in one car)
+  a grandma in a floral chador who takes two seats in one car),
+  8 Milad Tower at dusk (blue-hour light, lit city; «تونل نیایش» from 212: paired tunnel mouths, a car driving into one
+  comes out of the other and carries on; `lane()` in rules.ts walks the hops)
 - «ساعت شلوغی» daily challenge generated on the phone from the date (`src/game/daily.ts`, `src/game/generator.ts`)
 - Mechanics: «چادر ماشین» covers, «پیکان خراب» wait counter, «دربست» VIP passengers, «طرح زوج و فرد» plates
   with an auto-switching camera (never wedges); Mash Rahim intro cards

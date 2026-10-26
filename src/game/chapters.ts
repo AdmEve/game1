@@ -1,5 +1,5 @@
 /** The Journey's chapters: each is a Tehran place with its own light and bus stop. */
-export type Light = 'day' | 'sunset' | 'night' | 'snow' | 'bazaar' | 'autumn' | 'spring';
+export type Light = 'day' | 'sunset' | 'night' | 'snow' | 'bazaar' | 'autumn' | 'spring' | 'dusk';
 export interface Chapter { n: number; name: string; stop: string; light: Light; landmark: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; from: number; to: number; }
 
 export const CHAPTERS: Chapter[] = [
@@ -10,6 +10,7 @@ export const CHAPTERS: Chapter[] = [
   { n: 5, name: 'بازار بزرگ', stop: 'ایستگاه پانزده خرداد', light: 'bazaar', landmark: 'bazaar', from: 120, to: 150 },
   { n: 6, name: 'پاییز دربند', stop: 'ایستگاه سربند', light: 'autumn', landmark: 'darband', from: 150, to: 180 },
   { n: 7, name: 'بهار پل طبیعت', stop: 'ایستگاه پل طبیعت', light: 'spring', landmark: 'tabiat', from: 180, to: 210 },
+  { n: 8, name: 'غروب برج میلاد', stop: 'ایستگاه برج میلاد', light: 'dusk', landmark: 'milad', from: 210, to: 240 },
 ];
 
 export const chapterOf = (level: number) => CHAPTERS.find((c) => level >= c.from && level < c.to) ?? CHAPTERS[CHAPTERS.length - 1];

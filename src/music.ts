@@ -13,6 +13,7 @@ const MOODS = {
   sunset: { bpm: 80, tonic: 329.63, scale: [0, 1.5, 3, 5, 7, 8, 10], perc: 0.8 }, // Shur on E: wistful
   night: { bpm: 84, tonic: 261.63, scale: [0, 2, 3, 5, 7, 8, 11], perc: 0.6 }, // Bayat-e Esfahan on C: mysterious
   bazaar: { bpm: 96, tonic: 261.63, scale: [0, 1.5, 4, 5, 7, 8.5, 11], perc: 1.1 }, // Chahargah on C: bustling, with its quarter tones
+  dusk: { bpm: 86, tonic: 277.18, scale: [0, 1, 4, 5, 7, 8, 10], perc: 0.85 }, // Homayoun on C#: deep and glowing
   spring: { bpm: 100, tonic: 329.63, scale: [0, 2, 4, 5, 7, 9, 11], perc: 1.05 }, // Mahur on E: bright and springy, for Nowruz
   autumn: { bpm: 78, tonic: 293.66, scale: [0, 1.5, 3, 5, 7, 8, 10], perc: 0.75 }, // Dashti (from Shur) on D: folk, bittersweet
   snow: { bpm: 74, tonic: 349.23, scale: [0, 2, 4, 5, 7, 9, 10], perc: 0.45 }, // Mahur with a soft seventh, on F: hushed and bright
