@@ -29,6 +29,8 @@ export interface Save {
   lives: { n: number; next: number };
   /** «قلک»: coins saved up from wins, paid out when it is broken open. */
   piggy: number;
+  /** «کارت بلیت»: this month's punches, stations collected on each track, and the premium card. */
+  pass: { month: string; punches: number; free: number[]; prem: number[]; premium: boolean };
 }
 
 const KEY = 'rahbandoon.save.v1';
@@ -52,6 +54,7 @@ const fresh = (): Save => ({
   agency: { stars: 0, done: [], init: true },
   lives: { n: 5, next: 0 },
   piggy: 0,
+  pass: { month: '', punches: 0, free: [], prem: [], premium: false },
 });
 
 function load(): Save {
@@ -63,7 +66,7 @@ function load(): Save {
       return {
         ...f, ...s,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, lives: { ...f.lives, ...s.lives }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
+        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
       };
     }
   } catch { /* corrupted or blocked storage: start fresh */ }

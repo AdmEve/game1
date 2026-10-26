@@ -35,5 +35,7 @@ export const PRODUCTS: Product[] = [
   { sku: 'coins_xl', icon: '🏦', title: '۲۰٬۰۰۰ سکه', desc: 'به‌صرفه‌ترین', fallbackPrice: 199000, consumable: true, coins: 20000, badge: 'به‌صرفه‌ترین' },
   // «قلک»: breaks open the coins saved up from wins (see src/ui/piggy.ts); not listed with the packs.
   { sku: 'piggy', icon: '🏺', title: 'قلک', desc: 'سکه‌های جمع‌شده‌ی قلکت', fallbackPrice: 39000, consumable: true },
+  // «کارت بلیت»: this month's premium pass track.
+  { sku: 'pass', icon: '🎫', title: 'کارت طلایی', desc: 'جایزه‌های طلایی کارت بلیت این ماه', fallbackPrice: 79000, consumable: true },
   { sku: 'no_ads', icon: '🚫', title: 'حذف تبلیغات', desc: 'برای همیشه بدون تبلیغ بین مرحله‌ها', fallbackPrice: 59000, consumable: false },
 ];

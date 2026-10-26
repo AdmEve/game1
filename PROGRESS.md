@@ -74,6 +74,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   The daily challenge and events are free
 - «قلک» clay money box (`src/ui/piggy.ts`): from level 11 each new win drops 40 coins in (up to 4,000); from 1,000
   it can be broken open with the `piggy` Bazaar product (shown in the shop with its amount)
+- «کارت بلیت» monthly pass (`src/ui/pass.ts`): Tehran Metro Line 1 from Tajrish to Shush, 20 stations; every new
+  win punches the ticket, two punches per station; a free and a premium («کارت طلایی», `pass` product) reward each
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
@@ -82,9 +84,10 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Chapter 6+ (Darband / Shiraz / Isfahan), district league (needs a backend)
 - Real-device performance check (owner), real recorded horns and voice lines
 - Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`; create the
-  Bazaar SKUs from `PRODUCTS` (including `piggy`)
+  Bazaar SKUs from `PRODUCTS` (including `piggy` and `pass`)
 
 ## Gotchas
 - Never `pkill -f` a pattern that also appears in your own command line: it kills your shell.
+- Background commands are capped at 2 hours: for screenshots, start vite inside the same command if it is not running.
 - `scripts/copy-emoji.mjs` only adds missing emoji SVGs (safe while the dev server runs).
 - In `?shot` mode the render loop is off: call `window.__rb.advance(sec)` to step animations.

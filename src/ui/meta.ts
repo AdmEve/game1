@@ -53,7 +53,7 @@ export function showShop(onClose: () => void, onChange: () => void) {
     c.append(h('h3', '', 'سکه و بسته‌ها'));
     const grid = h('div', 'shop-grid');
     for (const p of PRODUCTS) {
-      if (p.sku === 'piggy' || (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads'])) continue;
+      if (p.sku === 'piggy' || p.sku === 'pass' || (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads'])) continue;
       const card = h('button', 'pack' + (p.sku === 'starter' ? ' starter' : ''), `${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<span class="ic">${emo(p.icon)}</span><b>${p.title}</b><small>${p.desc}</small><span class="price">${priceLabel(p)}</span>`);
       card.onclick = async () => { if (await buy(p.sku)) { coin(); haptic('success'); refresh(); if (!p.consumable) card.remove(); } };
       grid.append(card);
