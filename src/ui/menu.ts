@@ -10,7 +10,7 @@ import { fa, money } from '../engine/fmt';
 import { CLASS_NAMES, newLife } from '../engine/life';
 import type { Gender, Life, StatKey } from '../engine/types';
 import { buy, iapAvailable, priceLabel, rateApp, rewardedAvailable, showRewarded } from '../monetize';
-import { meta, persist, spendGems, today } from '../save';
+import { meta, persist, spendGems, today, type Grave } from '../save';
 import { ask, btn, clear, closeAll, h, modal, rt, sheet, toast } from './dom';
 import { avatarEmoji, emo } from './emoji';
 import { STAT_META, hooks, needGems } from './flow';
@@ -151,6 +151,7 @@ function selectEl(opts: [string, string][], val: string, on: (v: string) => void
 function graveyard() {
   const s = sheet('🪦 بهشت زهرا', { full: true });
   if (!meta.graves.length) { s.body.append(h('div', { class: 'empty', text: 'هنوز کسی اینجا نیست. اول یه زندگی کن!' })); return; }
+  for (const tree of familyTrees()) s.body.append(tree);
   for (const g of meta.graves) {
     const row = h('button', { class: 'grave' },
       h('span', { class: 'p-av', html: emo(avatarEmoji(g.age, g.gender, g.skin), 'emo p-emo') }),
@@ -160,6 +161,39 @@ function graveyard() {
     s.body.append(row);
   }
   s.body.append(rt('div', 'act-d center', 'روی هر سنگ‌قبر بزنی، اعلامیه‌اش رو می‌تونی به اشتراک بذاری.'));
+}
+
+/** «شجره‌نامه»: families played over two or more generations, oldest first, with the living heir last. */
+function familyTrees(): HTMLElement[] {
+  const byId = new Map(meta.graves.map((g) => [g.id, g]));
+  const rootOf = (g: Grave): Grave => {
+    let r = g;
+    for (let i = 0; i < 20 && r.parent && byId.has(r.parent); i++) r = byId.get(r.parent)!;
+    return r;
+  };
+  const families = new Map<string, Grave[]>();
+  for (const g of meta.graves) {
+    const root = rootOf(g);
+    families.set(root.id, [...(families.get(root.id) ?? []), g]);
+  }
+  const L = currentLife();
+  const out: HTMLElement[] = [];
+  for (const [rootId, members] of families) {
+    const alive = L && !L.dead && L.parentLife && byId.has(L.parentLife) && rootOf(byId.get(L.parentLife)!).id === rootId ? L : null;
+    if (members.length + (alive ? 1 : 0) < 2) continue;
+    members.sort((a, b) => a.gen - b.gen);
+    const root = byId.get(rootId)!;
+    const rows = members.map((g) => h('div', { class: 'tree-row' },
+      h('span', { class: 'p-av', html: emo(avatarEmoji(g.age, g.gender, g.skin), 'emo p-emo') }),
+      h('span', { class: 'act-t' },
+        h('span', { class: 'act-l', text: `نسل ${fa(g.gen)}: ${g.first} ${g.last}` }),
+        rt('span', 'act-d', `${fa(g.born)} تا ${fa(g.died)}${g.title ? `، «${g.title}»` : ''}`))));
+    if (alive) rows.push(h('div', { class: 'tree-row alive' },
+      h('span', { class: 'p-av', html: emo(avatarEmoji(alive.age, alive.gender, alive.skin), 'emo p-emo') }),
+      h('span', { class: 'act-t' }, h('span', { class: 'act-l', text: `نسل ${fa(alive.gen)}: ${alive.first} ${alive.last}` }), rt('span', 'act-d', `${fa(alive.age)} ساله، زنده و سرحال!`))));
+    out.push(h('div', { class: 'section tree' }, rt('div', 'section-h', `🌳 شجره‌نامه‌ی خاندان ${root.last}`), ...rows));
+  }
+  return out;
 }
 
 // ───────── achievements ─────────

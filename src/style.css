@@ -220,6 +220,10 @@ input, select { font: inherit; }
 .acts { display: flex; flex-direction: column; gap: 6px; }
 .act, .person, .grave, .asset, .product { display: flex; align-items: center; gap: 10px; width: 100%; text-align: right; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; }
 .act:active, .person:active, .grave:active { background: #f3faf9; }
+.tree { border-right: 4px solid #8bbf8f; }
+.tree-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; position: relative; }
+.tree-row + .tree-row::before { content: ''; position: absolute; right: 25px; top: -10px; height: 14px; border-right: 2px dashed #b9cdb9; }
+.tree-row.alive .act-l { color: var(--green); }
 .act.off { opacity: .55; }
 .act-e { width: 40px; height: 40px; border-radius: 12px; background: #f6efe1; display: grid; place-items: center; flex: none; }
 .act-emo { width: 26px; height: 26px; }

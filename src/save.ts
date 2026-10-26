@@ -25,6 +25,8 @@ export interface Grave {
   gen: number;
   facts: string[];
   title?: string;
+  /** The life this one continued from (the parent), for the family tree. */
+  parent?: string;
 }
 
 export interface Meta {
@@ -161,6 +163,7 @@ export function bury(L: Life, facts: string[], job: string, title?: string) {
     ach: [...L.ach],
     gen: L.gen,
     facts,
+    parent: L.parentLife,
   };
   meta.graves = [g, ...meta.graves.filter((x) => x.id !== g.id)].slice(0, 120);
   meta.stats.lives++;

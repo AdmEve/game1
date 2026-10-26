@@ -50,6 +50,8 @@ Read this first when resuming. Design: `docs/design.md`. Market research: `docs/
   interview (6💎); each lifts the meter without using up a question.
 - Store listing `store/listing-fa.md`, screenshots `store/screenshot-*.png` (`scripts/store-shots.cjs`).
 - First-run tutorial; incremental life-log rendering for budget phones.
+- A «شجره‌نامه» family tree at the top of the graveyard for families played over generations (graves
+  remember their `parent` life).
 - `scripts/story.ts <seed>` prints a whole life to proof-read.
 - `scripts/ui-smoke.cjs` plays three lives through the real UI, mini-games included, and reports page errors.
 - Local notifications (daily gift ready, «come back, your life is waiting») in `src/notify.ts`.
