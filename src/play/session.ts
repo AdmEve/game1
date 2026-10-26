@@ -383,7 +383,12 @@ export class Session {
     // Everyone steps forward one place; a new face joins the back of the line.
     this.queue.forEach((q, k) => {
       const from = q.root.position.clone(), to = this.slot(k);
-      void tween(0.24, (e) => { q.root.position.lerpVectors(from, to, e); q.root.position.y = 0.18 + Math.sin(e * Math.PI) * 0.08; }, ease.inOut);
+      // A little waddle as everyone shuffles forward.
+      void tween(0.32, (e) => {
+        q.root.position.lerpVectors(from, to, e);
+        q.root.position.y = 0.18 + Math.abs(Math.sin(e * Math.PI * 2)) * 0.05;
+        q.body.rotation.z = Math.sin(e * Math.PI * 4) * 0.12 * (1 - e);
+      }, ease.inOut);
     });
     this.spawn(this.queue.length, true);
     this.hooks.queueLeft(this.s.queue.length - this.vq);

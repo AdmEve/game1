@@ -305,8 +305,23 @@ async function boot() {
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
   let last = performance.now();
+  // Adaptive quality: watch the frame rate over the first seconds of play and step down if the phone struggles.
+  let probeFrames = 0, probeTime = 0, tier = 2;
+  const stepDown = () => {
+    tier--;
+    if (tier === 1) { tilt.style.display = 'none'; renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); }
+    if (tier === 0) { sun.shadow.mapSize.set(1024, 1024); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.setPixelRatio(1); }
+    fitCamera();
+  };
   const loop = (t: number) => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    if (tier > 0 && !modalOpen && document.visibilityState === 'visible') {
+      probeFrames++; probeTime += dt;
+      if (probeTime > 2.5) {
+        if (probeFrames / probeTime < 45) stepDown();
+        probeFrames = 0; probeTime = 0;
+      }
+    }
     tick(dt);
     session?.idle(t / 1000);
     if (session) {
