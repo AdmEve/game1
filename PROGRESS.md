@@ -111,3 +111,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Background commands are capped at 2 hours: for screenshots, start vite inside the same command if it is not running.
 - `scripts/copy-emoji.mjs` only adds missing emoji SVGs (safe while the dev server runs).
 - In `?shot` mode the render loop is off: call `window.__rb.advance(sec)` to step animations.
+
+## Traffic & smoothness pass (Oct 2026)
+- Bays are handed out in turn (no two cars in one bay); cars brake for the nearest car body, settle standoffs fairly, and steer round a blocker after waiting 2.5 s.
+- Overlap check (`scripts/overlap.cjs`, 1.5 s taps): level 5 went from 401 overlapping frames to 9; level 95 still has about 180 brief near-touches on the road.
+- Phones: pixel ratio 1.5, cheaper shadows, no backdrop blur, automatic quality step-down below 50 fps.
+- Known: with very fast taps the queue can take about 35 s to clear after the last move.
