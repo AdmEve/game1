@@ -211,7 +211,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     // A car that gave up waiting steers round whatever is still in its way instead of through it.
     swerve += THREE.MathUtils.clamp((me.overtaking || (gaveUp && blocked) ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
-    if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 2.5) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
+    if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 4) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
     const hold = !!ahead && !gaveUp;
     me.waitingFor = hold ? ahead : null;
     const left = L - s;
