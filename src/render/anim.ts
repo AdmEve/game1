@@ -74,7 +74,11 @@ export function roundedPath(pts: THREE.Vector3[], radius = 0.75): THREE.CurvePat
   return path;
 }
 
-export interface DriveOpts { vmax?: number; accel?: number; reverse?: boolean; onProgress?: (k: number) => void; brake?: boolean; }
+export interface DriveOpts {
+  vmax?: number; accel?: number; reverse?: boolean; onProgress?: (k: number) => void; brake?: boolean;
+  /** Has right of way (e.g. backing out of a bay): never waits for other cars. */
+  priority?: boolean;
+}
 
 /** Cars currently on the move, so each can keep its distance from the one in front. */
 interface Driver { root: THREE.Object3D; heading: THREE.Vector3; id: number; waitingFor: Driver | null; }
@@ -122,7 +126,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   const vmax = o.vmax ?? 9, acc = o.accel ?? 16, brake = o.brake ?? true;
   const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null };
   traffic.add(me);
-  let s = 0, v = 0, waited = 0, prevYaw = root.rotation.y;
+  let s = 0, v = 0, waited = 0, gaveUp = !!o.priority, prevYaw = root.rotation.y;
   const tan = new THREE.Vector3();
   const place = (dt: number) => {
     const u = Math.min(1, s / L);
@@ -142,11 +146,11 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   };
   return loop((dt) => {
     if (dt <= 0) return false;
-    const ahead = carAhead(me);
-    // Give up waiting after a while rather than ever locking up.
-    const hold = !!ahead && waited < 2.5;
+    const ahead = gaveUp ? null : carAhead(me);
+    // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
+    if (ahead) { waited += dt; if (waited > 2.5) gaveUp = true; } else waited = 0;
+    const hold = !!ahead && !gaveUp;
     me.waitingFor = hold ? ahead : null;
-    waited = hold ? waited + dt : 0;
     const left = L - s;
     let target = hold ? 0 : vmax;
     if (brake) target = Math.min(target, Math.sqrt(2 * acc * Math.max(0, left)) + 0.4);

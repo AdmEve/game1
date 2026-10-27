@@ -1,6 +1,7 @@
 // Plays levels by tapping every free car in quick succession and checks, frame by frame, that no two
 // cars on the road overlap (oriented-rectangle test).   node scripts/overlap.cjs 5 41 95
 const { chromium } = require('playwright');
+const STEP = Number(process.env.STEP || 8);
 (async () => {
   const levels = process.argv.slice(2).map(Number);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -9,7 +10,7 @@ const { chromium } = require('playwright');
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 240000 });
   let bad = 0;
   for (const n of levels) {
-    const res = await p.evaluate(async (n) => {
+    const res = await p.evaluate(async ([n, STEP]) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       r.save.seen = new Proxy({}, { get: () => true });
@@ -26,21 +27,22 @@ const { chromium } = require('playwright');
         }
         return true;
       };
-      let worst = 0, frames = 0;
+      let worst = 0, frames = 0, sample = null;
       // Tap the solution moves 0.25 s apart: a fast player.
       for (let k = 0; k < sol.length + 60; k++) {
         if (k < sol.length) s.tap(sol[k]);
-        for (let f = 0; f < 8; f++) {
+          for (let f = 0; f < STEP; f++) {
           await r.advance(1 / 30);
           const moving = s.cars.map((o, i) => ({ o, i })).filter(({ i }) => !s.s.inLot[i] && s.cars[i].root.parent && s.cars[i].root.position.y < 0.05);
           let hits = 0;
           for (let a = 0; a < moving.length; a++) for (let c = a + 1; c < moving.length; c++) if (overlap(rect(moving[a].o, moving[a].o.length), rect(moving[c].o, moving[c].o.length))) hits++;
+          if (hits > worst) sample = moving.map(({ o, i }) => `${i}:${o.root.position.x.toFixed(1)},${o.root.position.z.toFixed(1)}`).join(' ');
           worst = Math.max(worst, hits); frames += hits ? 1 : 0;
         }
         if (s.s.over && k >= sol.length) break;
       }
-      return { n, moves: sol.length, overlapFrames: frames, worst, over: s.s.over };
-    }, n);
+      return { n, moves: sol.length, overlapFrames: frames, worst, over: s.s.over, sample };
+    }, [n, STEP]);
     console.log(JSON.stringify(res));
     if (res.overlapFrames) bad++;
   }

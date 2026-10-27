@@ -52,8 +52,10 @@ export class Session {
   private queue: Person[] = []; // visible people, front first
   private vq = 0; // index (in s.queue) of the person at the front of the visible queue
   private chain: Promise<void> = Promise.resolve();
-  private bayFree: Promise<void>[] = [];
-  private bayIsFree: boolean[] = [];
+  /** Per bay, resolves when its latest claimant has backed out again; cars take turns through it. */
+  private bayGate: Promise<void>[] = [];
+  /** Lets the next car into the bay once this vehicle (by index) has backed out. */
+  private bayRelease = new Map<number, () => void>();
   private seats = new Map<number, Seat>();
   private lockGate: THREE.Group;
   private pending = 0;
@@ -84,7 +86,7 @@ export class Session {
     this.landmark = world.landmark;
     this.landmarkView = world.view;
     this.group.add(world.group);
-    for (let k = 0; k < MAX_BAYS; k++) { this.bayFree.push(Promise.resolve()); this.bayIsFree.push(true); }
+    for (let k = 0; k < MAX_BAYS; k++) this.bayGate.push(Promise.resolve());
     level.vehicles.forEach((v, idx) => {
       // Restored classics from the garage take the place of some ordinary sedans.
       const owned = worldOpts.skins ?? [];
@@ -610,7 +612,18 @@ export class Session {
     }
   }
 
+  /** Take a turn at a bay: returns a promise for when the car before us has left it. */
+  private claimBay(bay: number, v: number): Promise<void> {
+    const prev = this.bayGate[bay];
+    let release!: () => void;
+    this.bayGate[bay] = new Promise((r) => { release = r; });
+    this.bayRelease.set(v, release);
+    return prev;
+  }
+
   private async animExit(i: number, bay: number) {
+    // Claim the bay now, in tap order, before any waiting below.
+    const turn = this.claimBay(bay, i);
     const o = this.cars[i], v = this.level.vehicles[i];
     this.uncover(i);
     const sy = this.symbols.get(i); if (sy) { o.root.remove(sy); this.symbols.delete(i); }
@@ -633,25 +646,17 @@ export class Session {
     const exitFrac = (() => { const path = roundedPath(pts); const d0 = pts[0].distanceTo(pts[1]); return Math.min(0.5, (d0 * 0.6) / path.getLength()); })();
     const smoke = setInterval(() => puff(this.group, o.root.position, 0.5), 90);
     setTimeout(() => clearInterval(smoke), 350);
-    if (this.bayIsFree[bay]) {
-      this.bayIsFree[bay] = false;
-      await drive(o.root, o.body, roundedPath(pts, 0.8), { vmax: heavy ? 7 : 9.5, onProgress: (u) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } });
-    } else {
-      // Wait on the road beside the bay until the previous car has backed out.
-      const k = pts.length - 2, approach = pts.slice(0, k + 1);
-      const side = Math.sign(pts[k - 1].x - pts[k].x) || 1;
-      approach[k] = pts[k].clone().add(new THREE.Vector3(side * 1.0, 0, 0));
-      await drive(o.root, o.body, roundedPath(approach, 0.8), { vmax: heavy ? 7 : 9.5, onProgress: (u) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } });
-      const leave = occupy(o.root);
-      await this.bayFree[bay];
-      leave();
-      this.bayIsFree[bay] = false;
-      await drive(o.root, o.body, roundedPath([approach[k], pts[k], pts[k + 1]], 0.8), { vmax: 5 });
-    }
+    // Until the bay's previous car has backed out, wait in the parking spot (cars behind queue up there
+    // too) rather than on the road, where a waiting car could block the very car that frees the bay.
+    const hold = occupy(o.root);
+    await turn;
+    hold();
+    await drive(o.root, o.body, roundedPath(pts, 0.8), { vmax: heavy ? 7 : 9.5, onProgress: (u) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } });
     this.seat(bay, i);
   }
 
   private async animCrane(i: number, bay: number) {
+    const turn = this.claimBay(bay, i);
     const o = this.cars[i];
     this.uncover(i);
     const sy0 = this.symbols.get(i); if (sy0) { o.root.remove(sy0); this.symbols.delete(i); }
@@ -670,8 +675,7 @@ export class Session {
     const yaw0 = o.root.rotation.y;
     let yaw1 = 0; while (yaw1 - yaw0 > Math.PI) yaw1 -= 2 * Math.PI; while (yaw1 - yaw0 < -Math.PI) yaw1 += 2 * Math.PI;
     await tween(0.5, (k) => { o.root.position.y = start.y + k * 2.2; o.body.rotation.x = Math.sin(k * 9) * 0.05; place(); }, ease.out);
-    await this.bayFree[bay];
-    this.bayIsFree[bay] = false;
+    await turn;
     await tween(0.9, (k) => {
       o.root.position.x = THREE.MathUtils.lerp(start.x, end.x, k);
       o.root.position.z = THREE.MathUtils.lerp(start.z, end.z, k);
@@ -752,16 +756,13 @@ export class Session {
       setTimeout(() => this.hooks.float('مبارکه! +۳۰', at.clone().add(new THREE.Vector3(0, 1.2, 0)), 'combo'), 450);
     }
     await tween(0.22, (k) => { o.body.position.y = Math.sin(k * Math.PI) * 0.12; }, ease.out);
-    let release!: () => void;
-    this.bayFree[bay] = new Promise((r) => { release = r; });
     const bx = this.L.bayX[bay], top = this.L.topRoadZ;
     const s = bx >= 0 ? 1 : -1; // leave toward the nearer side of the screen
     // Back out into the lane that heads off-screen, then drive away keeping right.
     const lane = top + 0.45 * s;
     const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(bx - s * 1.1, 0, lane)], 0.9);
-    await drive(o.root, o.body, back, { vmax: 3.5, accel: 9, reverse: true });
-    this.bayIsFree[bay] = true;
-    release();
+    await drive(o.root, o.body, back, { vmax: 3.5, accel: 9, reverse: true, priority: true });
+    this.bayRelease.get(v)?.(); this.bayRelease.delete(v);
     sfx.engine(0, kind === 'bus' || kind === 'zamyad');
     const away = roundedPath([new THREE.Vector3(bx - s * 1.1, 0, lane), new THREE.Vector3(s * 34, 0, lane)]);
     await drive(o.root, o.body, away, { vmax: 11, accel: 10, brake: false });
