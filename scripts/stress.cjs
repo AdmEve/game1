@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
     const res = await p.evaluate(async (n) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
-      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, tunnel: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true, ch8: true };
+      r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, tunnel: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true, ch8: true }; for (let k = 0; k < 400; k++) r.save.seen['boss' + k] = true;
       r.save.level = n - 1; r.startLevel();
       const s = r.session();
       let rnd = n * 9301;
