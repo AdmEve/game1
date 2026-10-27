@@ -24,6 +24,7 @@ import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
 import { fillPiggy } from './ui/piggy';
+import { AJOOL, BOSS_LINES } from './ui/characters';
 import { passReady, punch, showPass } from './ui/pass';
 import { yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
@@ -328,6 +329,14 @@ function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
   } else if (level.intro && !save.seen[level.intro]) {
     modalOpen = true;
     showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; });
+  } else if (level.tag === 'boss' && !save.seen['boss' + n]) {
+    // Mr. Ajool walks in before his boss level.
+    modalOpen = true;
+    const c = h('div', 'boss-card');
+    const line = BOSS_LINES[(ch.n - 1) % BOSS_LINES.length];
+    c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad">${line.taunt}</div>`;
+    const close = modal(c, 'pop boss');
+    c.append(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; }));
   }
 }
 
@@ -407,7 +416,7 @@ function showWin() {
   hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت! جایزه‌ت منتظرته</div>` : ''}${piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : ''}${station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت! جایزه‌ت منتظرته</div>` : ''}${piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;

@@ -4,6 +4,7 @@ import { PRODUCTS } from '../config';
 import { haptic } from '../haptics';
 import { buy, iapAvailable, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
 import { persist, save } from '../save';
+import { RAHIM } from './characters';
 import { emo } from './emoji';
 import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId } from './hud';
 import { PIGGY_FROM, PIGGY_MAX, PIGGY_MIN, piggyArt, showPiggy } from './piggy';
@@ -134,7 +135,7 @@ export function showIntro(kind: keyof typeof INTROS): Promise<void> {
   return new Promise((done) => {
     const c = h('div', 'intro');
     c.innerHTML = `<div class="new">جدید!</div><div class="burst">${emo(it.icon, 'emo huge')}</div><h2>${it.title}</h2>
-      <div class="speech"><span class="who">${emo('👴', 'emo sm')} مش‌رحیم:</span> ${it.text}</div>`;
+      <div class="speech">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${it.text}</div></div>`;
     const close = modal(c, 'pop');
     c.append(button('فهمیدم!', 'primary big', () => { close(); done(); }));
   });

@@ -81,6 +81,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Level-start camera: when a chapter's place is new in the session, the camera opens on its landmark (Milad, Azadi,
   Tochal, the bazaar portal, Darband, Tabiat Bridge) over the rooftops and sweeps down onto the lot
   (`World.landmark`/`view`; `__rb.swoop(k)` renders any point of the move in `?shot` mode)
+- Characters (`src/ui/characters.ts`): SVG portraits of «مش‌رحیم» (speaks the mechanic intro cards) and «آقای عجول»,
+  who taunts before each chapter's boss level and makes his excuses on the win screen after it
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
