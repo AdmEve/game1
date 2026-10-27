@@ -85,8 +85,10 @@ interface Driver {
   root: THREE.Object3D; heading: THREE.Vector3; id: number; waitingFor: Driver | null;
   /** Where the car would be in its own lane (it may be swerving out to overtake). */
   base: THREE.Vector3;
-  /** Standing still on purpose (waiting for a bay): others may overtake it. */
+  /** Standing still on purpose (waiting for a bay). */
   parked?: boolean;
+  /** Others may pull out and pass it (only on the road, never inside the lot). */
+  passable?: boolean;
   overtaking?: boolean;
 }
 const traffic = new Set<Driver>();
@@ -105,9 +107,9 @@ export function standingNear(x: number, z: number, r: number): boolean {
 }
 
 /** A car standing on the road (e.g. waiting for its bay): others queue behind it. Returns the release. */
-export function occupy(root: THREE.Object3D): () => void {
+export function occupy(root: THREE.Object3D, passable = true): () => void {
   const yaw = root.rotation.y;
-  const d: Driver = { root, heading: new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), id: nextId++, waitingFor: null, base: root.position.clone(), parked: true };
+  const d: Driver = { root, heading: new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), id: nextId++, waitingFor: null, base: root.position.clone(), parked: true, passable };
   traffic.add(d);
   return () => { traffic.delete(d); };
 }
@@ -116,7 +118,7 @@ export function occupy(root: THREE.Object3D): () => void {
 function carAhead(me: Driver): Driver | null {
   let best: Driver | null = null, bestD = GAP;
   for (const o of traffic) {
-    if (o === me || (me.overtaking && o.parked)) continue;
+    if (o === me || (me.overtaking && o.passable)) continue;
     const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
     const d = Math.hypot(dx, dz);
     if (d >= bestD || d < 1e-3) continue;
@@ -136,7 +138,7 @@ function rel(me: Driver, o: Driver) {
   return { along: dx * me.heading.x + dz * me.heading.z, left: dx * me.heading.z - dz * me.heading.x };
 }
 /** Is a parked car still beside or just ahead of me in my lane? */
-const parkedAlongside = (me: Driver) => [...traffic].some((o) => o.parked && o !== me && (({ along, left }) => along > -2.4 && along < GAP + 0.3 && Math.abs(left) < 0.75)(rel(me, o)));
+const parkedAlongside = (me: Driver) => [...traffic].some((o) => o.passable && o !== me && (({ along, left }) => along > -2.4 && along < GAP + 0.3 && Math.abs(left) < 0.75)(rel(me, o)));
 /** Traffic coming the other way (or in the other lane) close ahead: not safe to pull out. */
 const oncoming = (me: Driver) => [...traffic].some((o) => o !== me && !o.parked && (({ along, left }) => along > -1 && along < 7 && left > 0.3 && left < 1.6)(rel(me, o)));
 
@@ -176,7 +178,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     if (dt <= 0) return false;
     // Pull out past a car parked in the lane when the other lane is clear; pull back in once past it.
     if (me.overtaking) me.overtaking = parkedAlongside(me);
-    else { const a = carAhead(me); if (a?.parked && !oncoming(me)) me.overtaking = true; }
+    else { const a = carAhead(me); if (a?.passable && !oncoming(me)) me.overtaking = true; }
     swerve += THREE.MathUtils.clamp((me.overtaking ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
     const ahead = gaveUp ? null : carAhead(me);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.

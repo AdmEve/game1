@@ -665,7 +665,7 @@ export class Session {
     // leave: waiting on the road could block the very car that frees the bay. Once it is leaving it is
     // sure to clear the bay soon, so set off and, if needed, pull up a car's length short of the bay
     // (anyone heading further on overtakes it through the other lane).
-    const hold = occupy(o.root);
+    const hold = occupy(o.root, false);
     await turn.started;
     hold();
     const opts = { vmax: heavy ? 7 : 9.5, onProgress: (u: number) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } };
