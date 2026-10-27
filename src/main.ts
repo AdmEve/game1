@@ -263,7 +263,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 /** When taps pile up faster than cars can park and load, play the backlog a little faster to catch up. */
 function catchUp() {
   const b = session?.backlog ?? 0;
-  setSpeed(b > 4 ? 1.8 : b > 2 ? 1.4 : 1);
+  setSpeed(b > 6 ? 2.3 : b > 4 ? 1.8 : b > 2 ? 1.4 : 1);
 }
 
 function disposeSession() {
