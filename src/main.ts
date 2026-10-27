@@ -415,8 +415,15 @@ function showWin() {
   hud.show(false);
   hud.refresh();
   const c = h('div', 'result win');
+  // Rewards in one row, then the notes (pass, money box), then Mr. Ajool and any new medal.
+  const rewards = `<div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`
+    + (stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره</small></div>` : '')
+    + (keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ</small></div>` : '');
+  const notes = (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
+    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
+  const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره‌ی آژانس</small></div>` : ''}${lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : ''}${station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت! جایزه‌ت منتظرته</div>` : ''}${piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : ''}${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ گاراژ</small></div>` : ''}${ach}`;
+    <div class="rewards">${rewards}</div>${notes}${beaten}${ach}`;
   const close = modal(c, 'pop');
   const next = async () => {
     close(); modalOpen = true;

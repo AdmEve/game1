@@ -39,6 +39,9 @@ const COMBO = ['', '', 'دوتایی!', 'سه‌تایی!', 'چهارتایی!',
 
 interface Seat { sprite: THREE.Sprite; ctx: CanvasRenderingContext2D; tex: THREE.CanvasTexture; }
 
+/** Most coins one level's combos can add. */
+const COMBO_CAP = 120;
+
 export class Session {
   readonly s: State;
   readonly group = new THREE.Group();
@@ -719,9 +722,10 @@ export class Session {
     const at = o.root.position.clone().add(new THREE.Vector3(0, 1.6, 0));
     this.hooks.float(`+${KIND[kind].cap}`, at, 'coin');
     if (this.combo >= 2) {
-      const extra = 5 * this.combo;
+      // Combos pay out, but within a level the bonus is capped so speed can't be farmed.
+      const extra = Math.min(5 * this.combo, Math.max(0, COMBO_CAP - this.bonus));
       this.bonus += extra;
-      setTimeout(() => { this.hooks.float(`${COMBO[Math.min(this.combo, COMBO.length - 1)]} +${extra}`, at.clone().add(new THREE.Vector3(0, 0.8, 0)), 'combo'); sfx.coin(0); sfx.coin(0.12); }, 250);
+      setTimeout(() => { this.hooks.float(`${COMBO[Math.min(this.combo, COMBO.length - 1)]}${extra ? ` +${extra}` : ''}`, at.clone().add(new THREE.Vector3(0, 0.8, 0)), 'combo'); sfx.coin(0); sfx.coin(0.12); }, 250);
     }
     if (this.level.vehicles[v].wedding && !this.s.late[v]) {
       // Just married: the convoy honks, confetti flies and the guests tip.

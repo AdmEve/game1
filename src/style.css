@@ -384,3 +384,5 @@ body[data-light='dusk'] .tint { opacity: 1; background: linear-gradient(180deg, 
 @keyframes bossin { from { transform: scale(.3) rotate(-20deg); opacity: 0; } }
 .beaten { display: flex; gap: 10px; align-items: center; margin-top: 10px; background: #fdf2f8; border-radius: 16px; padding: 8px 10px; text-align: right; font-size: 14px; color: #831843; line-height: 1.8; }
 .beaten .face { transform: rotate(-8deg); filter: grayscale(.3) drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
+.result .rewards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.result .rewards .reward { margin: 0; }
