@@ -89,7 +89,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; /** «نوروز» decorations. */ nowruz?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
@@ -490,6 +490,44 @@ function tabiatBridge(z0: number, rnd: () => number): THREE.Group {
   return g;
 }
 
+/** A goldfish bowl, the Nowruz favourite: glass, water and two little red fish. */
+function goldfishBowl(): THREE.Group {
+  const g = new THREE.Group();
+  const glass = new THREE.Mesh(new THREE.SphereGeometry(0.2, 18, 14, 0, Math.PI * 2, 0.35, Math.PI - 0.35), new THREE.MeshPhysicalMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.35, roughness: 0.05, side: THREE.DoubleSide }));
+  glass.position.y = 0.2; g.add(glass);
+  const water = new THREE.Mesh(new THREE.SphereGeometry(0.185, 16, 12, 0, Math.PI * 2, Math.PI * 0.45, Math.PI * 0.55), std(0x60a5fa, { transparent: true, opacity: 0.55, roughness: 0.1 }));
+  water.position.y = 0.2; g.add(water);
+  for (const [x, z, a] of [[0.05, 0.03, 0.4], [-0.06, -0.04, 2.5]]) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), std(0xf97316, { emissive: 0x7c2d12, emissiveIntensity: 0.3 })); f.scale.set(1.6, 0.9, 0.7);
+    f.position.set(x, 0.14, z); f.rotation.y = a; g.add(f);
+  }
+  return g;
+}
+
+/** A pot of «سبزه» (sprouted wheat) tied with a red ribbon. */
+function sabzeh(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(box(0.26, 0.12, 0.26, std(0xe5e7eb, { roughness: 0.4 }), 0, 0.06, 0, 0.03));
+  const grass = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.22, 10), std(0x65a30d, { roughness: 0.9, flatShading: true })); grass.position.y = 0.23; g.add(grass);
+  const ribbon = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.015, 6, 16), std(0xdc2626)); ribbon.rotation.x = Math.PI / 2; ribbon.position.y = 0.2; g.add(ribbon);
+  return g;
+}
+
+/** The «هفت‌سین» table: a cloth-covered table with sabzeh, apples, a goldfish bowl, coins and a mirror. */
+function haftSinTable(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(box(1.5, 0.06, 0.7, std(0xffffff, { roughness: 0.7 }), 0, 0.62, 0, 0.02));
+  g.add(box(1.52, 0.4, 0.72, std(0xb91c1c, { roughness: 0.8 }), 0, 0.42, 0, 0.02)); // the termeh cloth's skirt
+  for (const x of [-0.65, 0.65]) for (const z of [-0.28, 0.28]) g.add(box(0.05, 0.6, 0.05, std(0x7c4a21), x, 0.3, z));
+  const sz = sabzeh(); sz.position.set(-0.45, 0.65, 0); g.add(sz);
+  const bowl = goldfishBowl(); bowl.position.set(0.05, 0.65, 0.05); g.add(bowl);
+  for (let k = 0; k < 3; k++) { const a = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), std(0xdc2626, { roughness: 0.35 })); a.position.set(0.4 + (k % 2) * 0.1, 0.71 + (k === 2 ? 0.08 : 0), -0.1 + k * 0.08); g.add(a); }
+  for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 12), std(0xfbbf24, { metalness: 0.8, roughness: 0.3 })); c.position.set(0.55, 0.66 + k * 0.012, 0.2); g.add(c); }
+  const mirror = new THREE.Mesh(new THREE.CircleGeometry(0.16, 20), new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 1, roughness: 0.05 })); mirror.position.set(-0.1, 0.85, -0.3); g.add(mirror);
+  g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+
 /** «شب یلدا» fruit stand: a pyramid of pomegranates, watermelons (one cut open) and a lantern. */
 function yaldaStand(rnd: () => number): THREE.Group {
   const g = new THREE.Group();
@@ -769,6 +807,17 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   [[0xb91c1c, 0], [0x1d4ed8, 0.55], [0x111827, 1.1]].forEach(([c, dx]) => {
     const m = motorbike(c); m.position.set(kiosk.position.x - 1.3 - dx, 0.18, L.walkZ + 0.15); m.rotation.y = Math.PI / 2 + 0.25; add(m);
   });
+  if (opts.nowruz) {
+    // Nowruz: a Haft-Sin table by the bus stop, goldfish and sabzeh along the kerb, a greeting banner.
+    const t = haftSinTable(); t.position.set(L.queueX0 + 4.6, 0.18, L.walkZ - 0.35); add(t);
+    for (let x = -14, k = 0; x < 14; x += 3.1, k++) {
+      if (Math.abs(x - t.position.x) < 1.5) continue;
+      const o = k % 2 ? goldfishBowl() : sabzeh(); o.position.set(x, 0.18, L.walkZ + 0.75); o.scale.setScalar(1.3); add(o);
+    }
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 0.8), std(0xffffff, { map: label('نوروزتون پیروز', '#047857', '#fef3c7', 768, 112, 72), side: THREE.DoubleSide }));
+    banner.position.set(0.5, 3.5, L.walkZ - 0.6); g.add(banner);
+    for (const sx of [-2.8, 2.8]) add(box(0.07, 3.9, 0.07, std(0x3f2a1a), 0.5 + sx, 1.95, L.walkZ - 0.6));
+  }
   if (opts.yalda) {
     // Yalda night: fruit stands, a banner and strings of red and amber lights over the sidewalk.
     for (const x of [-11, -5.5, 6.5, 12]) { const st = yaldaStand(rnd); st.position.set(x, 0.18, L.walkZ - 0.25); st.rotation.y = (rnd() - 0.5) * 0.2; add(st); const p = lightPool(1.6, 0xffa060, 0.6); p.position.set(x, 0.2, L.walkZ + 0.1); g.add(p); }

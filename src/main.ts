@@ -23,10 +23,11 @@ import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
+import { nowruzBanner, showNowruzWin } from './ui/nowruz';
 import { fillPiggy } from './ui/piggy';
 import { AJOOL, BOSS_LINES } from './ui/characters';
 import { passReady, punch, showPass } from './ui/pass';
-import { yaldaLevel } from './game/events';
+import { HAFT_SIN, nowruzLevel, yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
 import { dailyLevel, today } from './game/daily';
@@ -278,20 +279,21 @@ let current = 0;
 let rush: Level | null = null;
 /** A booster or a continue was used this level (it then doesn't count as a clean win). */
 let helped = false;
-/** «شب یلدا»: which night of the event is being played, or -1. */
-let yaldaNight = -1;
+/** A seasonal event level being played («شب یلدا» night or «نوروز» day), or null. */
+type EventRun = { kind: 'yalda' | 'nowruz'; i: number };
+let event: EventRun | null = null;
 
-function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
+function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null) {
   disposeSession();
   rush = custom ?? null;
-  yaldaNight = night;
+  event = ev;
   current = Math.min(pick ?? save.level, levels.length - 1);
   const n = current;
   const level = custom ?? levels[n];
   // Yalda nights are played at home in Tajrish, after dark. The rush hour rotates day by day through
   // the places the player has already unlocked (never spoiling a chapter they haven't reached).
   const unlocked = CHAPTERS.filter((c) => c.from <= save.level);
-  const ch = night >= 0 ? { ...CHAPTERS[0], light: 'night' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
+  const ch = ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
   applyLight(ch.light);
   setMood(ch.light);
   craneMode = false;
@@ -308,15 +310,28 @@ function startLevel(pick?: number, custom?: Level, swoop = true, night = -1) {
     officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: night >= 0, skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
-  if (night >= 0) hud.setEvent(`شب یلدا ${fa(night + 1)}`, POM('hud')); else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
+  if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
+  else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
+  else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
   hud.refresh();
   hud.active(null);
   hud.show(true);
   fitCamera();
   if (swoop) introSwoop();
-  if (custom) return;
+  if (custom) {
+    // Event and daily levels may hold mechanics the player hasn't reached yet: explain the first one.
+    const v = level.vehicles, o = level.obstacles ?? [];
+    const has: [NonNullable<Level['intro']>, boolean][] = [
+      ['cover', v.some((x) => x.covered)], ['broken', v.some((x) => x.wait)], ['vip', !!level.vip?.length], ['oddEven', !!level.oddEven],
+      ['courier', v.some((x) => x.kind === 'bike')], ['officer', !!level.officer], ['cart', o.some((x) => x.kind === 'cart')],
+      ['wedding', v.some((x) => x.wedding)], ['granny', !!level.granny?.length], ['tunnel', o.some((x) => x.kind === 'tunnel')],
+    ];
+    const unseen = has.find(([k, on]) => on && !save.seen[k]);
+    if (unseen) { modalOpen = true; void showIntro(unseen[0]).then(() => { save.seen[unseen[0]] = true; persist(); modalOpen = false; }); }
+    return;
+  }
   const TIPS = ['روی ماشینی بزن که مسافرهای جلوی صف رنگش رو می‌خوان!', 'فلش روی ماشین جهت حرکتشه. اول ماشین‌های جلویی رو رد کن!', 'جای پارک ایستگاه محدوده؛ ماشینی رو بفرست که مسافرش تو صف نزدیکه.'];
   if (n < TIPS.length) hud.toast(TIPS[n], 5500);
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
@@ -389,10 +404,11 @@ function showRushWin() {
 }
 
 function showWin() {
-  if (yaldaNight >= 0) {
+  if (event) {
     recordWin(false);
     modalOpen = true; hud.show(false); hud.refresh();
-    showYaldaWin(yaldaNight, () => { hud.refresh(); modalOpen = false; startLevel(); showHome(); });
+    const back = () => { hud.refresh(); modalOpen = false; startLevel(); showHome(); };
+    if (event.kind === 'yalda') showYaldaWin(event.i, back); else showNowruzWin(event.i, back);
     return;
   }
   if (rush) { showRushWin(); return; }
@@ -497,7 +513,7 @@ function showLose() {
       loseLife();
       if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { startLevel(current, undefined, false); showHome(); return; }
     }
-    modalOpen = false; startLevel(current, rush ?? undefined, true, yaldaNight);
+    modalOpen = false; startLevel(current, rush ?? undefined, true, event);
   }));
 }
 
@@ -568,9 +584,16 @@ function showHome() {
     const lvl = yaldaLevel(night);
     if (!lvl) { hud.toast('مرحله‌ی امشب آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
-    startLevel(undefined, lvl, true, night); hud.show(true);
+    startLevel(undefined, lvl, true, { kind: 'yalda', i: night }); hud.show(true);
   });
   if (yb) c.querySelector('.chapter')!.before(yb);
+  const nb = nowruzBanner((day) => {
+    const lvl = nowruzLevel(day);
+    if (!lvl) { hud.toast('مرحله‌ی امروز آماده نشد، بعداً سر بزن!'); return; }
+    close(); modalOpen = false;
+    startLevel(undefined, lvl, true, { kind: 'nowruz', i: day }); hud.show(true);
+  });
+  if (nb) c.querySelector('.chapter')!.before(nb);
   const close = modal(c, 'home-card');
 
   const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {

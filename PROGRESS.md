@@ -83,6 +83,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   (`World.landmark`/`view`; `__rb.swoop(k)` renders any point of the move in `?shot` mode)
 - Characters (`src/ui/characters.ts`): SVG portraits of «مش‌رحیم» (speaks the mechanic intro cards) and «آقای عجول»,
   who taunts before each chapter's boss level and makes his excuses on the win screen after it
+- «نوروز» event (14 March – 3 April, `?nowruz` to test): seven days in a spring Tajrish with a Haft-Sin table, goldfish
+  and sabzeh; each win collects one «سین» and its «عیدی», the last 5 keys. Event and daily levels now show the intro
+  card of any mechanic the player hasn't met yet. `node scripts/playthrough.cjs n1 n7`
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)

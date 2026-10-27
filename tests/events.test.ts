@@ -19,3 +19,22 @@ describe('«شب یلدا» event', () => {
   }
   it('has a fortune for every night', () => expect(HAFEZ.length).toBeGreaterThanOrEqual(YALDA_NIGHTS));
 });
+
+describe('«نوروز» event', () => {
+  it('runs from mid-March to early April', async () => {
+    const { nowruzActive } = await import('../src/game/events');
+    expect(nowruzActive(new Date(2027, 2, 21))).toBe(true);
+    expect(nowruzActive(new Date(2027, 3, 3))).toBe(true);
+    expect(nowruzActive(new Date(2027, 3, 10))).toBe(false);
+  });
+  it('every day is valid and solvable', async () => {
+    const { NOWRUZ_DAYS, nowruzLevel, HAFT_SIN } = await import('../src/game/events');
+    expect(HAFT_SIN.length).toBe(NOWRUZ_DAYS);
+    for (let i = 0; i < NOWRUZ_DAYS; i++) {
+      const l = nowruzLevel(i);
+      expect(l).not.toBeNull();
+      expect(validate(l!)).toEqual([]);
+      expect(solve(l!).solvable).toBe(true);
+    }
+  }, 60000);
+});
