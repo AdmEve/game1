@@ -8,7 +8,7 @@ import { App as CapApp } from '@capacitor/app';
 import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
-import { busy, ease, tick, tween, resetTraffic } from './render/anim';
+import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { outdoorEnv } from './render/env.js';
 import { warmFleet } from './render/fleet';
 import { sky } from './render/world';
@@ -260,6 +260,12 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 });
 
 // ───── Level flow ─────
+/** When taps pile up faster than cars can park and load, play the backlog a little faster to catch up. */
+function catchUp() {
+  const b = session?.backlog ?? 0;
+  setSpeed(b > 4 ? 1.8 : b > 2 ? 1.4 : 1);
+}
+
 function disposeSession() {
   if (!session) return;
   resetTraffic();
@@ -694,6 +700,8 @@ async function boot() {
         probeFrames = 0; probeTime = 0;
       }
     }
+    // When taps pile up faster than cars can park and load, play the backlog a little faster to catch up.
+    catchUp();
     tick(dt);
     session?.idle(t / 1000);
     if (session) {
@@ -718,7 +726,7 @@ async function boot() {
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); renderer.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
-    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
+    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
   };
   performance.mark('b3');
   renderer.render(scene, camera);

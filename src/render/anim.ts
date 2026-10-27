@@ -81,8 +81,17 @@ export interface DriveOpts {
 }
 
 /** Cars currently on the move, so each can keep its distance from the one in front. */
-interface Driver { root: THREE.Object3D; heading: THREE.Vector3; id: number; waitingFor: Driver | null; }
+interface Driver {
+  root: THREE.Object3D; heading: THREE.Vector3; id: number; waitingFor: Driver | null;
+  /** Where the car would be in its own lane (it may be swerving out to overtake). */
+  base: THREE.Vector3;
+  /** Standing still on purpose (waiting for a bay): others may overtake it. */
+  parked?: boolean;
+  overtaking?: boolean;
+}
 const traffic = new Set<Driver>();
+/** Seconds cars have spent waiting behind others, and how often they gave up (for tuning). */
+export const trafficStats = { held: 0, gaveUp: 0 };
 let nextId = 0;
 /** Centre-to-centre gap kept behind the car in front (a sedan is about 2.2 long). */
 const GAP = 2.6;
@@ -93,7 +102,7 @@ export function resetTraffic() { traffic.clear(); }
 /** A car standing on the road (e.g. waiting for its bay): others queue behind it. Returns the release. */
 export function occupy(root: THREE.Object3D): () => void {
   const yaw = root.rotation.y;
-  const d: Driver = { root, heading: new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), id: nextId++, waitingFor: null };
+  const d: Driver = { root, heading: new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), id: nextId++, waitingFor: null, base: root.position.clone(), parked: true };
   traffic.add(d);
   return () => { traffic.delete(d); };
 }
@@ -102,8 +111,8 @@ export function occupy(root: THREE.Object3D): () => void {
 function carAhead(me: Driver): Driver | null {
   let best: Driver | null = null, bestD = GAP;
   for (const o of traffic) {
-    if (o === me) continue;
-    const dx = o.root.position.x - me.root.position.x, dz = o.root.position.z - me.root.position.z;
+    if (o === me || (me.overtaking && o.parked)) continue;
+    const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
     const d = Math.hypot(dx, dz);
     if (d >= bestD || d < 1e-3) continue;
     const along = (dx * me.heading.x + dz * me.heading.z) / d;
@@ -116,6 +125,16 @@ function carAhead(me: Driver): Driver | null {
   return best;
 }
 
+/** Relative position of `o` to `me`'s lane point: distance along the heading and to the left. */
+function rel(me: Driver, o: Driver) {
+  const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
+  return { along: dx * me.heading.x + dz * me.heading.z, left: dx * me.heading.z - dz * me.heading.x };
+}
+/** Is a parked car still beside or just ahead of me in my lane? */
+const parkedAlongside = (me: Driver) => [...traffic].some((o) => o.parked && o !== me && (({ along, left }) => along > -2.4 && along < GAP + 0.3 && Math.abs(left) < 0.75)(rel(me, o)));
+/** Traffic coming the other way (or in the other lane) close ahead: not safe to pull out. */
+const oncoming = (me: Driver) => [...traffic].some((o) => o !== me && !o.parked && (({ along, left }) => along > -1 && along < 7 && left > 0.3 && left < 1.6)(rel(me, o)));
+
 /**
  * Drive an object along a path: accelerates, cruises, brakes; yaw follows the tangent; `body` pitches
  * under acceleration and rolls in turns, like real suspension. Cars keep their distance: one that
@@ -124,17 +143,21 @@ function carAhead(me: Driver): Driver | null {
 export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.CurvePath<THREE.Vector3>, o: DriveOpts = {}): Promise<void> {
   const L = path.getLength();
   const vmax = o.vmax ?? 9, acc = o.accel ?? 16, brake = o.brake ?? true;
-  const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null };
+  const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null, base: root.position.clone() };
   traffic.add(me);
-  let s = 0, v = 0, waited = 0, gaveUp = !!o.priority, prevYaw = root.rotation.y;
+  let s = 0, v = 0, waited = 0, gaveUp = !!o.priority, prevYaw = root.rotation.y, swerve = 0;
+  const left = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const place = (dt: number) => {
     const u = Math.min(1, s / L);
     const p = path.getPointAt(u);
-    root.position.x = p.x; root.position.z = p.z;
+    me.base.set(p.x, 0, p.z);
+    // Overtaking a parked car: drift into the other lane (to the left of travel) and back.
+    root.position.x = p.x + left.x * swerve; root.position.z = p.z + left.z * swerve;
     path.getTangentAt(u, tan);
     // Look out along the way the car is moving (backwards when reversing).
     me.heading.set(tan.x, 0, tan.z).normalize();
+    left.set(me.heading.z, 0, -me.heading.x);
     if (o.reverse) tan.negate();
     // Our vehicles face −z at yaw 0.
     const yaw = Math.atan2(-tan.x, -tan.z);
@@ -146,9 +169,13 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   };
   return loop((dt) => {
     if (dt <= 0) return false;
+    // Pull out past a car parked in the lane when the other lane is clear; pull back in once past it.
+    if (me.overtaking) me.overtaking = parkedAlongside(me);
+    else { const a = carAhead(me); if (a?.parked && !oncoming(me)) me.overtaking = true; }
+    swerve += THREE.MathUtils.clamp((me.overtaking ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
     const ahead = gaveUp ? null : carAhead(me);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
-    if (ahead) { waited += dt; if (waited > 2.5) gaveUp = true; } else waited = 0;
+    if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 2.5) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
     const hold = !!ahead && !gaveUp;
     me.waitingFor = hold ? ahead : null;
     const left = L - s;
