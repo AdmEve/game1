@@ -7,16 +7,16 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'store');
 fs.mkdirSync(out, { recursive: true });
-const seen = "window.__rb.save.seen={cover:true,broken:true,vip:true,oddEven:true,courier:true,officer:true,cart:true,ch2:true,ch3:true,ch4:true,ch5:true};";
+const seen = "window.__rb.save.seen={cover:true,broken:true,vip:true,oddEven:true,courier:true,officer:true,cart:true,wedding:true,granny:true,tunnel:true,ch6:true,ch7:true,ch8:true,ch2:true,ch3:true,ch4:true,ch5:true};";
 const shots = [
   { name: '1-gameplay', caption: 'ترافیک تهران، تو دستای تو!', sub: 'ماشین‌ها رو آزاد کن، مسافرها رو برسون', setup: `${seen} window.__rb.save.level=11; window.__rb.startLevel(); (async () => { const s = window.__rb.session(); const { solve } = await import('/src/game/solver.ts'); const sol = solve(s.level).solution; s.tap(sol[0]); await window.__rb.advance(1.4); s.tap(sol[1]); await window.__rb.advance(0.9); s.tap(sol[2]); })()`, ms: 1500 },
   { name: '2-cars', caption: 'ماشین‌های واقعی ایرانی', sub: 'پیکان، پراید، ۴۰۵، سمند، زامیاد و اتوبوس تندرو', setup: `${seen} window.__rb.save.level=29; window.__rb.startLevel();`, ms: 300 },
-  { name: '3-valiasr', caption: 'غروب خیابان ولیعصر', sub: 'از تجریش تا میدان آزادی، فصل به فصل', setup: `${seen} window.__rb.save.level=40; window.__rb.startLevel();`, ms: 300 },
-  { name: '4-azadi', caption: 'شب‌های میدان آزادی', sub: '۲۴۰ مرحله در هشت فصل، با مکانیک‌های تازه', setup: `${seen} window.__rb.save.level=66; window.__rb.startLevel();`, ms: 300 },
+  { name: '3-valiasr', caption: 'غروب خیابان ولیعصر', sub: '۲۴۰ مرحله در هشت فصل، از تجریش تا برج میلاد', setup: `${seen} window.__rb.save.level=40; window.__rb.startLevel();`, ms: 300 },
+  { name: '4-milad', caption: 'غروب برج میلاد', sub: 'تونل نیایش: از یه سر برو تو، از اون سر بیا بیرون!', setup: `${seen} window.__rb.save.level=212; window.__rb.startLevel();`, ms: 300 },
   { name: '5-tochal', caption: 'برف توچال', sub: 'پلیس راهور سر چهارراه وایستاده!', setup: `${seen} window.__rb.save.level=96; window.__rb.startLevel();`, ms: 1200 },
   { name: '6-bazaar', caption: 'بازار بزرگ تهران', sub: 'گاری‌های میوه، گنبدها و حجره‌ها', setup: `${seen} window.__rb.save.level=125; window.__rb.startLevel();`, ms: 300 },
   { name: '7-garage', caption: 'گاراژ من', sub: 'ژیان، جیپ ویلیز و اتوبوس بنز دودر رو بازسازی کن', setup: `window.__rb.save.garage={keys:6,restored:['javanan']}; (async () => { const g = await import('/src/ui/garage.ts'); g.showGarage(() => {}); })()`, ms: 100 },
-  { name: '8-home', caption: 'رادیو راه‌بندون و جایزه‌های روزانه', sub: 'هر روز یه هدیه، هر هفته یه سوئیچ', setup: `window.__rb.save.garage={keys:4,restored:[]}`, ms: 300, home: true },
+  { name: '8-agency', caption: 'آژانس آقاجون', sub: 'با ستاره‌هات آژانس و محله‌ی آقاجون رو از نو بساز', setup: `window.__rb.save.agency={stars:7,done:['clean','paint','windows','sign','awning','bench','flowers','desk','tree'],init:true}; document.querySelector('.agency-btn').click();`, ms: 1500, home: true },
 ];
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -25,7 +25,7 @@ const shots = [
     await p.goto(`http://127.0.0.1:5173/?shot${s.home ? '' : '&play'}`);
     await p.waitForFunction(() => document.title === 'ready', null, { timeout: 240000 });
     await p.evaluate(s.setup);
-    await p.waitForTimeout(400);
+    await p.waitForTimeout(s.home ? 1500 : 400);
     await p.evaluate((ms) => window.__rb.advance(ms / 1000), s.ms);
     await p.screenshot({ path: `/tmp/raw-${s.name}.png` });
     await p.close();
