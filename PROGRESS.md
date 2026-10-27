@@ -13,6 +13,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - `node scripts/shot.cjs "<query>" out.png <ms> "<js to run first>"` takes a 390×844@3x screenshot from the
   dev server with SwiftShader. Example: `node scripts/shot.cjs play /tmp/a.png 2000 "window.__rb.session().tap(3)"`.
 - `npm test` checks the rules and that all levels are valid and solvable (solver replay).
+- The app loads `src/game/levels.pack.json`, a compact text form of `levels.json` (`src/game/pack.ts`, ~67 KB instead
+  of ~590 KB). `npm run levels` writes both; after editing `levels.json` by hand run `npm run pack-levels` (a test
+  checks they match).
 - `npm run levels -- --from 210` keeps the first 210 levels and only regenerates the rest. `npm run levels` regenerates `src/game/levels.json` from the specs in `scripts/gen-levels.ts`. It picks
   each level from many seeds to hit a target win rate for a simulated casual player.
 - Icons and splash: render the hero car with `scripts/icon-car.html` (served by the dev server, captured with

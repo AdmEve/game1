@@ -1,0 +1,6 @@
+/* Vazirmatn in only the weights the game uses (400–900), so the unused light weights stay out of the APK. */
+@font-face { font-family: Vazirmatn; src: url('vazirmatn/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Vazirmatn; src: url('vazirmatn/fonts/webfonts/Vazirmatn-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: Vazirmatn; src: url('vazirmatn/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: Vazirmatn; src: url('vazirmatn/fonts/webfonts/Vazirmatn-ExtraBold.woff2') format('woff2'); font-weight: 800; font-display: swap; }
+@font-face { font-family: Vazirmatn; src: url('vazirmatn/fonts/webfonts/Vazirmatn-Black.woff2') format('woff2'); font-weight: 900; font-display: swap; }

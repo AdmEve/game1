@@ -1,11 +1,12 @@
-import 'vazirmatn/Vazirmatn-font-face.css';
+import './fonts.css';
 import './style.css';
 import * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { App as CapApp } from '@capacitor/app';
-import LEVELS from './game/levels.json';
+import PACKED from './game/levels.pack.json';
+import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
 import { busy, ease, tick, tween } from './render/anim';
 import { outdoorEnv } from './render/env.js';
@@ -37,7 +38,7 @@ import { click, coin } from './audio';
 import { setMood, setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
-const levels = LEVELS as Level[];
+const levels: Level[] = (PACKED as string[]).map(unpackLevel);
 const debug = new URLSearchParams(location.search);
 
 // ───── Renderer and scene ─────

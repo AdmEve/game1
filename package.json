@@ -11,6 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "levels": "vite-node scripts/gen-levels.ts",
+    "pack-levels": "vite-node scripts/pack-levels.ts",
     "android:sync": "npm run build && cap sync android"
   },
   "dependencies": {

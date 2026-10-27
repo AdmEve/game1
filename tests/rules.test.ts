@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import LEVELS from '../src/game/levels.json';
+import PACKED from '../src/game/levels.pack.json';
+import { unpackLevel } from '../src/game/pack';
 import { addBay, lane, newState, whistle, startState, tap, validate, weddingLeft, type Level } from '../src/game/rules';
 import { solve } from '../src/game/solver';
 
@@ -275,6 +277,9 @@ describe('courier', () => {
 
 describe('journey levels', () => {
   it('has 240 levels', () => expect(levels.length).toBe(240));
+  it('ships the same levels in compact form (run scripts/pack-levels.ts after editing levels.json)', () => {
+    expect((PACKED as string[]).map(unpackLevel)).toEqual(levels);
+  });
   levels.forEach((l, i) => {
     it(`level ${i + 1} is valid and solvable`, () => {
       expect(validate(l)).toEqual([]);

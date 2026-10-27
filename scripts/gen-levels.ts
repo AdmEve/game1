@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { KIND, type Level } from '../src/game/rules';
 import { playRates, rng, solve } from '../src/game/solver';
 import { generate, type Spec } from '../src/game/generator';
+import { packLevel } from '../src/game/pack';
 
 // Difficulty curve: a sawtooth with a «سخت» (hard) level every five.
 const SPECS: Spec[] = [
@@ -228,4 +229,6 @@ SPECS.forEach((spec0, n) => {
   console.log(`L${n + 1} ${spec.w}x${spec.h} vehicles=${best.level.vehicles.length} passengers=${best.level.queue.length} greedy=${best.rates.greedy.toFixed(2)} random=${best.rates.random.toFixed(2)} (target ${spec.target})${spec.tag ? ' ' + spec.tag : ''}`);
 });
 writeFileSync(new URL('../src/game/levels.json', import.meta.url), JSON.stringify(out));
+// The app loads the compact form.
+writeFileSync(new URL('../src/game/levels.pack.json', import.meta.url), JSON.stringify(out.map(packLevel)));
 console.log('wrote', out.length, 'levels');
