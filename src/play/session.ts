@@ -75,6 +75,8 @@ export class Session {
     this.colorblind = !!worldOpts.colorblind;
     const world = buildWorld(level.w, level.h, MAX_BAYS, seed, worldOpts);
     this.L = world.L;
+    this.landmark = world.landmark;
+    this.landmarkView = world.view;
     this.group.add(world.group);
     for (let k = 0; k < MAX_BAYS; k++) { this.bayFree.push(Promise.resolve()); this.bayIsFree.push(true); }
     level.vehicles.forEach((v, idx) => {
@@ -810,5 +812,8 @@ export class Session {
 
   /** Where the camera should look and what it must keep in view. */
   focus() { return this.L.focus; }
+  /** Where the chapter's landmark stands (for the level-start camera). */
+  landmark = new THREE.Vector3();
+  landmarkView?: { from: THREE.Vector3; look: THREE.Vector3 };
 }
 

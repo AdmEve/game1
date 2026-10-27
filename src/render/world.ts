@@ -583,7 +583,8 @@ function azadiTower(): THREE.Group {
   return g;
 }
 
-export interface World { group: THREE.Group; L: Layout; }
+/** `landmark`: the chapter's landmark, where the level-start camera looks first. */
+export interface World { group: THREE.Group; L: Layout; landmark: THREE.Vector3; /** A hand-placed opening shot where the generic one is blocked or fogged. */ view?: { from: THREE.Vector3; look: THREE.Vector3 }; }
 
 export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
   const night = !!opts.night, snow = !!opts.snow;
@@ -800,5 +801,15 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // Everything here is static: merge it into one mesh per material to keep draw calls low.
   const baked = bake(g);
   baked.traverse((m) => { (m as THREE.Mesh).receiveShadow = true; });
-  return { group: baked, L };
+  // The point the level-start camera frames first: the chapter's landmark.
+  const top = (o: THREE.Object3D, h: number) => o.position.clone().add(new THREE.Vector3(0, h * o.scale.y, 0));
+  const landmark = {
+    milad: top(milad, 13), azadi: top(azadi, 3), both: top(milad, 11),
+    tochal: new THREE.Vector3(6, 14, L.walkZ - 34), bazaar: new THREE.Vector3(-2.5, 3, L.walkZ - 3),
+    darband: new THREE.Vector3(0, 3, L.walkZ - 6), tabiat: new THREE.Vector3(0, 5, L.walkZ - 6.5),
+  }[lm];
+  // Azadi sits behind tall blocks and Tochal deep in the fog: frame those two by hand.
+  const view = lm === 'azadi' ? { from: new THREE.Vector3(0, 19, azadi.position.z + 38), look: new THREE.Vector3(0, 6, azadi.position.z) }
+    : lm === 'tochal' ? { from: new THREE.Vector3(-2, 9, L.walkZ + 2), look: new THREE.Vector3(5, 17, L.walkZ - 34) } : undefined;
+  return { group: baked, L, landmark, view };
 }

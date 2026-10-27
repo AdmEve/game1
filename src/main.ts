@@ -166,18 +166,41 @@ let shakeAmp = 0;
 const camBase = new THREE.Vector3(), camTarget = new THREE.Vector3();
 
 /** Level opening: the camera swoops down from the skyline onto the lot. */
+/**
+ * Level start: the camera opens on the chapter's landmark over the rooftops, then sweeps down onto the
+ * lot. The full reveal plays when a chapter's place is new this session; later levels get a short swoop.
+ */
+let lastPlace = '';
+function swoopPose(k: number, startPos: THREE.Vector3, startLook: THREE.Vector3, endPos: THREE.Vector3, endLook: THREE.Vector3) {
+  // Rise a little in the middle so the move arcs over the rooftops instead of cutting through them.
+  camera.position.lerpVectors(startPos, endPos, k).add(new THREE.Vector3(0, Math.sin(k * Math.PI) * 3, 0));
+  camera.lookAt(new THREE.Vector3().lerpVectors(startLook, endLook, k));
+}
+function landmarkShot() {
+  const lm = session!.landmark, v = session!.landmarkView;
+  if (v) return { startPos: v.from.clone(), startLook: v.look.clone() };
+  // Far enough back to frame the whole landmark (taller ones need more room), looking a little below
+  // its top so the street shows underneath.
+  const d = Math.min(34, Math.max(16, (lm.y * 1.4 + 6) * 1.9)); // inside the fog's clear range
+  const startLook = new THREE.Vector3(lm.x, lm.y * 0.6, lm.z);
+  const startPos = new THREE.Vector3(lm.x * 0.7, lm.y * 0.55 + 4, lm.z + d);
+  return { startPos, startLook };
+}
 function introSwoop() {
-  if (debug.has('shot') || !session) return;
+  if (!session) return;
   const endPos = camBase.clone(), endLook = camTarget.clone();
-  const startLook = new THREE.Vector3(0, 3, session.L.walkZ - 14);
-  const startPos = endPos.clone().add(new THREE.Vector3(0, 6, 10));
-  const look = new THREE.Vector3();
-  void tween(1.5, (k) => {
-    camera.position.lerpVectors(startPos, endPos, k);
-    look.lerpVectors(startLook, endLook, k);
-    camera.lookAt(look);
+  const place = session.landmark.toArray().join();
+  const full = place !== lastPlace;
+  lastPlace = place;
+  const { startPos, startLook } = full ? landmarkShot() : { startPos: endPos.clone().add(new THREE.Vector3(0, 6, 10)), startLook: new THREE.Vector3(0, 3, session.L.walkZ - 14) };
+  if (debug.has('shot')) return;
+  // Hold on the landmark for a beat, then sweep down.
+  const hold = full ? 0.7 : 0;
+  void tween(hold + (full ? 2.0 : 1.5), (t) => {
+    const k = full ? Math.max(0, (t * (hold + 2.0) - hold) / 2.0) : t;
+    swoopPose(ease.inOut(k), startPos, startLook, endPos, endLook);
     camBase.copy(camera.position);
-  }, ease.inOut).then(() => { camera.position.copy(endPos); camera.lookAt(endLook); camBase.copy(endPos); });
+  }, ease.linear).then(() => { camera.position.copy(endPos); camera.lookAt(endLook); camBase.copy(endPos); });
 }
 function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
   const p = at.clone().project(camera);
@@ -641,6 +664,8 @@ async function boot() {
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, levels, camera, renderer,
+    /** Render the level-start camera move at progress k (0 = the landmark shot). */
+    swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); renderer.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
     async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
   };

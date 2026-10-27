@@ -78,6 +78,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
   it can be broken open with the `piggy` Bazaar product (shown in the shop with its amount)
 - «کارت بلیت» monthly pass (`src/ui/pass.ts`): Tehran Metro Line 1 from Tajrish to Shush, 20 stations; every new
   win punches the ticket, two punches per station; a free and a premium («کارت طلایی», `pass` product) reward each
+- Level-start camera: when a chapter's place is new in the session, the camera opens on its landmark (Milad, Azadi,
+  Tochal, the bazaar portal, Darband, Tabiat Bridge) over the rooftops and sweeps down onto the lot
+  (`World.landmark`/`view`; `__rb.swoop(k)` renders any point of the move in `?shot` mode)
 - Store: `store/listing-fa.md` and captioned screenshots (`node scripts/store-shots.cjs`)
 - Tests: `npm test` (rules + all levels solvable), `node scripts/playthrough.cjs 1 7 30 61` (real client),
   `node scripts/stress.cjs 12 30 55` (random rapid taps, visual/rules sync)
