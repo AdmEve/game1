@@ -99,6 +99,11 @@ const GAP = 2.6;
 /** Forget every car on the road (a new level starts). */
 export function resetTraffic() { traffic.clear(); }
 
+/** Is any car standing (parked or stopped) within `r` of a point? */
+export function standingNear(x: number, z: number, r: number): boolean {
+  return [...traffic].some((o) => o.parked && Math.hypot(o.root.position.x - x, o.root.position.z - z) < r);
+}
+
 /** A car standing on the road (e.g. waiting for its bay): others queue behind it. Returns the release. */
 export function occupy(root: THREE.Object3D): () => void {
   const yaw = root.rotation.y;

@@ -8,7 +8,7 @@ import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
-import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
+import { drive, ease, keepRight, occupy, roundedPath, standingNear, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
@@ -787,7 +787,9 @@ export class Session {
     // The next car for this bay may set off now.
     this.bayRelease.get(v)?.started();
     const bx = this.L.bayX[bay], top = this.L.topRoadZ;
-    const s = bx >= 0 ? 1 : -1; // leave toward the nearer side of the screen
+    // Leave toward the nearer side of the screen, unless a car is waiting there for this bay.
+    let s = bx >= 0 ? 1 : -1;
+    if (standingNear(bx - s * 1.8, top + 0.45 * s, 1.6) || standingNear(bx - s * 1.8, top - 0.45 * s, 1.6)) s = -s;
     // Back out into the lane that heads off-screen, then drive away keeping right.
     const lane = top + 0.45 * s;
     const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(bx - s * 1.1, 0, lane)], 0.9);
