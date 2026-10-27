@@ -27,13 +27,13 @@ const STEP = Number(process.env.STEP || 8);
         }
         return true;
       };
-      let worst = 0, frames = 0, sample = null;
+      let worst = 0, frames = 0, sample = null; const last = new Map();
       // Tap the solution moves 0.25 s apart: a fast player.
       for (let k = 0; k < sol.length + 60; k++) {
         if (k < sol.length) s.tap(sol[k]);
           for (let f = 0; f < STEP; f++) {
           await r.advance(1 / 30);
-          const moving = s.cars.map((o, i) => ({ o, i })).filter(({ i }) => !s.s.inLot[i] && s.cars[i].root.parent && s.cars[i].root.position.y < 0.05);
+          const moving = s.cars.map((o, i) => ({ o, i })).filter(({ i }) => !s.s.inLot[i] && s.cars[i].root.parent && s.cars[i].root.position.y < 0.05).filter(({ o, i }) => { const q = last.get(i), p = o.root.position; last.set(i, p.clone()); return !q || Math.hypot(p.x - q.x, p.z - q.z) > 0.004; });
           let hits = 0; const pairs = [];
           for (let a = 0; a < moving.length; a++) for (let c = a + 1; c < moving.length; c++) if (overlap(rect(moving[a].o, moving[a].o.length), rect(moving[c].o, moving[c].o.length))) { hits++; pairs.push([moving[a], moving[c]]); }
           if (hits > worst) {
