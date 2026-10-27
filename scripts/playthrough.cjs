@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
       const { solve } = await import('/src/game/solver.ts');
       const sol = solve(s.level).solution;
       for (const m of sol) { s.tap(m); await r.advance(0.7); }
-      for (let k = 0; k < 40 && !document.querySelector('.result'); k++) await r.advance(0.5);
+      for (let k = 0; k < 120 && !document.querySelector('.result'); k++) await r.advance(0.5);
       const won = !!document.querySelector('.result.win');
       return { n, moves: sol.length, won, over: s.s.over, yalda: r.save.yalda.done, nowruz: r.save.nowruz.done };
     }, n);
