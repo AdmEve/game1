@@ -171,30 +171,43 @@ type Style = 'stone' | 'brick';
  * awnings on the ground floor, balconies, bare cement side walls, an ایزوگام roof with a parapet and the
  * usual rooftop clutter (water tank, evaporative cooler, satellite dishes).
  */
+/** One floor's worth of wall texture per tone and style, painted once and reused by every building. */
+const wallTiles = new Map<string, HTMLCanvasElement>();
+function wallTile(tone: string, style: Style, W: number, FH: number): HTMLCanvasElement {
+  const key = `${tone}|${style}|${W}x${FH}`;
+  let t = wallTiles.get(key);
+  if (t) return t;
+  t = document.createElement('canvas'); t.width = W; t.height = FH;
+  const c = t.getContext('2d')!, r = Math.random;
+  c.fillStyle = tone; c.fillRect(0, 0, W, FH);
+  if (style === 'brick') {
+    for (let y = 0; y < FH; y += 6) {
+      for (let x = (y / 6) % 2 ? -8 : 0; x < W; x += 16) {
+        c.fillStyle = `rgba(${90 + r() * 40},${40 + r() * 20},${25 + r() * 15},${0.25 + r() * 0.2})`;
+        c.fillRect(x + 1, y + 1, 14, 4);
+      }
+    }
+    c.fillStyle = 'rgba(240,230,210,.35)'; for (let y = 0; y < FH; y += 6) c.fillRect(0, y, W, 1);
+  } else {
+    // Travertine slabs with soft veining.
+    for (let y = 0; y < FH; y += 24) for (let x = (y / 24) % 2 ? -32 : 0; x < W; x += 64) {
+      c.fillStyle = `rgba(${150 + r() * 60},${130 + r() * 50},${100 + r() * 40},.12)`; c.fillRect(x + 1, y + 1, 62, 22);
+      c.strokeStyle = 'rgba(120,100,70,.18)'; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, 63, 23);
+    }
+  }
+  wallTiles.set(key, t);
+  return t;
+}
+
 function apartment(w: number, floors: number, tone: string, style: Style, rnd: () => number, night = false, snow = false): THREE.Group {
   const g = new THREE.Group();
   const glow: [number, number, number, number, string][] = [];
   const fh = 0.62, h = floors * fh + 0.3, d = 1.8;
   const W = 384, FH = 96, cols = w > 2.8 ? 4 : 3;
   const facade = canvasTex(W, FH * floors, (c) => {
-    if (style === 'brick') {
-      c.fillStyle = tone; c.fillRect(0, 0, W, FH * floors);
-      // Brick courses.
-      for (let y = 0; y < FH * floors; y += 6) {
-        for (let x = (y / 6) % 2 ? -8 : 0; x < W; x += 16) {
-          c.fillStyle = `rgba(${90 + rnd() * 40},${40 + rnd() * 20},${25 + rnd() * 15},${0.25 + rnd() * 0.2})`;
-          c.fillRect(x + 1, y + 1, 14, 4);
-        }
-      }
-      c.fillStyle = 'rgba(240,230,210,.35)'; for (let y = 0; y < FH * floors; y += 6) c.fillRect(0, y, W, 1);
-    } else {
-      c.fillStyle = tone; c.fillRect(0, 0, W, FH * floors);
-      // Travertine slabs with soft veining.
-      for (let y = 0; y < FH * floors; y += 24) for (let x = (y / 24) % 2 ? -32 : 0; x < W; x += 64) {
-        c.fillStyle = `rgba(${150 + rnd() * 60},${130 + rnd() * 50},${100 + rnd() * 40},.12)`; c.fillRect(x + 1, y + 1, 62, 22);
-        c.strokeStyle = 'rgba(120,100,70,.18)'; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, 63, 23);
-      }
-    }
+    // The wall (brick courses or travertine slabs) is painted once per tone and stamped floor by floor.
+    const tile = wallTile(tone, style, W, FH);
+    for (let f = 0; f < floors; f++) c.drawImage(tile, 0, f * FH);
     for (let f = 0; f < floors; f++) {
       const y = f * FH;
       if (f === floors - 1) {

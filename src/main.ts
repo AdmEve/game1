@@ -646,9 +646,16 @@ async function boot() {
   hud.onBooster = useBooster;
   hud.onSettings = showSettings;
   hud.onCoins = () => { modalOpen = true; showShop(() => { modalOpen = false; }, () => hud.refresh()); };
+  performance.mark('b0');
+  performance.measure('before-boot', { start: 0, end: 'b0' });
   await document.fonts.load('900 40px Vazirmatn').catch(() => {});
+  performance.measure('fonts', 'b0');
+  performance.mark('b1');
   warmFleet([]);
+  performance.measure('fleet', 'b1');
+  performance.mark('b2');
   startLevel(undefined, undefined, debug.has('play'));
+  performance.measure('level', 'b2');
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);
@@ -709,6 +716,9 @@ async function boot() {
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
     async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
   };
+  performance.mark('b3');
+  renderer.render(scene, camera);
+  performance.measure('first-frame', 'b3');
   document.title = 'ready';
 }
 void boot();

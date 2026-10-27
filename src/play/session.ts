@@ -76,7 +76,10 @@ export class Session {
   constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1, worldOpts: WorldOpts = {}) {
     this.s = newState(level);
     this.colorblind = !!worldOpts.colorblind;
+    performance.mark('w0');
     const world = buildWorld(level.w, level.h, MAX_BAYS, seed, worldOpts);
+    performance.measure('world', 'w0');
+    performance.mark('v0');
     this.L = world.L;
     this.landmark = world.landmark;
     this.landmarkView = world.view;
@@ -143,11 +146,18 @@ export class Session {
       }
       const m = cone(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y); m.rotation.y = c.col * 1.3; this.group.add(m); this.cones.push(m);
     }
+    performance.measure('vehicles', 'v0');
+    performance.mark('q0');
     for (let k = 0; k < Math.min(VISIBLE_QUEUE, this.s.queue.length); k++) this.spawn(k, false);
+    performance.measure('queue', 'q0');
+    performance.mark('r0');
     this.lockGate = this.gate(this.s.bays.length);
     hooks.queueLeft(this.s.queue.length, this.s.queue.length);
     this.refreshPlates();
+    performance.measure('misc', 'r0');
+    performance.mark('d0');
     this.dressStreets(seed);
+    performance.measure('streets', 'd0');
     if (level.officer) {
       // He stands on the ring road at the lot's top-left corner, facing the lot.
       this.officer = trafficOfficer();

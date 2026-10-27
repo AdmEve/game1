@@ -99,6 +99,13 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Before publishing: permanent signing key secrets, Bazaar RSA key and Tapsell ids in `src/config.ts`; create the
   Bazaar SKUs from `PRODUCTS` (including `piggy` and `pass`)
 
+## Performance
+- Boot and level building leave `performance.measure` entries (`before-boot`, `fonts`, `level`, `world`, `vehicles`,
+  `queue`, `streets`, `first-frame`). Read them with `performance.getEntriesByType('measure')`.
+- Measured on the production build (headless, software GPU): about 1 s of the page's own work to the first frame, about
+  2.5 s with the CPU throttled 4×, mostly building the world (~0.9 s) and the first level's car models (~0.6 s, later
+  ones come from the background warmup).
+
 ## Gotchas
 - Never `pkill -f` a pattern that also appears in your own command line: it kills your shell.
 - Background commands are capped at 2 hours: for screenshots, start vite inside the same command if it is not running.
