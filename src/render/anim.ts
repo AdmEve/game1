@@ -76,7 +76,7 @@ export function roundedPath(pts: THREE.Vector3[], radius = 0.75): THREE.CurvePat
 
 export interface DriveOpts {
   vmax?: number; accel?: number; reverse?: boolean; onProgress?: (k: number) => void; brake?: boolean;
-  /** Has right of way (e.g. backing out of a bay): never waits for other cars. */
+  /** Has right of way (e.g. backing out of a bay): never waits for a stopped car, only for moving ones. */
   priority?: boolean;
 }
 
@@ -96,9 +96,19 @@ interface Driver {
 const traffic = new Set<Driver>();
 /** Seconds cars have spent waiting behind others, and how often they gave up (for tuning). */
 export const trafficStats = { held: 0, gaveUp: 0 };
+// Readable from test scripts.
+(globalThis as unknown as { __traffic?: typeof trafficStats }).__traffic = trafficStats;
 let nextId = 0;
 /** Centre-to-centre gap kept behind the car in front (a sedan is about 2.2 long). */
 const GAP = 2.6;
+/** Half a car's length, centre to bumper. */
+const BODY = 1.15;
+/** Distance from point (px, pz) to the segment a–b. */
+function segDist(px: number, pz: number, ax: number, az: number, bx: number, bz: number) {
+  const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz;
+  const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / l2)) : 0;
+  return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+}
 
 /** Forget every car on the road (a new level starts). */
 export function resetTraffic() { traffic.clear(); }
@@ -117,22 +127,30 @@ export function occupy(root: THREE.Object3D, passable = true): () => void {
 }
 
 /** The car this one should wait for: close, straight ahead and in the same lane. */
-function carAhead(me: Driver): Driver | null {
+function carAhead(me: Driver, priority = false): Driver | null {
   let best: Driver | null = null, bestD = Infinity;
   for (const o of traffic) {
-    if (o === me || (me.overtaking && o.passable)) continue;
+    // A car with right of way (backing out of a bay) only waits for cars that are moving.
+    if (o === me || (me.overtaking && o.passable) || (priority && o.parked)) continue;
     const ox = o.root.position.x, oz = o.root.position.z;
-    // On my route a little further on (this follows bends and sees cars merging in)…
-    let hit = me.look.some((p) => Math.hypot(ox - p.x, oz - p.z) < 1.0);
+    // On my route a little further on (this follows bends and sees cars merging in)… The other car is
+    // a body about 2.2 long, so measure to the line from its nose to its tail, not to its centre.
+    const hx = o.heading.x * BODY, hz = o.heading.z * BODY;
+    let hit = me.look.some((p) => segDist(p.x, p.z, ox - hx, oz - hz, ox + hx, oz + hz) < 0.9);
     if (!hit) {
       // …or straight ahead in my lane.
       const dx = ox - me.base.x, dz = oz - me.base.z, d = Math.hypot(dx, dz);
       if (d > 1e-3 && d < GAP) hit = (dx * me.heading.x + dz * me.heading.z) / d > 0.75 && Math.abs(dx * me.heading.z - dz * me.heading.x) < 0.75;
     }
     if (!hit) continue;
-    // Two cars waiting on each other: the one that set off first goes.
-    if (o.waitingFor === me && me.id < o.id) continue;
     const d = Math.hypot(ox - me.base.x, oz - me.base.z);
+    // Two cars waiting on each other: the one with the other more squarely in front of it gives way
+    // (the other sees it off to the side and can go first); a tie goes to the one that set off first.
+    if (o.waitingFor === me && d > 1e-3) {
+      const mine = ((ox - me.base.x) * me.heading.x + (oz - me.base.z) * me.heading.z) / d;
+      const theirs = ((me.base.x - ox) * o.heading.x + (me.base.z - oz) * o.heading.z) / d;
+      if (mine < theirs - 0.05 || (Math.abs(mine - theirs) <= 0.05 && me.id < o.id)) continue;
+    }
     if (d < bestD) { best = o; bestD = d; }
   }
   return best;
@@ -158,7 +176,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   const vmax = o.vmax ?? 9, acc = o.accel ?? 16, brake = o.brake ?? true;
   const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null, base: root.position.clone(), look: [0, 1, 2, 3].map(() => new THREE.Vector3()) };
   traffic.add(me);
-  let s = 0, v = 0, waited = 0, gaveUp = !!o.priority, prevYaw = root.rotation.y, swerve = 0;
+  let s = 0, v = 0, waited = 0, gaveUp = false, prevYaw = root.rotation.y, swerve = 0;
   const left = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const place = (dt: number) => {
@@ -183,12 +201,14 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   return loop((dt) => {
     if (dt <= 0) return false;
     // Where this car will be shortly (a car's length or so further along its route).
-    [0.7, 1.4, 2.1, 2.7].forEach((d, k) => me.look[k].copy(path.getPointAt(Math.min(1, (s + d) / L))));
+    // Look further ahead the faster it goes, so it has room to brake.
+    const reach = 0.5 + v * 0.14;
+    me.look.forEach((p, k) => p.copy(path.getPointAt(Math.min(1, (s + 1.3 + k * reach) / L))));
     // Pull out past a car parked in the lane when the other lane is clear; pull back in once past it.
     if (me.overtaking) me.overtaking = parkedAlongside(me);
     else { const a = carAhead(me); if (a?.passable && !oncoming(me)) me.overtaking = true; }
     swerve += THREE.MathUtils.clamp((me.overtaking ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
-    const ahead = gaveUp ? null : carAhead(me);
+    const ahead = gaveUp ? null : carAhead(me, o.priority);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
     if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 2.5) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
     const hold = !!ahead && !gaveUp;

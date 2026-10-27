@@ -14,7 +14,7 @@ const STEP = Number(process.env.STEP || 8);
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       r.save.seen = new Proxy({}, { get: () => true });
-      r.save.level = n - 1; r.startLevel();
+      r.save.level = n - 1; r.startLevel(); if (window.__traffic) { window.__traffic.held = 0; window.__traffic.gaveUp = 0; }
       const s = r.session();
       const { solve } = await import('/src/game/solver.ts');
       const sol = solve(s.level).solution;
@@ -34,15 +34,21 @@ const STEP = Number(process.env.STEP || 8);
           for (let f = 0; f < STEP; f++) {
           await r.advance(1 / 30);
           const moving = s.cars.map((o, i) => ({ o, i })).filter(({ i }) => !s.s.inLot[i] && s.cars[i].root.parent && s.cars[i].root.position.y < 0.05);
-          let hits = 0;
-          for (let a = 0; a < moving.length; a++) for (let c = a + 1; c < moving.length; c++) if (overlap(rect(moving[a].o, moving[a].o.length), rect(moving[c].o, moving[c].o.length))) hits++;
-          if (hits > worst) sample = moving.map(({ o, i }) => `${i}:${o.root.position.x.toFixed(1)},${o.root.position.z.toFixed(1)}`).join(' ');
+          let hits = 0; const pairs = [];
+          for (let a = 0; a < moving.length; a++) for (let c = a + 1; c < moving.length; c++) if (overlap(rect(moving[a].o, moving[a].o.length), rect(moving[c].o, moving[c].o.length))) { hits++; pairs.push([moving[a], moving[c]]); }
+          if (hits > worst) {
+            const d = ({ o, i }) => `${i}@${o.root.position.x.toFixed(1)},${o.root.position.z.toFixed(1)}/${(o.root.rotation.y * 57.3).toFixed(0)}deg`;
+            sample = pairs.map(([a, c]) => `${d(a)} x ${d(c)}`).join(' | ');
+            window.__shot = r.renderer.domElement.toDataURL('image/png');
+          }
           worst = Math.max(worst, hits); frames += hits ? 1 : 0;
         }
         if (s.s.over && k >= sol.length) break;
       }
-      return { n, moves: sol.length, overlapFrames: frames, worst, over: s.s.over, sample };
+      return { n, moves: sol.length, overlapFrames: frames, worst, over: s.s.over, traffic: { ...window.__traffic }, sample };
     }, [n, STEP]);
+    const shot = await p.evaluate(() => window.__shot);
+    if (shot) require('fs').writeFileSync(`/tmp/claude-0/-home-user/14fbbd01-32ca-5c58-8648-1f68d09d5432/scratchpad/ov-${n}.png`, Buffer.from(shot.split(',')[1], 'base64'));
     console.log(JSON.stringify(res));
     if (res.overlapFrames) bad++;
   }
