@@ -207,8 +207,9 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     // Pull out past a car parked in the lane when the other lane is clear; pull back in once past it.
     if (me.overtaking) me.overtaking = parkedAlongside(me);
     else { const a = carAhead(me); if (a?.passable && !oncoming(me)) me.overtaking = true; }
-    swerve += THREE.MathUtils.clamp((me.overtaking ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
-    const ahead = gaveUp ? null : carAhead(me, o.priority);
+    const blocked = carAhead(me, o.priority), ahead = gaveUp ? null : blocked;
+    // A car that gave up waiting steers round whatever is still in its way instead of through it.
+    swerve += THREE.MathUtils.clamp((me.overtaking || (gaveUp && blocked) ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
     if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 2.5) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
     const hold = !!ahead && !gaveUp;
