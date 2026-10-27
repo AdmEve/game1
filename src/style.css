@@ -14,6 +14,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9dcff7; fon
 .garage canvas { display: block; }
 .tiltshift { position: fixed; left: 0; right: 0; top: 0; height: 30%; pointer-events: none; backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px);
   mask-image: linear-gradient(180deg, #000 0%, #000 35%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 35%, transparent 100%); }
+/* Phones: a static haze instead of a live blur (re-blurring every frame costs a lot in a WebView). */
+.tiltshift.lite { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(220,232,245,.38) 0%, rgba(220,232,245,.12) 60%, transparent 100%); mask-image: none; -webkit-mask-image: none; }
 .vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 85% 75% at 50% 55%, transparent 60%, rgba(10,20,40,.28) 100%); }
 button { font-family: inherit; border: 0; cursor: pointer; }
 .emo { width: 1.25em; height: 1.25em; vertical-align: -0.25em; }
@@ -45,8 +47,8 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .plate .lv small { font-size: 14px; font-weight: 800; color: #475569; }
 .plate-hard { background: #fff4d6; } .plate-hard .lv small { color: #b45309; }
 .plate-boss { background: #ffe1e1; } .plate-boss .lv small { color: #b91c1c; }
-.people { position: absolute; top: calc(78px + var(--sat)); left: 50%; transform: translateX(-50%); height: 32px; font-size: 15px; background: rgba(15,30,60,.42); color: #fff;
-  box-shadow: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.people { position: absolute; top: calc(78px + var(--sat)); left: 50%; transform: translateX(-50%); height: 32px; font-size: 15px; background: rgba(15,30,60,.6); color: #fff;
+  box-shadow: none; }
 .people .emo { width: 20px; height: 20px; }
 .people span { font-weight: 700; font-size: 13px; opacity: .85; }
 

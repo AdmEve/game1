@@ -8,9 +8,9 @@ import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
-import { drive, ease, roundedPath, settleBody, tween, wait } from '../render/anim';
+import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
-import { BAY_D, BAY_W, LOT_Y, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
+import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
@@ -594,13 +594,18 @@ export class Session {
     const v = this.level.vehicles[i], L = this.L, p = (from ?? this.cars[i].root.position).clone().setY(0);
     const bx = L.bayX[bay], top = L.topRoadZ, V = (x: number, z: number) => new THREE.Vector3(x, 0, z);
     const intoBay = [V(bx, top), V(bx, L.bayZ + 0.05)];
-    switch (v.dir) {
-      case 'up': return [p, V(p.x, top), ...intoBay];
-      case 'left': return [p, V(L.leftRoadX, p.z), V(L.leftRoadX, top), ...intoBay];
-      case 'right': return [p, V(L.rightRoadX, p.z), V(L.rightRoadX, top), ...intoBay];
+    // Straight out of the lot to the kerb (past the neighbours), then keep right on the ring road.
+    return keepRight(this.routePoints(v.dir, p, bx, top, intoBay, L, V), 0.45, 2);
+  }
+
+  private routePoints(dir: 'up' | 'down' | 'left' | 'right', p: THREE.Vector3, bx: number, top: number, intoBay: THREE.Vector3[], L: Layout, V: (x: number, z: number) => THREE.Vector3): THREE.Vector3[] {
+    switch (dir) {
+      case 'up': return [p, V(p.x, top + ROAD / 2), V(p.x, top), ...intoBay];
+      case 'left': return [p, V(L.leftRoadX + ROAD / 2, p.z), V(L.leftRoadX, p.z), V(L.leftRoadX, top), ...intoBay];
+      case 'right': return [p, V(L.rightRoadX - ROAD / 2, p.z), V(L.rightRoadX, p.z), V(L.rightRoadX, top), ...intoBay];
       case 'down': {
         const side = p.x < 0 ? L.leftRoadX : L.rightRoadX;
-        return [p, V(p.x, L.bottomRoadZ), V(side, L.bottomRoadZ), V(side, top), ...intoBay];
+        return [p, V(p.x, L.bottomRoadZ - ROAD / 2), V(p.x, L.bottomRoadZ), V(side, L.bottomRoadZ), V(side, top), ...intoBay];
       }
     }
   }
@@ -637,7 +642,9 @@ export class Session {
       const side = Math.sign(pts[k - 1].x - pts[k].x) || 1;
       approach[k] = pts[k].clone().add(new THREE.Vector3(side * 1.0, 0, 0));
       await drive(o.root, o.body, roundedPath(approach, 0.8), { vmax: heavy ? 7 : 9.5, onProgress: (u) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } });
+      const leave = occupy(o.root);
       await this.bayFree[bay];
+      leave();
       this.bayIsFree[bay] = false;
       await drive(o.root, o.body, roundedPath([approach[k], pts[k], pts[k + 1]], 0.8), { vmax: 5 });
     }
@@ -749,12 +756,14 @@ export class Session {
     this.bayFree[bay] = new Promise((r) => { release = r; });
     const bx = this.L.bayX[bay], top = this.L.topRoadZ;
     const s = bx >= 0 ? 1 : -1; // leave toward the nearer side of the screen
-    const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, top), new THREE.Vector3(bx - s * 1.1, 0, top)], 0.9);
+    // Back out into the lane that heads off-screen, then drive away keeping right.
+    const lane = top + 0.45 * s;
+    const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(bx - s * 1.1, 0, lane)], 0.9);
     await drive(o.root, o.body, back, { vmax: 3.5, accel: 9, reverse: true });
     this.bayIsFree[bay] = true;
     release();
     sfx.engine(0, kind === 'bus' || kind === 'zamyad');
-    const away = roundedPath([new THREE.Vector3(bx - s * 1.1, 0, top), new THREE.Vector3(s * 34, 0, top)]);
+    const away = roundedPath([new THREE.Vector3(bx - s * 1.1, 0, lane), new THREE.Vector3(s * 34, 0, lane)]);
     await drive(o.root, o.body, away, { vmax: 11, accel: 10, brake: false });
     this.group.remove(o.root);
   }

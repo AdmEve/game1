@@ -49,17 +49,30 @@ export function coinBurst(parent: THREE.Object3D, at: THREE.Vector3, n = 6) {
 }
 
 const CONFETTI = [0xff4d4f, 0xffc31a, 0x4b8bff, 0x2fc26b, 0xa66bff, 0xff8a3d, 0xffffff];
+const confettiGeo = new THREE.PlaneGeometry(0.16, 0.26);
+const confettiMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+/** A confetti burst: every piece is one instance of a single mesh, so it costs one draw call. */
 export function confetti(parent: THREE.Object3D, at: THREE.Vector3, n = 140) {
-  const geo = new THREE.PlaneGeometry(0.16, 0.26);
-  for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: CONFETTI[i % CONFETTI.length], side: THREE.DoubleSide }));
-    parent.add(m);
-    const vx = (Math.random() - 0.5) * 14, vz = (Math.random() - 0.5) * 12, vy = 4 + Math.random() * 6, spin = new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8);
-    const life = 2 + Math.random();
-    void tween(life, (k) => {
-      const t = k * life;
-      m.position.set(at.x + vx * t * 0.6, at.y + vy * t - 4.9 * t * t * 0.55, at.z + vz * t * 0.6);
-      m.rotation.set(spin.x * t, spin.y * t, spin.z * t);
-    }, ease.linear).then(() => { parent.remove(m); (m.material as THREE.Material).dispose(); });
-  }
+  const mesh = new THREE.InstancedMesh(confettiGeo, confettiMat, n);
+  mesh.frustumCulled = false;
+  const col = new THREE.Color();
+  const parts = Array.from({ length: n }, (_, i) => {
+    mesh.setColorAt(i, col.setHex(CONFETTI[i % CONFETTI.length]));
+    return { vx: (Math.random() - 0.5) * 14, vz: (Math.random() - 0.5) * 12, vy: 4 + Math.random() * 6, sx: Math.random() * 8, sy: Math.random() * 8, sz: Math.random() * 8, life: 2 + Math.random() };
+  });
+  parent.add(mesh);
+  const o = new THREE.Object3D(), longest = Math.max(...parts.map((p) => p.life));
+  void tween(longest, (k) => {
+    const T = k * longest;
+    parts.forEach((p, i) => {
+      const t = Math.min(T, p.life);
+      o.position.set(at.x + p.vx * t * 0.6, at.y + p.vy * t - 4.9 * t * t * 0.55, at.z + p.vz * t * 0.6);
+      o.rotation.set(p.sx * t, p.sy * t, p.sz * t);
+      // Pieces past their life shrink away.
+      o.scale.setScalar(T < p.life ? 1 : 0);
+      o.updateMatrix();
+      mesh.setMatrixAt(i, o.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, ease.linear).then(() => { parent.remove(mesh); mesh.dispose(); });
 }

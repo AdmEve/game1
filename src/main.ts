@@ -8,7 +8,7 @@ import { App as CapApp } from '@capacitor/app';
 import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
-import { busy, ease, tick, tween } from './render/anim';
+import { busy, ease, tick, tween, resetTraffic } from './render/anim';
 import { outdoorEnv } from './render/env.js';
 import { warmFleet } from './render/fleet';
 import { sky } from './render/world';
@@ -44,15 +44,17 @@ const debug = new URLSearchParams(location.search);
 // ───── Renderer and scene ─────
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: debug.has('shot') });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : 2));
+/** Phones (the APK or a mobile browser) get a lighter setup: fewer pixels, cheaper shadows, no live blur. */
+const mobile = Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : mobile ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.append(renderer.domElement);
 // Lens look: a tilt-shift blur on the far city (miniature feel) and a soft vignette.
-const tilt = document.createElement('div'); tilt.className = 'tiltshift';
+const tilt = document.createElement('div'); tilt.className = mobile ? 'tiltshift lite' : 'tiltshift';
 const vignette = document.createElement('div'); vignette.className = 'vignette';
 const tint = document.createElement('div'); tint.className = 'tint';
 app.append(tilt, tint, vignette);
@@ -65,7 +67,7 @@ scene.environmentIntensity = 0.8;
 scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.7));
 const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
 sun.shadow.radius = 3;
@@ -260,6 +262,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 // ───── Level flow ─────
 function disposeSession() {
   if (!session) return;
+  resetTraffic();
   scene.remove(session.group);
   session.group.traverse((o) => {
     const m = o as THREE.Mesh;
@@ -659,13 +662,14 @@ async function boot() {
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);
-  // Build every vehicle template in the background, one per idle frame, so later levels load instantly.
+  // Build every vehicle template in the background so later levels load instantly. Each build takes a
+  // noticeable slice of a frame on a phone, so it only happens behind a menu, never during play.
   const pending: [Kind, Color][] = [];
   for (const k of ['pride', 'peykan', 'p405', 'samand', 'zamyad', 'bus'] as Kind[]) for (const c of ['red', 'yellow', 'blue', 'green', 'purple', 'orange'] as Color[]) pending.push([k, c]);
   pending.push(['bike', 'white']);
   const warm = () => {
     if (!pending.length) return;
-    if (!busy() && document.visibilityState === 'visible') warmFleet([pending.shift()!]);
+    if (modalOpen && !busy() && document.visibilityState === 'visible') warmFleet([pending.shift()!]);
     setTimeout(warm, 120);
   };
   setTimeout(warm, 2500);
@@ -677,8 +681,8 @@ async function boot() {
   let probeFrames = 0, probeTime = 0, tier = 2;
   const stepDown = () => {
     tier--;
-    if (tier === 1) { tilt.style.display = 'none'; renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); }
-    if (tier === 0) { sun.shadow.mapSize.set(1024, 1024); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.setPixelRatio(1); }
+    if (tier === 1) { tilt.style.display = 'none'; renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); }
+    if (tier === 0) { sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.shadowMap.type = THREE.BasicShadowMap; renderer.setPixelRatio(1); }
     fitCamera();
   };
   const loop = (t: number) => {
@@ -686,7 +690,7 @@ async function boot() {
     if (tier > 0 && !modalOpen && document.visibilityState === 'visible') {
       probeFrames++; probeTime += dt;
       if (probeTime > 2.5) {
-        if (probeFrames / probeTime < 45) stepDown();
+        if (probeFrames / probeTime < 50) stepDown();
         probeFrames = 0; probeTime = 0;
       }
     }
