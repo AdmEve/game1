@@ -114,6 +114,6 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 
 ## Traffic & smoothness pass (Oct 2026)
 - Bays are handed out in turn (no two cars in one bay); cars brake for the nearest car body, settle standoffs fairly, and steer round a blocker after waiting 2.5 s.
-- Overlap check (`scripts/overlap.cjs`, 1.5 s taps): level 5 went from 401 overlapping frames to 9; level 95 still has about 180 brief near-touches on the road.
+- Overlap check (`scripts/overlap.cjs`, 1.5 s taps): level 5 went from 401 overlapping frames to 9; level 95 has 24 brief near-touches (worst: 2 cars at once), counting only cars that are actually moving; the earlier ~180 included parked cars.
 - Phones: pixel ratio 1.5, cheaper shadows, no backdrop blur, automatic quality step-down below 50 fps.
 - Known: with very fast taps the queue can take about 35 s to clear after the last move.
