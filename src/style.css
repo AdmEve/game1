@@ -404,3 +404,6 @@ body[data-light='dusk'] .tint { opacity: 1; background: linear-gradient(180deg, 
 .sin.new { animation: pulse 1.2s infinite; }
 .result.nowruz .sins { margin: 6px 0 12px; } .result.nowruz .sin { width: 34px; height: 34px; background: #ecfdf5; } .result.nowruz .sin .emo { width: 22px; height: 22px; }
 .result.nowruz .wish { color: #047857; font-weight: 800; }
+
+/* A soft vignette pulls the eye to the lot. */
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 58%, rgba(0,0,0,0) 55%, rgba(8,16,40,.28) 100%); }
