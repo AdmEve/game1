@@ -129,6 +129,21 @@ const arrowEdge = new THREE.MeshBasicMaterial({ color: 0x0b1220, transparent: tr
  */
 export interface VehicleObj { root: THREE.Group; body: THREE.Group; arrow: THREE.Group; length: number; }
 
+/** A soft dark blob under a car: grounds it on the asphalt where the real shadow map is too coarse. */
+let blobMat: THREE.MeshBasicMaterial | null = null;
+function blobShadow(w: number, d: number): THREE.Mesh {
+  if (!blobMat) {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d')!, gr = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    blobMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false });
+  }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), blobMat);
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.014; m.renderOrder = 1;
+  return m;
+}
+
 export function makeVehicle(kind: Kind, color: Color, skin?: string, opts: { arrow?: boolean } = {}): VehicleObj {
   const t = template(kind, color, skin);
   const L = KIND[kind].len * CELL - 0.26;
@@ -152,6 +167,7 @@ export function makeVehicle(kind: Kind, color: Color, skin?: string, opts: { arr
   turn.add(body);
   const root = new THREE.Group();
   root.add(turn);
+  if (kind !== 'bike') root.add(blobShadow(1.35, L * 1.08)); else root.add(blobShadow(0.8, L * 1.1));
   return { root, body, arrow, length: L };
 }
 
