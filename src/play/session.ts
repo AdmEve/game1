@@ -408,11 +408,21 @@ export class Session {
     this.lastInput = performance.now();
     // The tunnel hops of the way out, read before the tap rolls the fruit carts on.
     this.hops.set(i, lane(this.s, i).hops);
-    this.play(ruleTap(this.s, i), i);
+    this.play(ruleTap(this.s, i, false, this.bayOrder()), i);
     if (this.level.moves && !this.ended) {
       this.showLimits();
       if (this.taps >= this.level.moves + this.moveBonus && this.s.inLot.some(Boolean)) void this.loseBy('moves');
     }
+  }
+
+  /**
+   * Which bay a newly tapped car should get: bays with nothing in or heading for them come first (so a
+   * car never queues for the first bay while the others stand empty), then the rest, lowest first.
+   */
+  private bayOrder(): number[] {
+    const all = this.s.bays.map((_, k) => k);
+    const clear = (k: number) => this.bayGate[k].isFreed();
+    return [...all.filter(clear), ...all.filter((k) => !clear(k))];
   }
 
   private movesLeft() { return this.level.moves ? Math.max(0, this.level.moves + this.moveBonus - this.taps) : null; }

@@ -295,14 +295,15 @@ function settle(s: State, ev: Event[]) {
 }
 
 /** Tap a vehicle (or lift it out with the crane: `force`). Returns what happened, in order. */
-export function tap(s: State, i: number, force = false): Event[] {
+/** `prefer` lists bay indices in the order a new car should be given them (default: lowest free bay first). */
+export function tap(s: State, i: number, force = false, prefer?: number[]): Event[] {
   const ev: Event[] = [];
   if (s.over || !s.inLot[i]) return ev;
   const lk = force ? null : lock(s, i);
   if (lk) { ev.push({ t: 'locked', v: i, ...lk }); return ev; }
   const b = force ? null : blocker(s, i);
   if (b) { ev.push({ t: 'blocked', v: i, by: b }); return ev; }
-  const free = s.bays.findIndex((x) => !x);
+  const free = prefer ? prefer.find((k) => !s.bays[k]) ?? s.bays.findIndex((x) => !x) : s.bays.findIndex((x) => !x);
   if (free < 0) { ev.push({ t: 'bays-full', v: i }); return ev; }
   const v = s.level.vehicles[i];
   s.inLot[i] = false;
