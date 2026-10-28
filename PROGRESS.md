@@ -117,3 +117,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Overlap check (`scripts/overlap.cjs`, 1.5 s taps): level 5 went from 401 overlapping frames to 9; level 95 has 24 brief near-touches (worst: 2 cars at once), counting only cars that are actually moving; the earlier ~180 included parked cars.
 - Phones: pixel ratio 1.5, cheaper shadows, no backdrop blur, automatic quality step-down below 50 fps.
 - Known: with very fast taps the queue can take about 35 s to clear after the last move.
+
+## Exit lane (Oct 2026)
+- Cars now leave forward through the top of the bay onto a new exit lane above the bays (no more backing out into arriving cars); the front row of buildings is gone and a low skyline sits further back. The camera frames the whole ring road above the boosters bar.
+- Measured (1.5 s taps): level 95 has 1 overlap frame (was 24, originally ~180); cars waited 7 s in total (was 53 s). Level 160 clears 16 s after the last tap (was 33 s).
+- Ideas queued: passenger patience and tips by speed, pipelined bays, shorter trips for cars leaving by the bottom, hidden queue, par-move stars.
