@@ -661,17 +661,12 @@ export class Session {
     const exitFrac = (() => { const path = roundedPath(pts); const d0 = pts[0].distanceTo(pts[1]); return Math.min(0.5, (d0 * 0.6) / path.getLength()); })();
     const smoke = setInterval(() => puff(this.group, o.root.position, 0.5), 90);
     setTimeout(() => clearInterval(smoke), 350);
-    // Wait in the parking spot (cars behind queue up there too) until the bay's previous car starts to
-    // leave: waiting on the road could block the very car that frees the bay. Once it is leaving it is
-    // sure to clear the bay soon, so set off and, if needed, pull up a car's length short of the bay
-    // (anyone heading further on overtakes it through the other lane).
-    const hold = occupy(o.root, false);
-    await turn.started;
-    hold();
+    // Set off at once: a tapped car must never sit still. The car leaving the bay does so through the
+    // exit lane, so it cannot be blocked by us; if the bay is still busy we pull up short of its mouth.
     const opts = { vmax: heavy ? 9 : 13, onProgress: (u: number) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } };
     if (turn.isFreed()) await drive(o.root, o.body, roundedPath(pts, 0.8), opts);
     else {
-      // Stop a car's length short of the bay's mouth, out of the way of the car backing out.
+      // Stop a car's length short of the bay's mouth until the car in it has driven out.
       const n = pts.length, mouth = pts[n - 2], dir = mouth.clone().sub(pts[n - 3]).setY(0).normalize();
       const stop = mouth.clone().addScaledVector(dir, -Math.min(1.8, mouth.distanceTo(pts[n - 3]) * 0.6));
       await drive(o.root, o.body, roundedPath([...pts.slice(0, n - 2), stop], 0.8), opts);
