@@ -174,7 +174,7 @@ const paintCache = new Map();
 export function paint(color, metallic = false) {
   const key = color + ':' + metallic;
   if (!paintCache.has(key)) paintCache.set(key, new THREE.MeshPhysicalMaterial({
-    color, metalness: metallic ? 0.55 : 0.05, roughness: metallic ? 0.32 : 0.38, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.2,
+    color, metalness: metallic ? 0.55 : 0.05, roughness: metallic ? 0.26 : 0.3, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 2.0,
   }));
   return paintCache.get(key);
 }
