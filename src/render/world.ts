@@ -730,7 +730,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     add(tabiatBridge(L.walkZ - 6.5, rnd));
   }
   if (darband) add(darbandSlope(L.walkZ - 1.9, rnd, night));
-  for (let x = -18, i = 0; x < 18 && opts.landmark !== 'bazaar' && !darband && !tabiat; i++) {
+  // The front row of buildings is gone: the street opens onto a distant, hazy skyline.
+  for (let x = -18, i = 0; x < 18 && false && opts.landmark !== 'bazaar' && !darband && !tabiat; i++) {
     const bw = 2.2 + rnd() * 1.4, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
@@ -740,10 +741,10 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   }
   // Second row and the skyline.
   for (let x = -24, i = 0; x < 24 && !darband; i++) {
-    const bw = 2.6 + rnd() * 2, floors = 7 + Math.floor(rnd() * 6);
+    const bw = 2.6 + rnd() * 2, floors = 4 + Math.floor(rnd() * 4);
     const [tone, style] = facadeOf(i + 3);
     const b = apartment(bw, floors, tone, style, rnd, night, snow);
-    b.position.set(x + bw / 2, 0, L.walkZ - (tabiat ? 21 : 7.5) - rnd() * 2); add(b);
+    b.position.set(x + bw / 2, 0, L.walkZ - (tabiat ? 21 : 9) - rnd() * 2); add(b);
     x += bw + 0.4;
   }
   const lm = opts.landmark ?? 'both';
