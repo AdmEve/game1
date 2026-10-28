@@ -36,7 +36,7 @@ export function layout(w: number, h: number, bays: number): Layout {
   const bayX = Array.from({ length: bays }, (_, i) => ((bays - 1) / 2 - i) * BAY_W * 1.06);
   const walkZ = bayZ - BAY_D / 2 - 0.95;
   const sideX = Math.max(-lotX0 + CURB + ROAD * 0.45, bayX[0] + BAY_W * 0.6);
-  const focus = new THREE.Box3(new THREE.Vector3(-sideX, 0, walkZ - 0.6), new THREE.Vector3(sideX, 0.6, lotH + CURB + 0.15));
+  const focus = new THREE.Box3(new THREE.Vector3(-sideX, 0, walkZ - 0.6), new THREE.Vector3(sideX, 0.6, lotH + CURB + ROAD + 0.3));
   return {
     w, h, lotX0, lotZ0, lotW, lotH, topRoadZ, bottomRoadZ, leftRoadX, rightRoadX, bayZ, bayX, walkZ, queueX0: bayX[0] + 0.9, focus,
     cell: (c, r) => new THREE.Vector3(lotX0 + (c + 0.5) * CELL, 0, lotZ0 + (r + 0.5) * CELL),

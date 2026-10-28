@@ -668,7 +668,7 @@ export class Session {
     const hold = occupy(o.root, false);
     await turn.started;
     hold();
-    const opts = { vmax: heavy ? 7 : 9.5, onProgress: (u: number) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } };
+    const opts = { vmax: heavy ? 9 : 13, onProgress: (u: number) => { o.root.position.y = u < exitFrac ? LOT_Y * (1 - u / exitFrac) : 0; } };
     if (turn.isFreed()) await drive(o.root, o.body, roundedPath(pts, 0.8), opts);
     else {
       // Stop a car's length short of the bay's mouth, out of the way of the car backing out.
@@ -678,7 +678,7 @@ export class Session {
       const pause = occupy(o.root);
       await turn.freed;
       pause();
-      await drive(o.root, o.body, roundedPath([stop, mouth, pts[n - 1]], 0.8), { vmax: 7, accel: 18 });
+      await drive(o.root, o.body, roundedPath([stop, mouth, pts[n - 1]], 0.8), { vmax: 9.5, accel: 28 });
     }
     this.seat(bay, i);
   }
@@ -793,11 +793,11 @@ export class Session {
     // Back out into the lane that heads off-screen, then drive away keeping right.
     const lane = top + 0.45 * s;
     const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(bx - s * 1.1, 0, lane)], 0.9);
-    await drive(o.root, o.body, back, { vmax: 5.5, accel: 16, reverse: true, priority: true });
+    await drive(o.root, o.body, back, { vmax: 7.5, accel: 26, reverse: true, priority: true });
     this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v);
     sfx.engine(0, kind === 'bus' || kind === 'zamyad');
     const away = roundedPath([new THREE.Vector3(bx - s * 1.1, 0, lane), new THREE.Vector3(s * 34, 0, lane)]);
-    await drive(o.root, o.body, away, { vmax: 11, accel: 10, brake: false });
+    await drive(o.root, o.body, away, { vmax: 14, accel: 18, brake: false });
     this.group.remove(o.root);
   }
 

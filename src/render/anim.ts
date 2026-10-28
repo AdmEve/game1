@@ -173,7 +173,7 @@ const oncoming = (me: Driver) => [...traffic].some((o) => o !== me && !o.parked 
  */
 export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.CurvePath<THREE.Vector3>, o: DriveOpts = {}): Promise<void> {
   const L = path.getLength();
-  const vmax = o.vmax ?? 9, acc = o.accel ?? 16, brake = o.brake ?? true;
+  const vmax = o.vmax ?? 12, acc = o.accel ?? 26, brake = o.brake ?? true;
   const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null, base: root.position.clone(), look: [0, 1, 2, 3].map(() => new THREE.Vector3()) };
   traffic.add(me);
   let s = 0, v = 0, waited = 0, gaveUp = false, prevYaw = root.rotation.y, swerve = 0;
