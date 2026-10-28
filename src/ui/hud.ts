@@ -25,6 +25,7 @@ export class Hud {
   private coins = h('button', 'pill coins');
   private plate = h('div', 'plate');
   private people = h('div', 'pill people');
+  private limit = h('div', 'pill limit hidden');
   private bar = h('div', 'boosters');
   private toastEl = h('div', 'toast');
   private camSign = h('div', 'camsign hidden');
@@ -40,7 +41,7 @@ export class Hud {
     gear.onclick = () => { click(); this.onSettings(); };
     this.coins.onclick = () => { click(); this.onCoins(); };
     top.append(gear, this.plate, this.coins);
-    this.root.append(top, this.people, this.camSign, this.copSign, this.bar, this.toastEl);
+    this.root.append(top, this.people, this.limit, this.camSign, this.copSign, this.bar, this.toastEl);
     for (const b of BOOSTERS) {
       const el = h('button', `bst bst-${b.id}`);
       el.onclick = () => { click(); this.onBooster(b.id); };
@@ -77,6 +78,15 @@ export class Hud {
   setRush() {
     this.plate.className = 'plate plate-rush';
     this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>چالش روزانه</small>${emo('⏰', 'emo')}</span>`;
+  }
+  /** Hard-mode counters: seconds left and/or taps left (null hides that part). */
+  setLimits(time: number | null, moves: number | null) {
+    this.limit.classList.toggle('hidden', time === null && moves === null);
+    const low = (time !== null && time <= 10) || (moves !== null && moves <= 3);
+    this.limit.classList.toggle('low', low);
+    const t = time === null ? '' : `<span class="lim">${emo('⏱️', 'emo xs')}<b>${fa(time)}</b></span>`;
+    const m = moves === null ? '' : `<span class="lim">${emo('👆', 'emo xs')}<b>${fa(moves)}</b><small>حرکت</small></span>`;
+    this.limit.innerHTML = t + m;
   }
   setQueue(n: number, total = n) {
     const pct = total ? Math.round(((total - n) / total) * 100) : 0;

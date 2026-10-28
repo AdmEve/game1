@@ -314,7 +314,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     toast: (t) => hud.toast(t),
     canPlay: () => !modalOpen,
     won: () => showWin(),
-    lost: () => showLose(),
+    lost: (why) => showLose(why),
+    limits: (t, m) => hud.setLimits(t, m),
     float: floatText,
     parity: (p, left) => hud.setParity(p, left),
     officer: (a) => hud.setOfficer(a),
@@ -325,6 +326,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
+  if (level.time) setTimeout(() => hud.toast(`این مرحله ${fa(level.time!)} ثانیه وقت داره! ساعت از اولین ضربه شروع می‌شه.`), 900);
+  else if (level.moves) setTimeout(() => hud.toast(`فقط ${fa(level.moves!)} ضربه داری! ضربه‌ی اشتباه هم حساب می‌شه.`), 900);
+  else if (level.bays && level.bays < 5) setTimeout(() => hud.toast(`این مرحله فقط ${fa(level.bays!)} جای پارک داره!`), 900);
   hud.refresh();
   hud.active(null);
   hud.show(true);
@@ -485,7 +489,7 @@ function askRating(): Promise<void> {
   });
 }
 
-function showLose() {
+function showLose(limit?: 'time' | 'moves') {
   save.stats.losses++;
   persist();
   modalOpen = true;
@@ -494,16 +498,16 @@ function showLose() {
   const COLOR_FA: Record<string, string> = { red: 'قرمز', yellow: 'زرد', blue: 'آبی', green: 'سبز', purple: 'بنفش', orange: 'نارنجی', white: 'سفید', pink: 'صورتی' };
   const want = session ? session.s.queue[session.s.q] : undefined;
   // Bays still free means the loss came from a wedding car missing its deadline.
-  const bride = session && !session.isFull() ? session.lastLate : -1;
+  const bride = !limit && session && !session.isFull() ? session.lastLate : -1;
   const culprit = bride >= 0 ? bride : session ? session.culprit() : -1;
   if (culprit >= 0) session!.highlight(culprit);
-  const why = bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
-  c.innerHTML = `<div class="burst">${emo(bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>`;
+  const why = limit === 'time' ? 'وقت تموم شد و هنوز ماشین‌ها تو پارکینگ موندن! سریع‌تر تصمیم بگیر.' : limit === 'moves' ? 'ضربه‌هات تموم شد! ضربه روی ماشین گیر کرده هم حساب می‌شه، پس قبل از زدن خوب نگاه کن.' : bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
+  c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>`;
   const close = modal(c, 'pop');
-  const canBay = session && (session.s.bays.length < 6 || bride >= 0);
-  const resume = () => { close(); modalOpen = false; helped = true; session!.extraBay(); };
+  const canBay = !!session && (!!limit || session.s.bays.length < 6 || bride >= 0);
+  const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
   if (canBay) {
-    c.append(button(`${emo(bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
+    c.append(button(`${emo(limit === 'time' ? '⏱️' : limit === 'moves' ? '👆' : bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${limit === 'time' ? '۱۵ ثانیه وقت بیشتر' : limit === 'moves' ? '۴ ضربه‌ی بیشتر' : bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
       if (save.coins < price) { hud.toast('سکه کافی نداری!'); showShop(() => {}, () => hud.refresh()); return; }
       save.coins -= price; persist(); hud.refresh();
       resume();

@@ -21,7 +21,9 @@ export interface SessionHooks {
   queueLeft(n: number, total: number): void;
   toast(text: string): void;
   won(): void;
-  lost(): void;
+  lost(reason?: 'time' | 'moves'): void;
+  /** Hard-mode counters: seconds left and taps left (null when the level has no such limit). */
+  limits(time: number | null, moves: number | null): void;
   /** Whether input should currently be accepted (no modal open). */
   canPlay(): boolean;
   /** Floating text at a world point. */
@@ -160,6 +162,8 @@ export class Session {
     performance.mark('r0');
     this.lockGate = this.gate(this.s.bays.length);
     hooks.queueLeft(this.s.queue.length, this.s.queue.length);
+    this.timeLeft = level.time ?? 0;
+    hooks.limits(level.time ?? null, level.moves ?? null);
     this.refreshPlates();
     performance.measure('misc', 'r0');
     performance.mark('d0');
@@ -390,6 +394,9 @@ export class Session {
   }
 
   taps = 0;
+  /** Hard mode: the clock starts at the first tap; bonuses come from a paid continue. */
+  private timeLeft = 0; private moveBonus = 0; private lastShown = -1;
+  limitLost: 'time' | 'moves' | null = null;
   private hops = new Map<number, ReturnType<typeof lane>['hops']>();
   /** The wedding car that was last late (for the lose screen), or -1. */
   lastLate = -1;
@@ -402,6 +409,30 @@ export class Session {
     // The tunnel hops of the way out, read before the tap rolls the fruit carts on.
     this.hops.set(i, lane(this.s, i).hops);
     this.play(ruleTap(this.s, i), i);
+    if (this.level.moves && !this.ended) {
+      this.showLimits();
+      if (this.taps >= this.level.moves + this.moveBonus && this.s.inLot.some(Boolean)) void this.loseBy('moves');
+    }
+  }
+
+  private movesLeft() { return this.level.moves ? Math.max(0, this.level.moves + this.moveBonus - this.taps) : null; }
+  private showLimits() { this.hooks.limits(this.level.time ? Math.ceil(this.timeLeft) : null, this.movesLeft()); }
+
+  /** The level's time or tap budget ran out with cars still in the lot. */
+  private async loseBy(reason: 'time' | 'moves') {
+    this.ended = true; this.limitLost = reason;
+    await wait(0.9);
+    sfx.lose(); haptic('warn');
+    this.hooks.lost(reason);
+  }
+
+  /** A paid continue after a time or tap loss. */
+  extend(): boolean {
+    if (!this.limitLost) return false;
+    if (this.limitLost === 'time') this.timeLeft += 15; else this.moveBonus += 4;
+    this.limitLost = null; this.ended = false;
+    this.showLimits();
+    return true;
   }
 
   /** Finger down on a vehicle: it squats a little, like it is about to launch. */
@@ -802,7 +833,13 @@ export class Session {
 
   /** Ambient life each frame: passengers shift their weight and glance around. */
   idle(t: number) {
-    const dt = Math.min(0.05, Math.max(0, t - this.lastT)); this.lastT = t;
+    const real = Math.max(0, t - this.lastT), dt = Math.min(0.05, real); this.lastT = t;
+    // Hard mode clock: runs from the first tap while cars are still in the lot and no modal is open.
+    if (this.level.time && this.taps > 0 && !this.ended && this.hooks.canPlay() && this.s.inLot.some(Boolean)) {
+      this.timeLeft = Math.max(0, this.timeLeft - Math.min(0.25, real));
+      if (Math.ceil(this.timeLeft) !== this.lastShown) { this.lastShown = Math.ceil(this.timeLeft); this.showLimits(); }
+      if (this.timeLeft <= 0) void this.loseBy('time');
+    }
     if (this.flakes) {
       const p = this.flakes.geometry.getAttribute('position') as THREE.BufferAttribute;
       for (let i = 0; i < p.count; i++) {

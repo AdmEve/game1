@@ -47,6 +47,10 @@ export interface Level {
   /** Passenger colors from the front of the queue. */
   queue: Color[];
   bays?: number;
+  /** Hard mode: at most this many taps (taps on blocked cars and full bays count too). */
+  moves?: number;
+  /** Hard mode: seconds to get every car out of the lot, counted from the first tap. */
+  time?: number;
   /** Designer label for hard levels: 'hard' | 'boss'. */
   tag?: string;
   /** «دربست!» passengers (queue indices): they ride alone in an empty car, which leaves at once. */

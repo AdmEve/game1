@@ -1,6 +1,6 @@
 /**
  * A compact text form of the Journey levels, so the app doesn't ship (and parse) half a megabyte of JSON.
- * One string per level:  `w h bays tag oddEven officer | vehicles | obstacles | queue | vip | granny | intro`
+ * One string per level:  `w h bays tag oddEven officer time moves | vehicles | obstacles | queue | vip | granny | intro`
  * Vehicles are 5 base-36 characters (kind, color, col, row, dir) plus optional flags: `c` covered,
  * `w<n>` wait, `p<d>` plate, `e<n>` wedding, each `n` one base-36 character.
  */
@@ -14,7 +14,7 @@ const n36 = (c: string) => parseInt(c, 36);
 const ci = (c: string) => COLORS.indexOf(c as (typeof COLORS)[number]);
 
 export function packLevel(l: Level): string {
-  const head = [l.w, l.h, l.bays ?? '', l.tag ?? '', l.oddEven ?? '', l.officer ? 1 : ''].join(' ');
+  const head = [l.w, l.h, l.bays ?? '', l.tag ?? '', l.oddEven ?? '', l.officer ? 1 : '', l.time ?? '', l.moves ?? ''].join(' ');
   const veh = l.vehicles.map((v) => b36(KINDS.indexOf(v.kind)) + ci(v.color) + b36(v.col) + b36(v.row) + DIRS.indexOf(v.dir)
     + (v.covered ? 'c' : '') + (v.wait ? 'w' + b36(v.wait) : '') + (v.plate !== undefined ? 'p' + v.plate : '') + (v.wedding ? 'e' + b36(v.wedding) : '')).join(',');
   const obs = (l.obstacles ?? []).map((o) => OBST.indexOf(o.kind) + b36(o.col) + b36(o.row)
@@ -25,12 +25,14 @@ export function packLevel(l: Level): string {
 
 export function unpackLevel(s: string): Level {
   const [head, veh, obs, queue, vip, granny, intro] = s.split('|');
-  const [w, h, bays, tag, oddEven, officer] = head.split(' ');
+  const [w, h, bays, tag, oddEven, officer, time, moves] = head.split(' ');
   const l: Level = { w: +w, h: +h, vehicles: [], queue: [...queue].map((c) => COLORS[+c]) };
   if (bays) l.bays = +bays;
   if (tag) l.tag = tag;
   if (oddEven) l.oddEven = +oddEven;
   if (officer) l.officer = true;
+  if (time) l.time = +time;
+  if (moves) l.moves = +moves;
   for (const t of veh ? veh.split(',') : []) {
     const v: VehicleDef = { kind: KINDS[n36(t[0])], color: COLORS[+t[1]], col: n36(t[2]), row: n36(t[3]), dir: DIRS[+t[4]] };
     for (let k = 5; k < t.length; k++) {
