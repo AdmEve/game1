@@ -19,7 +19,7 @@ export interface Layout {
   lotW: number; lotH: number;
   topRoadZ: number; bottomRoadZ: number; leftRoadX: number; rightRoadX: number;
   bayZ: number; bayX: number[];
-  walkZ: number; queueX0: number;
+  walkZ: number; exitZ: number; queueX0: number;
   cell(c: number, r: number): THREE.Vector3;
   /** The world-space bounds that must stay visible. */
   focus: THREE.Box3;
@@ -34,11 +34,13 @@ export function layout(w: number, h: number, bays: number): Layout {
   const rightRoadX = -lotX0 + CURB + ROAD / 2;
   const bayZ = -CURB - ROAD - 0.1 - BAY_D / 2;
   const bayX = Array.from({ length: bays }, (_, i) => ((bays - 1) / 2 - i) * BAY_W * 1.06);
-  const walkZ = bayZ - BAY_D / 2 - 0.95;
+  // The sidewalk sits one exit lane beyond the bays: cars leave forward through the top, never back out.
+  const exitZ = bayZ - BAY_D / 2 - 1.02;
+  const walkZ = bayZ - BAY_D / 2 - 0.95 - ROAD - 0.5;
   const sideX = Math.max(-lotX0 + CURB + ROAD * 0.45, bayX[0] + BAY_W * 0.6);
   const focus = new THREE.Box3(new THREE.Vector3(-sideX, 0, walkZ - 0.6), new THREE.Vector3(sideX, 0.6, lotH + CURB + ROAD + 0.3));
   return {
-    w, h, lotX0, lotZ0, lotW, lotH, topRoadZ, bottomRoadZ, leftRoadX, rightRoadX, bayZ, bayX, walkZ, queueX0: bayX[0] + 0.9, focus,
+    w, h, lotX0, lotZ0, lotW, lotH, topRoadZ, bottomRoadZ, leftRoadX, rightRoadX, bayZ, bayX, walkZ, exitZ, queueX0: bayX[0] + 0.9, focus,
     cell: (c, r) => new THREE.Vector3(lotX0 + (c + 0.5) * CELL, 0, lotZ0 + (r + 0.5) * CELL),
   };
 }
@@ -659,7 +661,11 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   const yellow = std(0xffc928, { roughness: 0.6 }), whiteLine = std(0xf2f2ee, { roughness: 0.6 });
   for (let x = -40; x < 40; x += 1.5) add(plane(0.7, 0.07, yellow, x, 0.01, L.topRoadZ));
   // Zebra crossing to the bus stop.
-  for (let i = 0; i < 7; i++) add(plane(0.22, ROAD - 0.2, whiteLine, L.bayX[0] + 1.9 + i * 0.4, 0.012, L.topRoadZ));
+  for (let i = 0; i < 7; i++) add(plane(0.22, ROAD - 0.2, whiteLine, L.bayX[0] + 1.9 + i * 0.4, 0.012, L.exitZ));
+  // The exit lane above the bays: cars leave forward through it, off to either side of the screen.
+  const asph3 = asphaltTex(); asph3.repeat.set(20, 0.5);
+  add(plane(80, ROAD + 0.04, std(0xffffff, { map: asph3, roughness: 0.95 }), 0, 0.003, L.exitZ));
+  for (let x = -40; x < 40; x += 1.5) add(plane(0.7, 0.07, yellow, x, 0.011, L.exitZ));
 
   // The lot: a raised slab with a curb and painted bays.
   const curbMat = std(0xd4d8dd, { roughness: 0.7 });

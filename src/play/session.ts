@@ -8,7 +8,7 @@ import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
-import { drive, ease, keepRight, occupy, roundedPath, standingNear, settleBody, tween, wait } from '../render/anim';
+import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
@@ -786,18 +786,16 @@ export class Session {
     await tween(0.22, (k) => { o.body.position.y = Math.sin(k * Math.PI) * 0.12; }, ease.out);
     // The next car for this bay may set off now.
     this.bayRelease.get(v)?.started();
-    const bx = this.L.bayX[bay], top = this.L.topRoadZ;
-    // Leave toward the nearer side of the screen, unless a car is waiting there for this bay.
-    let s = bx >= 0 ? 1 : -1;
-    if (standingNear(bx - s * 1.8, top + 0.45 * s, 1.6) || standingNear(bx - s * 1.8, top - 0.45 * s, 1.6)) s = -s;
-    // Back out into the lane that heads off-screen, then drive away keeping right.
-    const lane = top + 0.45 * s;
-    const back = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(bx - s * 1.1, 0, lane)], 0.9);
-    await drive(o.root, o.body, back, { vmax: 7.5, accel: 26, reverse: true, priority: true });
-    this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v);
+    const bx = this.L.bayX[bay], exitZ = this.L.exitZ;
+    // Drive straight out through the top of the bay onto the exit lane, then off toward the nearer side.
+    const s = bx >= 0 ? 1 : -1;
+    const lane = exitZ + 0.45 * s;
+    const out = roundedPath([o.root.position.clone().setY(0), new THREE.Vector3(bx, 0, lane), new THREE.Vector3(s * 34, 0, lane)], 0.9);
+    const cleared = (BAY_D / 2 + 0.9) / out.getLength();
+    let freed = false;
     sfx.engine(0, kind === 'bus' || kind === 'zamyad');
-    const away = roundedPath([new THREE.Vector3(bx - s * 1.1, 0, lane), new THREE.Vector3(s * 34, 0, lane)]);
-    await drive(o.root, o.body, away, { vmax: 14, accel: 18, brake: false });
+    await drive(o.root, o.body, out, { vmax: 14, accel: 26, brake: true, onProgress: (u) => { if (!freed && u >= cleared) { freed = true; this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v); } } });
+    if (!freed) { this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v); }
     this.group.remove(o.root);
   }
 
