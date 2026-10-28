@@ -76,6 +76,15 @@ const asphaltTex = () => shared('asphalt', () => canvasTex(512, 512, (g) => {
   for (let i = 0; i < 6; i++) { g.beginPath(); let x = Math.random() * 512, y = Math.random() * 512; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 40; y += (Math.random() - 0.5) * 40; g.lineTo(x, y); } g.stroke(); }
   g.globalAlpha = 1;
 }, 1));
+/** The lot's surface: smoother and a shade lighter than the road, with faint tyre marks and oil stains. */
+const lotTex = () => shared('lot', () => canvasTex(512, 512, (g) => {
+  speckle(g, 512, 512, '#5b6270', ['#525967', '#666e7c', '#4a505c'], 9000);
+  g.globalAlpha = 0.1; g.fillStyle = '#20242b';
+  for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 512, 6 + Math.random() * 14, 3 + Math.random() * 7, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
+  g.globalAlpha = 0.07; g.strokeStyle = '#15181d'; g.lineWidth = 7; g.lineCap = 'round';
+  for (let i = 0; i < 6; i++) { const x = Math.random() * 512, y = Math.random() * 512; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 60, y + (Math.random() - 0.5) * 80, x + 150, y + (Math.random() - 0.5) * 30); g.stroke(); }
+  g.globalAlpha = 1;
+}, 1));
 const pavingTex = () => shared('paving', () => canvasTex(256, 256, (g) => {
   speckle(g, 256, 256, '#d9cdb5', ['#c9bb9e', '#e6dcc8', '#b8a98b'], 3000);
   g.strokeStyle = 'rgba(120,100,70,.35)'; g.lineWidth = 2;
@@ -676,12 +685,28 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // The lot: a raised slab with a curb and painted bays.
   const curbMat = std(0xd4d8dd, { roughness: 0.7 });
   add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.077, lotCZ, 0.04)).castShadow = false;
-  const lotTex = asphaltTex(); lotTex.repeat.set(L.lotW / 3, L.lotH / 3);
-  add(plane(L.lotW, L.lotH, std(0xffffff, { map: lotTex, color: 0xb9bec8 }), cx, LOT_Y, lotCZ));
-  const gridMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16 });
-  for (let i = 1; i < w; i++) add(plane(0.035, L.lotH - 0.1, gridMat, L.lotX0 + i * CELL, LOT_Y + 0.008, lotCZ));
-  for (let i = 1; i < h; i++) add(plane(L.lotW - 0.1, 0.035, gridMat, cx, LOT_Y + 0.008, i * CELL));
-
+  const lotMap = lotTex(); lotMap.repeat.set(L.lotW / 3.4, L.lotH / 3.4);
+  add(plane(L.lotW, L.lotH, std(0xffffff, { map: lotMap, roughness: 0.78 }), cx, LOT_Y, lotCZ));
+  // Painted stalls: a white tick at every cell corner, and a border line just inside the curb.
+  const paint = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+  const ticks = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.045).rotateX(-Math.PI / 2), paint, (w + 1) * (h + 1) * 2);
+  const tm = new THREE.Matrix4(), rot = new THREE.Matrix4().makeRotationY(Math.PI / 2);
+  let ti = 0;
+  for (let c = 0; c <= w; c++) for (let r = 0; r <= h; r++) {
+    const x = L.lotX0 + c * CELL, z = r * CELL, ix = c === 0 ? 0.17 : c === w ? -0.17 : 0, iz = r === 0 ? 0.17 : r === h ? -0.17 : 0;
+    if (c > 0 && c < w && r > 0 && r < h) { tm.makeTranslation(x, LOT_Y + 0.008, z); ticks.setMatrixAt(ti++, tm); tm.makeTranslation(x, LOT_Y + 0.008, z).multiply(rot); ticks.setMatrixAt(ti++, tm); continue; }
+    tm.makeTranslation(x + ix, LOT_Y + 0.008, z + iz); ticks.setMatrixAt(ti++, tm); tm.makeTranslation(x + ix, LOT_Y + 0.008, z + iz).multiply(rot); ticks.setMatrixAt(ti++, tm);
+  }
+  ticks.count = ti; add(ticks);
+  for (const [bw, bd, bx2, bz2] of [[L.lotW - 0.3, 0.05, cx, 0.15], [L.lotW - 0.3, 0.05, cx, L.lotH - 0.15], [0.05, L.lotH - 0.3, L.lotX0 + 0.15, lotCZ], [0.05, L.lotH - 0.3, -L.lotX0 - 0.15, lotCZ]] as const) add(plane(bw, bd, whiteLine, bx2, LOT_Y + 0.008, bz2));
+  // Hazard bollards at the four corners.
+  const bol = std(0xf5b400, { roughness: 0.5 }), bolBand = std(0x1b1f27, { roughness: 0.5 });
+  for (const sx of [-1, 1]) for (const sz of [0, 1]) {
+    const bx3 = sx * (L.lotW / 2 + CURB * 0.5), bz3 = sz ? L.lotH + CURB * 0.5 : -CURB * 0.5;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.5, 14), bol); post.position.set(bx3, LOT_Y + 0.25, bz3); post.castShadow = true; add(post);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.115, 0.1, 14), bolBand); band.position.set(bx3, LOT_Y + 0.3, bz3); add(band);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), std(0xff5a3c, { emissive: 0xff3b1a, emissiveIntensity: 0.35 })); cap.position.set(bx3, LOT_Y + 0.52, bz3); add(cap);
+  }
   // Pickup bays: a darker strip with white separators and numbered pavement.
   const bayStrip = asphaltTex(); bayStrip.repeat.set(6, 1);
   const stripW = L.bayX.length * BAY_W * 1.06 + 0.6;
