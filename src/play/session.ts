@@ -460,7 +460,7 @@ export class Session {
       this.group.remove(p.root); this.group.add(np.root); this.queue[k] = np;
       void tween(0.35, (e) => { np.root.position.y = 0.18 + Math.sin(e * Math.PI) * 0.35; }, ease.linear);
     });
-    this.chain = this.chain.then(() => wait(0.4)).then(() => this.playBoards(ev));
+    this.chain = this.chain.then(() => wait(0.2)).then(() => this.playBoards(ev));
     return true;
   }
 
