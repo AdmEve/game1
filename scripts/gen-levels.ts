@@ -204,8 +204,8 @@ for (let i = 0; i < 30; i++) {
 SPECS.forEach((s, i) => {
   const n = i + 1;
   if (n <= 8) return;
-  const k = n <= 30 ? 0.7 : n <= 90 ? 0.55 : 0.45;
-  s.target = s.tag === 'boss' ? 0.04 : s.tag === 'hard' ? Math.min(s.target, 0.1) : Math.max(0.05, s.target * k);
+  const k = n <= 30 ? 0.55 : n <= 90 ? 0.42 : 0.33;
+  s.target = s.tag === 'boss' ? 0.04 : s.tag === 'hard' ? Math.min(s.target, 0.08) : Math.max(0.05, s.target * k);
   s.mix += n <= 30 ? 1 : 2 + Math.floor(n / 60);
   if (n >= 20 && (n % 2 === 0 || s.tag)) s.bays = 4;
 });

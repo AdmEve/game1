@@ -122,3 +122,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Cars now leave forward through the top of the bay onto a new exit lane above the bays (no more backing out into arriving cars); the front row of buildings is gone and a low skyline sits further back. The camera frames the whole ring road above the boosters bar.
 - Measured (1.5 s taps): level 95 has 1 overlap frame (was 24, originally ~180); cars waited 7 s in total (was 53 s). Level 160 clears 16 s after the last tap (was 33 s).
 - Ideas queued: passenger patience and tips by speed, pipelined bays, shorter trips for cars leaving by the bottom, hidden queue, par-move stars.
+
+## Hard mode, weather and music (Oct 2026)
+- Levels from 9 on are regenerated with much lower casual win rates (`scripts/gen-levels.ts`: target × 0.55 / 0.42 / 0.33 by chapter, «سخت» levels ≤ 8%, bosses ~4%). Most levels now have 4 pickup bays (a few have 3), every level is still solver-verified.
+- `scripts/challenges.ts` then adds tap budgets (blocked taps count), clocks (start at the first tap) and, for bosses, both. Run order: `gen-levels.ts --from 8`, `challenges.ts`, `pack-levels.ts`.
+- Weather per map (`src/render/weather.ts`): Tajrish sun motes, Valiasr golden leaves, Azadi night storm with lightning, Tochal snow, Bazaar dust, Darband autumn rain, Tabiat petals, Milad mist with fireflies. Fog never starts closer than the camera distance (42), or the lot disappears.
+- Music rewritten (`src/music.ts`): calm 4/4, electric-piano arpeggio, soft pad, seeded pentatonic melody per chapter, round bass, quiet drums, low-passed. Offline render check: centroid 600–1200 Hz, no clipping.
