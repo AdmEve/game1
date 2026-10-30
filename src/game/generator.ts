@@ -14,6 +14,8 @@ export interface Spec {
   /** «تونل نیایش»: pairs of tunnel mouths. */
   tunnels?: number;
   intro?: Level['intro'];
+  /** Fewer pickup bays than the usual five. */
+  bays?: number;
 }
 
 const DIRS: Dir[] = ['up', 'down', 'left', 'right'];
@@ -152,6 +154,7 @@ export function generate(spec: Spec, seed: number): Level | null {
   if (spec.officer) level.officer = true;
   if (spec.intro) level.intro = spec.intro;
   if (spec.tag) level.tag = spec.tag;
+  if (spec.bays) level.bays = spec.bays;
   if (validate(level).length) throw new Error(validate(level).join('; '));
   return level;
 }

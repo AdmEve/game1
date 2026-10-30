@@ -199,6 +199,17 @@ for (let i = 0; i < 30; i++) {
   SPECS.push(spec);
 }
 
+// Hard mode: from level 9 on the casual player (who looks three passengers ahead) should lose most of the time,
+// bosses are close to a coin flip for an expert, and every other level from 20 has one bay fewer.
+SPECS.forEach((s, i) => {
+  const n = i + 1;
+  if (n <= 8) return;
+  const k = n <= 30 ? 0.7 : n <= 90 ? 0.55 : 0.45;
+  s.target = s.tag === 'boss' ? 0.04 : s.tag === 'hard' ? Math.min(s.target, 0.1) : Math.max(0.05, s.target * k);
+  s.mix += n <= 30 ? 1 : 2 + Math.floor(n / 60);
+  if (n >= 20 && (n % 2 === 0 || s.tag)) s.bays = 4;
+});
+
 // `--from N` keeps the first N levels as they are and only generates the rest.
 const fromArg = process.argv.indexOf('--from');
 const keepN = fromArg > 0 ? Number(process.argv[fromArg + 1]) : 0;
