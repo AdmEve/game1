@@ -15,11 +15,14 @@ let nMoves = 0, nTime = 0, nBays = 0, skipped = 0;
 levels.forEach((l, i) => {
   delete l.time; delete l.moves;
   const n = i + 1, cars = l.vehicles.length;
-  if (n < 12 || l.tag === 'boss' || l.intro) return;
+  if (n < 12 || l.intro) return;
   const late = n / levels.length;
-  if (n % 6 === 2) { l.moves = cars + Math.max(2, Math.round(cars * (0.14 - 0.08 * late))); nMoves++; }
-  else if (n % 6 === 4) { l.time = Math.round(cars * (1.8 - 0.5 * late) + 8); nTime++; }
-  else if (n % 6 === 0 && n >= 24 && (l.bays ?? 5) >= 5) {
+  const tapBudget = (slack: number) => cars + Math.max(1, Math.round(cars * slack));
+  const clock = (perCar: number, extra: number) => Math.round(cars * perCar + extra);
+  if (l.tag === 'boss') { l.moves = tapBudget(0.05); l.time = clock(1.35 - 0.2 * late, 8); nMoves++; nTime++; return; }
+  if (n % 4 === 2) { l.moves = tapBudget(0.07 - 0.03 * late); nMoves++; }
+  else if (n % 4 === 0) { l.time = clock(1.5 - 0.3 * late, 7); nTime++; }
+  else if (n % 6 === 3 && n >= 24 && (l.bays ?? 5) >= 4) {
     const tight = { ...l, bays: (l.bays ?? 5) - 1 };
     if (solve(tight).solvable) { l.bays = tight.bays; nBays++; } else skipped++;
   }
