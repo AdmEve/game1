@@ -219,7 +219,7 @@ SPECS.forEach((spec00, n) => {
   let best: { level: Level; err: number; rates: { random: number; greedy: number }; seed: number } | null = null;
   let spec0 = spec00;
   // If four bays make the spec unsolvable, fall back to the usual five.
-  for (let relax = 0; relax < 3 && !best; relax++) {
+  for (let relax = 0; relax < 6 && !best; relax++) {
   if (relax) spec0 = { ...spec00, bays: undefined, mix: Math.max(0, spec00.mix - 3 * (relax - 1)) };
   // If the target is far off, ease the queue mixing (or tighten it) and search again.
   for (let attempt = 0; attempt < 4 && (!best || best.err > 0.12); attempt++) {

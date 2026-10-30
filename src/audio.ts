@@ -178,3 +178,50 @@ export function win() {
 export function lose() {
   [392, 370, 311, 262].forEach((f, i) => pluck(f, i * 0.16, 0.16));
 }
+
+// ───── Weather sounds ─────
+let ambBuf: AudioBuffer | null = null;
+let amb: { src: AudioBufferSourceNode; gain: GainNode; lfo?: OscillatorNode } | null = null;
+
+/** A four-second noise loop, long enough that the repeat isn't noticeable. */
+function ambNoise(c: AudioContext) {
+  if (!ambBuf) {
+    ambBuf = c.createBuffer(1, c.sampleRate * 4, c.sampleRate);
+    const d = ambBuf.getChannelData(0); let b = 0;
+    for (let i = 0; i < d.length; i++) { b = b * 0.6 + (Math.random() * 2 - 1) * 0.4; d[i] = b; }
+  }
+  return ambBuf;
+}
+
+/** The bed of sound under a map's weather: rain hiss, a storm, or a low wind. `null` fades it out. */
+export function ambience(kind: 'rain' | 'storm' | 'snow' | 'dust' | null) {
+  const c = ac();
+  const old = amb; amb = null;
+  if (old && ctx) { old.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.4); setTimeout(() => { try { old.src.stop(); old.lfo?.stop(); } catch { /* already stopped */ } }, 1800); }
+  if (!c || !kind) return;
+  const src = c.createBufferSource(); src.buffer = ambNoise(c); src.loop = true;
+  const gain = c.createGain(); gain.gain.value = 0;
+  const f = c.createBiquadFilter();
+  let lfo: OscillatorNode | undefined, level = 0.05;
+  if (kind === 'rain' || kind === 'storm') {
+    f.type = 'bandpass'; f.frequency.value = kind === 'storm' ? 2600 : 3400; f.Q.value = 0.35; level = kind === 'storm' ? 0.12 : 0.075;
+  } else {
+    f.type = 'lowpass'; f.frequency.value = 420; level = 0.05;
+    // The wind swells and fades.
+    lfo = c.createOscillator(); lfo.frequency.value = 0.12;
+    const depth = c.createGain(); depth.gain.value = 260; lfo.connect(depth).connect(f.frequency); lfo.start();
+  }
+  src.connect(f).connect(gain).connect(out); src.start();
+  gain.gain.setTargetAtTime(level, c.currentTime, 0.8);
+  amb = { src, gain, lfo };
+}
+
+/** A rumble of thunder after a flash. */
+export function thunder() {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  const n = noise(c, t, 2.6), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(260, t); lp.frequency.exponentialRampToValueAtTime(70, t + 2.4);
+  n.connect(lp).connect(env(c, t, 0.12, 0.55, 2.3)).connect(out);
+  const o = osc(c, 'sine', 62, t, 2.2); o.frequency.exponentialRampToValueAtTime(34, t + 2.1);
+  o.connect(env(c, t, 0.1, 0.3, 2.0)).connect(out);
+}

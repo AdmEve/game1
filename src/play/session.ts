@@ -10,6 +10,7 @@ import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
+import { Weather, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
@@ -179,22 +180,15 @@ export class Session {
       poseOfficer(this.officer, this.s.axis);
     }
     hooks.officer(level.officer ? this.s.axis : null);
-    if (worldOpts.snow) this.makeSnow();
+    if (worldOpts.weather) this.makeWeather(worldOpts.weather);
   }
 
-  // ───── Falling snow ─────
-  private flakes: THREE.Points | null = null;
+  // ───── Weather ─────
+  weather: Weather | null = null;
   private lastT = 0;
-  private makeSnow() {
-    const n = 900, pos = new Float32Array(n * 3);
-    const z0 = this.L.walkZ - 8, z1 = this.L.lotH + 4;
-    for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 14; pos[i * 3 + 2] = z0 + Math.random() * (z1 - z0); }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const c = document.createElement('canvas'); c.width = c.height = 32;
-    const g = c.getContext('2d')!; const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
-    const mat = new THREE.PointsMaterial({ size: 0.2, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, opacity: 0.9 });
-    this.flakes = new THREE.Points(geo, mat);
-    this.group.add(this.flakes);
+  private makeWeather(kind: WeatherKind) {
+    this.weather = new Weather(kind, this.L.lotW, this.L.lotH);
+    this.group.add(this.weather.object);
   }
   private officer: THREE.Group | null = null;
 
@@ -850,16 +844,7 @@ export class Session {
       if (Math.ceil(this.timeLeft) !== this.lastShown) { this.lastShown = Math.ceil(this.timeLeft); this.showLimits(); }
       if (this.timeLeft <= 0) void this.loseBy('time');
     }
-    if (this.flakes) {
-      const p = this.flakes.geometry.getAttribute('position') as THREE.BufferAttribute;
-      for (let i = 0; i < p.count; i++) {
-        let y = p.getY(i) - dt * (0.9 + (i % 7) * 0.08);
-        if (y < 0) y += 14;
-        p.setY(i, y);
-        p.setX(i, p.getX(i) + Math.sin(t * 0.8 + i) * dt * 0.25);
-      }
-      p.needsUpdate = true;
-    }
+    this.weather?.update(dt);
     this.pigeons.forEach((p, k) => {
       if (p.away) return;
       const hd = p.o.getObjectByName('head')!;

@@ -34,7 +34,9 @@ import { radioCard } from './ui/radio';
 import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
+import * as sfx from './audio';
 import { click, coin } from './audio';
+import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
 import { setMood, setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
@@ -98,6 +100,25 @@ function applyLight(light: Light) {
   scene.environmentIntensity = L.env;
   lightsMaterial.emissiveIntensity = L.lamps;
   document.body.dataset.light = light;
+}
+
+// Weather: thicker fog and dimmer light in rain and snow, and a flash of the sky for lightning.
+let wxBase = { hemi: 0.7, sun: 2.6, exposure: 0.95 };
+let wxFlashing = false;
+function applyWeatherMood(kind: WeatherKind) {
+  const m = WEATHER_MOODS[kind], fog = scene.fog as THREE.Fog;
+  fog.near = m.fogNear; fog.far = m.fogFar;
+  fog.color.lerp(new THREE.Color(m.tint), m.tintAmount);
+  hemi.intensity *= m.light; sun.intensity *= m.light;
+  wxBase = { hemi: hemi.intensity, sun: sun.intensity, exposure: renderer.toneMappingExposure };
+  const amb = kind === 'rain' || kind === 'storm' || kind === 'snow' || kind === 'dust' ? kind : null;
+  sfx.ambience(amb);
+}
+function applyFlash(f: number) {
+  if (!f && !wxFlashing) return;
+  wxFlashing = f > 0;
+  hemi.intensity = wxBase.hemi * (1 + f * 3.5); sun.intensity = wxBase.sun * (1 + f * 2);
+  renderer.toneMappingExposure = wxBase.exposure * (1 + f * 0.5);
 }
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 260);
@@ -303,8 +324,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   // Yalda nights are played at home in Tajrish, after dark. The rush hour rotates day by day through
   // the places the player has already unlocked (never spoiling a chapter they haven't reached).
   const unlocked = CHAPTERS.filter((c) => c.from <= save.level);
-  const ch = ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
+  const ch = ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const, weather: ev.kind === 'yalda' ? 'snow' as const : 'petals' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
   applyLight(ch.light);
+  applyWeatherMood(ch.weather);
   setMood(ch.light);
   craneMode = false;
   modalOpen = false;
@@ -321,8 +343,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
+  if (session.weather) session.weather.onThunder = () => sfx.thunder();
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
@@ -708,6 +731,7 @@ async function boot() {
     catchUp();
     tick(dt);
     session?.idle(t / 1000);
+    applyFlash(session?.weather?.flash ?? 0);
     if (session) {
       const bays = session.s.bays, used = bays.filter(Boolean).length;
       setTension(session.s.over ? 0 : Math.max(0, (used - 2) / Math.max(1, bays.length - 2)));
