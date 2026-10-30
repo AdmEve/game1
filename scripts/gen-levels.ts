@@ -214,9 +214,13 @@ SPECS.forEach((s, i) => {
 const fromArg = process.argv.indexOf('--from');
 const keepN = fromArg > 0 ? Number(process.argv[fromArg + 1]) : 0;
 const out: Level[] = keepN ? (JSON.parse(readFileSync(new URL('../src/game/levels.json', import.meta.url), 'utf8')) as Level[]).slice(0, keepN) : [];
-SPECS.forEach((spec0, n) => {
+SPECS.forEach((spec00, n) => {
   if (n < keepN) return;
   let best: { level: Level; err: number; rates: { random: number; greedy: number }; seed: number } | null = null;
+  let spec0 = spec00;
+  // If four bays make the spec unsolvable, fall back to the usual five.
+  for (let relax = 0; relax < 2 && !best; relax++) {
+  if (relax) spec0 = { ...spec00, bays: undefined };
   // If the target is far off, ease the queue mixing (or tighten it) and search again.
   for (let attempt = 0; attempt < 4 && (!best || best.err > 0.12); attempt++) {
   const tooHard = best ? best.rates.greedy < spec0.target : false;
@@ -232,6 +236,7 @@ SPECS.forEach((spec0, n) => {
     const err = Math.abs(rates.greedy - spec.target) + (1 - Math.min(1, density)) * 0.5;
     if (!best || err < best.err) best = { level, err, rates, seed };
     if (err < 0.03) break;
+  }
   }
   }
   const spec = spec0;
