@@ -575,7 +575,7 @@ function showSettings() {
   c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(current); }));
   c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) startLevel(current); }));
   // Version label; seven taps unlock every level (for testers).
-  const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)}`);
+  const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)} · ساخت ${__BUILD__}`);
   let taps = 0;
   ver.onclick = () => { if (++taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); } };
   c.append(ver);

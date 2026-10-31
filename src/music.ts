@@ -1,5 +1,6 @@
 /**
- * Adaptive background music, synthesised live. A calm, warm 4/4 groove: a soft pad, an electric-piano
+ * Adaptive background music. Each chapter's loop is synthesised once, offline (so playing it costs the phone
+ * nothing and cannot crackle), then looped; a second stem of extra percussion fades in with the tension. A calm, warm 4/4 groove: a soft pad, an electric-piano
  * arpeggio, a plucked melody that wanders through a pentatonic subset of the chapter's mode (never a clash),
  * a round bass, and quiet drums. As the parking bays fill up, a tension layer (more hi-hat, a brighter
  * pad, a driving off-beat) fades in. Everything runs through a gentle low-pass so nothing is ever shrill.
@@ -26,10 +27,13 @@ let DRUMS = 1;
 let moodSeed = 1;
 
 export function setMood(m: Mood) {
+  if (m === currentMood && stems?.mood === m) return;
+  currentMood = m;
   const x = MOODS[m];
   E = 60 / x.bpm / 2; TONIC = x.tonic; SCALE = x.scale; DRUMS = x.drums;
   moodSeed = Object.keys(MOODS).indexOf(m) + 1;
   melody = makeMelody();
+  if (playing) void ensureStems();
 }
 const freq = (deg: number, oct = 0) => {
   const o = Math.floor(deg / 7), d = ((deg % 7) + 7) % 7;
@@ -38,7 +42,7 @@ const freq = (deg: number, oct = 0) => {
 
 // One chord per bar: scale degrees of the roots (I, vi, IV, V in a major mode; the same degrees in a minor one).
 const PROG = [0, 5, 3, 4];
-const BARS = 16; // the melody repeats every sixteen bars, four chords four times
+const BARS = 8; // the loop is eight bars: the four chords twice, with a melody that changes in the second half
 
 /** A seeded melody, so each chapter has its own tune but it is the same every time you play it. */
 type Note = { at: number; deg: number; len: number };
@@ -74,18 +78,15 @@ function makeMelody(): Note[][] {
 }
 melody = makeMelody();
 
+/** While a stem is being rendered these point at the offline context and its graph. */
 let c: AudioContext | null = null;
-let bus: GainNode, tensionGain: GainNode, padFilter: BiquadFilterNode, noiseBuf: AudioBuffer;
-let timer = 0, nextTime = 0, step = 0;
-let tension = 0, tensionTarget = 0;
-let playing = false;
+let bus: GainNode, padFilter: BiquadFilterNode, noiseBuf: AudioBuffer;
+/** Which layer `schedule` writes: the main groove, or the extra percussion that fades in with tension. */
+let layer: 'base' | 'tension' = 'base';
 
-function init(offline?: { c: AudioContext; out: AudioNode }) {
-  const o = offline ?? audioOut();
-  if (!o) return false;
+function init(o: { c: AudioContext; out: AudioNode }) {
   c = o.c;
-  bus = c.createGain(); bus.gain.value = 0;
-  tensionGain = c.createGain(); tensionGain.gain.value = 0;
+  bus = c.createGain(); bus.gain.value = 1;
   // Everything passes a soft low-pass (tames any brightness) and a roomy reverb.
   const soft = c.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 6200; soft.Q.value = 0.4;
   const rev = c.createConvolver();
@@ -93,7 +94,6 @@ function init(offline?: { c: AudioContext; out: AudioNode }) {
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.6; }
   rev.buffer = ir;
   const wet = c.createGain(); wet.gain.value = 0.3;
-  tensionGain.connect(bus);
   bus.connect(soft); soft.connect(o.out);
   bus.connect(rev).connect(wet).connect(soft);
   padFilter = c.createBiquadFilter(); padFilter.type = 'lowpass'; padFilter.frequency.value = 800; padFilter.Q.value = 0.5; padFilter.connect(bus);
@@ -177,11 +177,18 @@ function schedule(i: number, t: number) {
   const root = PROG[bar % 4];
   // A hair of human timing on the soft instruments.
   const hum = () => (Math.random() - 0.5) * 0.012;
+  if (layer === 'tension') {
+    // The stem that fades in as the bays fill: busier hats, a driving off-beat kick, a high shimmer.
+    hat(t, 0.03); hat(t + E / 2, 0.018);
+    if (pos === 3 || pos === 7) kick(t + E * 0.5, 0.2 * DRUMS);
+    if (pos % 2 === 0) keys(freq(root + [0, 4, 2, 4][(pos / 2) % 4], 1), t + hum(), 0.035);
+    return;
+  }
   if (pos === 0) {
     pad(root, t);
     for (const n of melody[bar]) lead(freq(n.deg, 1), t + n.at * E + hum(), n.len, 0.055);
   }
-  // Electric-piano arpeggio: root, fifth, octave, third, in eighths (a gentle rolling figure).
+  // Electric-piano arpeggio: a gentle rolling figure over the chord.
   const ARP = [0, 2, 4, 7, 4, 2, 4, 2];
   keys(freq(root + ARP[pos]), t + hum(), pos % 2 ? 0.05 : 0.07);
   // Bass on the one and the "and" of two.
@@ -192,57 +199,102 @@ function schedule(i: number, t: number) {
   if (pos === 0 || pos === 4) kick(t, 0.32 * DRUMS);
   if (pos === 2 || pos === 6) rim(t, 0.05 * DRUMS);
   if (pos % 2 === 1) hat(t, 0.02 * DRUMS);
-  // Tension: more hats, a driving off-beat kick and a brighter pad.
-  if (tension > 0.02) {
-    hat(t, 0.025, tensionGain); hat(t + E / 2, 0.015, tensionGain);
-    if (pos === 3 || pos === 7) kick(t + E * 0.5, 0.2);
-  }
 }
 
-function tickScheduler() {
-  if (!c) return;
-  tension += (tensionTarget - tension) * 0.08;
-  tensionGain.gain.setTargetAtTime(tension, c.currentTime, 0.4);
-  padFilter.frequency.setTargetAtTime(800 + tension * 1400, c.currentTime, 0.5);
-  while (nextTime < c.currentTime + 0.25) { schedule(step, nextTime); nextTime += E; step++; }
+const RATE = 32000;
+/**
+ * Render one stem of the current mood: `BARS` bars of music plus the reverb tail, with the tail folded back
+ * onto the start so the loop has no seam.
+ */
+async function renderStem(which: 'base' | 'tension'): Promise<AudioBuffer> {
+  const bar = 8 * E, len = bar * BARS, tail = 2.6;
+  const off = new OfflineAudioContext(2, Math.ceil(RATE * (len + tail)), RATE);
+  const comp = off.createDynamicsCompressor(); comp.threshold.value = -14; comp.connect(off.destination);
+  c = off as unknown as AudioContext; layer = which;
+  init({ c, out: comp });
+  for (let i = 0; i < 8 * BARS; i++) schedule(i, 0.05 + i * E);
+  const buf = await off.startRendering();
+  const n = Math.round(RATE * len);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; n + i < d.length; i++) d[i] += d[n + i];
+  }
+  const loop = new AudioBuffer({ length: n, numberOfChannels: 2, sampleRate: RATE });
+  for (let ch = 0; ch < 2; ch++) loop.copyToChannel(buf.getChannelData(ch).subarray(0, n), ch);
+  c = null;
+  return loop;
+}
+
+// ───── Playback ─────
+let ctx: AudioContext | null = null;
+let out: { gain: GainNode; tension: GainNode } | null = null;
+let srcs: AudioBufferSourceNode[] = [];
+let stems: { mood: Mood; base: AudioBuffer; tension: AudioBuffer } | null = null;
+let currentMood: Mood = 'day';
+let building: Mood | null = null;
+let playing = false;
+let tensionTarget = 0;
+
+function stopSources(fade = 0.8) {
+  const old = srcs, o = out; srcs = []; out = null;
+  if (o && ctx) { o.gain.gain.setTargetAtTime(0, ctx.currentTime, fade / 3); setTimeout(() => old.forEach((s) => { try { s.stop(); } catch { /* already stopped */ } }), fade * 1000 + 300); }
+}
+
+function begin() {
+  const o = audioOut();
+  if (!o || !stems || !playing) return;
+  ctx = o.c;
+  stopSources(0.6);
+  const gain = ctx.createGain(); gain.gain.value = 0; gain.connect(o.out);
+  const tension = ctx.createGain(); tension.gain.value = 0; tension.connect(gain);
+  const mk = (b: AudioBuffer, dest: AudioNode) => { const s = ctx!.createBufferSource(); s.buffer = b; s.loop = true; s.connect(dest); s.start(); return s; };
+  srcs = [mk(stems.base, gain), mk(stems.tension, tension)];
+  out = { gain, tension };
+  gain.gain.setTargetAtTime(0.9, ctx.currentTime, 1.2);
+  tension.gain.setTargetAtTime(tensionTarget, ctx.currentTime, 0.4);
+}
+
+async function ensureStems() {
+  if (stems?.mood === currentMood || building === currentMood) return;
+  const mood = currentMood;
+  building = mood;
+  try {
+    const base = await renderStem('base');
+    if (currentMood !== mood) return; // the chapter changed while rendering: the parameters moved on
+    const tension = await renderStem('tension');
+    if (currentMood === mood) { stems = { mood, base, tension }; begin(); }
+  } finally { if (building === mood) building = null; }
 }
 
 export function startMusic() {
   if (!save.settings.music || playing) return;
-  if (!c && !init()) return;
   playing = true;
-  nextTime = c!.currentTime + 0.1;
-  bus.gain.cancelScheduledValues(c!.currentTime);
-  bus.gain.setTargetAtTime(0.5, c!.currentTime, 1.2);
-  timer = window.setInterval(tickScheduler, 40);
+  if (stems?.mood === currentMood) begin(); else void ensureStems();
 }
 
 export function stopMusic(fade = 0.6) {
-  if (!c || !playing) return;
+  if (!playing) return;
   playing = false;
-  bus.gain.setTargetAtTime(0, c.currentTime, fade / 3);
-  const t = timer;
-  setTimeout(() => clearInterval(t), fade * 1000 + 200);
+  stopSources(fade);
 }
 
 /** 0 = calm, 1 = every bay is taken. */
-export function setTension(x: number) { tensionTarget = Math.max(0, Math.min(1, x)); }
+export function setTension(x: number) {
+  tensionTarget = Math.max(0, Math.min(1, x));
+  if (out && ctx) out.tension.gain.setTargetAtTime(tensionTarget, ctx.currentTime, 0.5);
+}
 
-/** Test hook: render `sec` seconds of music offline (with the given tension) into a 16-bit WAV. */
-export async function renderMusicWav(sec: number, tens = 0): Promise<Blob> {
-  const off = new OfflineAudioContext(2, Math.floor(44100 * sec), 44100);
-  const comp = off.createDynamicsCompressor(); comp.threshold.value = -14; comp.connect(off.destination);
-  init({ c: off as unknown as AudioContext, out: comp });
-  bus.gain.value = 0.5; tension = tens; tensionGain.gain.value = tens; padFilter.frequency.value = 800 + tens * 1400;
-  let t = 0.05, i = 0;
-  while (t < sec) { schedule(i++, t); t += E; }
-  const buf = await off.startRendering();
-  const n = buf.length, data = new DataView(new ArrayBuffer(44 + n * 4));
+/** Test hook: render the current mood's loop (base plus, optionally, tension) into a 16-bit WAV. */
+export async function renderMusicWav(_sec = 0, tens = 0): Promise<Blob> {
+  const base = await renderStem('base'), tn = tens > 0 ? await renderStem('tension') : null;
+  const n = base.length, data = new DataView(new ArrayBuffer(44 + n * 4));
   const w = (o: number, s: string) => { for (let k = 0; k < s.length; k++) data.setUint8(o + k, s.charCodeAt(k)); };
   w(0, 'RIFF'); data.setUint32(4, 36 + n * 4, true); w(8, 'WAVEfmt '); data.setUint32(16, 16, true); data.setUint16(20, 1, true); data.setUint16(22, 2, true);
-  data.setUint32(24, 44100, true); data.setUint32(28, 44100 * 4, true); data.setUint16(32, 4, true); data.setUint16(34, 16, true); w(36, 'data'); data.setUint32(40, n * 4, true);
-  const L = buf.getChannelData(0), R = buf.getChannelData(1);
-  for (let k = 0; k < n; k++) { data.setInt16(44 + k * 4, Math.max(-1, Math.min(1, L[k])) * 32767, true); data.setInt16(46 + k * 4, Math.max(-1, Math.min(1, R[k])) * 32767, true); }
-  c = null;
+  data.setUint32(24, RATE, true); data.setUint32(28, RATE * 4, true); data.setUint16(32, 4, true); data.setUint16(34, 16, true); w(36, 'data'); data.setUint32(40, n * 4, true);
+  const L = base.getChannelData(0), R = base.getChannelData(1), TL = tn?.getChannelData(0), TR = tn?.getChannelData(1);
+  for (let k = 0; k < n; k++) {
+    const l = L[k] * 0.9 + (TL ? TL[k] * 0.9 * tens : 0), r = R[k] * 0.9 + (TR ? TR[k] * 0.9 * tens : 0);
+    data.setInt16(44 + k * 4, Math.max(-1, Math.min(1, l)) * 32767, true); data.setInt16(46 + k * 4, Math.max(-1, Math.min(1, r)) * 32767, true);
+  }
   return new Blob([data.buffer], { type: 'audio/wav' });
 }
