@@ -10,7 +10,7 @@ import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { outdoorEnv } from './render/env.js';
-import { warmFleet } from './render/fleet';
+import { setCarShadows, warmFleet } from './render/fleet';
 import { sky } from './render/world';
 import { Session } from './play/session';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
@@ -48,9 +48,11 @@ const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: debug.has('shot') });
 /** Phones (the APK or a mobile browser) get a lighter setup: fewer pixels, cheaper shadows, no live blur. */
 const mobile = Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : mobile ? 1.5 : 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : mobile ? 1.25 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+// The world's shadows barely change, so phones redraw the shadow map only every few frames, and cars cast none.
+if (mobile) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); }
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -345,6 +347,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
   }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
+  renderer.shadowMap.needsUpdate = true;
   if (session.weather) session.weather.onThunder = () => sfx.thunder();
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
@@ -711,7 +714,7 @@ async function boot() {
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
-  let last = performance.now();
+  let last = performance.now(), shadowTick = 0;
   // Adaptive quality: watch the frame rate over the first seconds of play and step down if the phone struggles.
   let probeFrames = 0, probeTime = 0, tier = 2;
   const stepDown = () => {
@@ -740,6 +743,7 @@ async function boot() {
     }
     applyShake(dt);
     updateHand();
+    if (mobile && ++shadowTick % 4 === 0) renderer.shadowMap.needsUpdate = true;
     renderer.render(scene, camera);
     requestAnimationFrame(loop);
   };

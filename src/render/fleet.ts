@@ -85,7 +85,7 @@ function tint(g: THREE.BufferGeometry, c: THREE.Color) {
 
 interface Template { mesh: THREE.Group; length: number; width: number; roofX: number; roofY: number; tilt: number; }
 const cache = new Map<string, Template>();
-const QUALITY = 0.32;
+const QUALITY = 0.14;
 
 function template(kind: Kind, color: Color, skin?: string): Template {
   const key = kind + color + (skin ?? '');
@@ -144,12 +144,17 @@ function blobShadow(w: number, d: number): THREE.Mesh {
   return m;
 }
 
+/** Phones draw cars without a shadow-map pass (the soft blob under each car stands in for it). */
+let carShadows = true;
+export function setCarShadows(on: boolean) { carShadows = on; }
+
 export function makeVehicle(kind: Kind, color: Color, skin?: string, opts: { arrow?: boolean } = {}): VehicleObj {
   const t = template(kind, color, skin);
   const L = KIND[kind].len * CELL - 0.26;
   const s = L / t.length, sz = Math.min(s, 0.98 / t.width);
   const body = new THREE.Group();
   const model = t.mesh.clone();
+  if (!carShadows) model.traverse((o) => { o.castShadow = false; });
   model.scale.set(s, s, sz);
   body.add(model);
   const arrow = new THREE.Group();
