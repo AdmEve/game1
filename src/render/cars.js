@@ -272,7 +272,12 @@ function faceMat(kind, w, h) {
   if (faceCache.has(key)) return faceCache.get(key);
   const W = 256, H = Math.max(48, Math.round(256 * h / w));
   const t = tex(W, H, (g) => {
-    if (kind === 'head') {
+    if (kind === 'round') {
+      const c = W / 2, rr = (r, col) => { g.fillStyle = col; g.beginPath(); g.arc(c, H / 2, r, 0, Math.PI * 2); g.fill(); };
+      rr(c, '#2a2d31'); rr(c * 0.94, '#dfe4e8'); rr(c * 0.82, '#aab4be'); rr(c * 0.76, '#f3f6f8');
+      for (const [r, col] of [[0.7, '#c8d1d9'], [0.5, '#8d99a5'], [0.34, '#e9eef2'], [0.18, '#fff6d0']]) rr(c * r, col);
+      g.strokeStyle = 'rgba(70,82,95,.5)'; g.lineWidth = 3; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(c + Math.cos(a) * c * 0.36, H / 2 + Math.sin(a) * c * 0.36); g.lineTo(c + Math.cos(a) * c * 0.74, H / 2 + Math.sin(a) * c * 0.74); g.stroke(); }
+    } else if (kind === 'head') {
       const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#f5f8fb'); gr.addColorStop(1, '#c9d2da');
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
       const ax = W * 0.74;
@@ -289,13 +294,13 @@ function faceMat(kind, w, h) {
       g.strokeStyle = 'rgba(40,0,0,.45)'; g.lineWidth = 2; for (let i = 1; i < 9; i++) { g.beginPath(); g.moveTo(W * (0.24 + i * 0.06), 4); g.lineTo(W * (0.24 + i * 0.06), H - 4); g.stroke(); }
     }
   });
-  const m = new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.08, clearcoat: 1, emissive: kind === 'head' ? 0xfff3d6 : 0x7a0008, emissiveMap: t, emissiveIntensity: kind === 'head' ? 0.22 : 0.4 });
+  const m = new THREE.MeshPhysicalMaterial({ map: t, alphaTest: 0.3, roughness: 0.08, clearcoat: 1, emissive: kind !== 'tail' ? 0xfff3d6 : 0x7a0008, emissiveMap: t, emissiveIntensity: kind !== 'tail' ? 0.22 : 0.4 });
   faceCache.set(key, m); return m;
 }
 function lamp(w, h, r, lensMat, bezel = M.trim) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(slab(w, h, r, 0.01), bezel));
-  const kind = lensMat === M.lens ? 'head' : lensMat === M.red ? 'tail' : null;
+  const kind = lensMat === M.lens ? (Math.abs(w - h) < 0.03 ? 'round' : 'head') : lensMat === M.red ? 'tail' : null;
   if (kind) {
     const f = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, h * 0.8), faceMat(kind, w, h)); f.position.z = 0.0195; g.add(f);
   } else {

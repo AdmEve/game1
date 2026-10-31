@@ -153,3 +153,4 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 ## Peugeot Pars model (from photos)
 - Dedicated `pars` spec + `parsExtra`: shrink-wrapped decals (ray-projected grid meshes) for wedge multi-reflector headlamps with amber indicators, slatted body-colour grille, lion badge, smoked-red wedge tail lamps; black bumper bands with teal pinstripe, fog lamps, silver 5-pocket wheel covers, body-colour mirrors, boot lettering and plate lip. All 405 vehicles now render as Pars.
 - Samand: wrapped wedge headlamps, slatted grille + lion, wedge tail lamps, black lower bumper strip (shared `wrapper()` decal helper).
+- Peykan: round multi-reflector headlamp faces with chrome rims (new 'round' lamp face, alpha-cut).
