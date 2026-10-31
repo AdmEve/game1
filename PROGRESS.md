@@ -149,3 +149,6 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 
 ## Realistic weather pass
 - Rain is now camera-facing streaks with a fading tail (not 1px lines), wind gusts vary the slant, ripples bloom on the tarmac, and rainy chapters wet the ground (darker, glossy, reflects the env map). First frame already rains (drops laid out in the constructor).
+
+## Peugeot Pars model (from photos)
+- Dedicated `pars` spec + `parsExtra`: shrink-wrapped decals (ray-projected grid meshes) for wedge multi-reflector headlamps with amber indicators, slatted body-colour grille, lion badge, smoked-red wedge tail lamps; black bumper bands with teal pinstripe, fog lamps, silver 5-pocket wheel covers, body-colour mirrors, boot lettering and plate lip. All 405 vehicles now render as Pars.

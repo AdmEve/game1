@@ -167,6 +167,7 @@ export const M = {
   lens: new THREE.MeshPhysicalMaterial({ color: 0xf4f7fb, roughness: 0.05, clearcoat: 1, emissive: 0xfff3d6, emissiveIntensity: 0.35 }),
   amber: new THREE.MeshPhysicalMaterial({ color: 0xff9a1a, roughness: 0.1, clearcoat: 1, emissive: 0xff7a00, emissiveIntensity: 0.25 }),
   red: new THREE.MeshPhysicalMaterial({ color: 0xc8101c, roughness: 0.1, clearcoat: 1, emissive: 0x8a0008, emissiveIntensity: 0.35 }),
+  teal: new THREE.MeshStandardMaterial({ color: 0x1fa79b, roughness: 0.4 }),
   seat: new THREE.MeshStandardMaterial({ color: 0x3a3631, roughness: 0.9 }),
   seatBeige: new THREE.MeshStandardMaterial({ color: 0x9c8466, roughness: 0.9 }),
 };
@@ -212,6 +213,11 @@ function rimTex(style) {
       ring(128, '#2a2d30'); ring(114, '#c3c8ce'); ring(108, '#9ea5ad');
       g.fillStyle = '#2b2f33'; for (let i = 0; i < 14; i++) { const a = i * Math.PI * 2 / 14; g.save(); g.translate(c + Math.cos(a) * 80, c + Math.sin(a) * 80); g.rotate(a); g.fillRect(-14, -5, 28, 10); g.restore(); }
       ring(52, '#d5dade'); ring(24, '#7d858d');
+    } else if (style === 'pars') { // Pars: silver full wheel cover, five vented pockets, centre cap
+      ring(128, '#222527'); ring(116, '#d5d9dd'); ring(106, '#aeb4ba');
+      g.fillStyle = '#6f777e'; for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 - Math.PI / 2; g.save(); g.translate(c, c); g.rotate(a); g.beginPath(); g.ellipse(0, -72, 18, 38, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+      g.fillStyle = '#eef1f4'; for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 - Math.PI / 2 + Math.PI / 5; g.save(); g.translate(c, c); g.rotate(a); g.fillRect(-5, -100, 10, 56); g.restore(); }
+      ring(30, '#c4cacf'); ring(20, '#e9edf0');
     } else { // alloy five-spoke
       ring(128, '#2a2d30'); ring(114, '#b7bec6'); ring(104, '#1c1f22');
       g.fillStyle = '#c9d0d7'; for (let i = 0; i < 5; i++) { g.save(); g.translate(c, c); g.rotate(i * Math.PI * 2 / 5); g.beginPath(); g.moveTo(-14, 0); g.lineTo(-20, -104); g.lineTo(20, -104); g.lineTo(14, 0); g.fill(); g.restore(); }
@@ -394,7 +400,7 @@ export function buildCar(spec, color, opts = {}) {
 
   // Bumpers: bands that wrap the nose and tail.
   for (const b of spec.bumpers ?? []) {
-    const mat = b.mat === 'chrome' ? M.chrome : b.mat === 'body' ? P : b.mat === 'gray' ? M.steel : M.plastic;
+    const mat = b.mat?.isMaterial ? b.mat : b.mat === 'black' ? M.under : b.mat === 'teal' ? M.teal : b.mat === 'chrome' ? M.chrome : b.mat === 'body' ? P : b.mat === 'gray' ? M.steel : M.plastic;
     const ex = b.grow ?? 0.035;
     for (const end of b.ends ?? [1, -1]) {
       const g = loft({ x0: -hl - ex, x1: hl + ex, cx0: end > 0 ? hl - (b.depth ?? 0.45) : -hl - ex, cx1: end > 0 ? hl + ex : -hl + (b.depth ?? 0.45), nx: Math.round(40 * Q), nr: Math.round(40 * Q), planExp: spec.planExp ?? 7,
@@ -405,7 +411,7 @@ export function buildCar(spec, color, opts = {}) {
   // Side rubbing strips.
   for (const s of spec.strips ?? []) {
     const g = loft({ x0: -hl + 0.02, x1: hl - 0.02, cx0: s.x0, cx1: s.x1, nx: Math.round(80 * Q), nr: Math.max(8, Math.round(24 * Q)), planExp: spec.planExp ?? 7, bot: s.y0, top: s.y1, half: hw + 0.012, rt: 0.01, rb: 0.01 });
-    const m = new THREE.Mesh(g, s.mat === 'chrome' ? M.chrome : M.trim); car.add(m);
+    const m = new THREE.Mesh(g, s.mat?.isMaterial ? s.mat : s.mat === 'chrome' ? M.chrome : s.mat === 'plastic' ? M.plastic : M.trim); car.add(m);
   }
 
   // Lights, grille, badge, plates.
@@ -514,20 +520,21 @@ export const CARS = {
     plateF: 0.38, plateR: 0.62, handles: [0.2, -0.66],
     strips: [{ y0: 0.5, y1: 0.56, x0: -2.0, x1: 2.0 }],
   },
-  // Peugeot Pars (Iran Khodro, 2000s): the 405 reskinned — long sloping nose, big wrap headlamps, wide chrome-barred grille, black lower bumper.
+  // Peugeot Pars / Persia family (Iran Khodro): modelled from photos. See parsExtra().
   pars: {
-    name: 'پژو پارس', L: 4.5, W: 1.72, R: 0.3, tireW: 0.19, wheels: [1.32, -1.4], rim: 'alloy', planExp: 7, bodyRt: 0.11, metallic: true,
-    top: [[-2.25, 0.62], [-2.22, 0.93], [-2.08, 0.985], [-1.6, 0.985], [0.9, 0.88], [1.85, 0.74], [2.2, 0.66], [2.25, 0.5]],
-    cab: { xA: 0.92, xRF: 0.1, xRR: -0.95, xC: -1.62, roof: 1.42, half: 0.8, tumble: 0.21, rt: 0.12,
-      roofPts: [[-1.62, 0.985], [-1.2, 1.28], [-0.9, 1.4], [-0.3, 1.43], [0.1, 1.42], [0.55, 1.2], [0.92, 0.9]] },
-    windows: [[0.72, -0.02], [-0.12, -1.3]],
-    bumpers: [{ y0: 0.28, y1: 0.5, mat: 'plastic', depth: 0.34, grow: 0.03 }],
-    headlights: [{ w: 0.4, h: 0.17, z: 0.5, y: 0.69, r: 0.07, bezel: 'body' }],
-    grille: { w: 0.6, h: 0.12, y: 0.66, bars: 4 },
-    badge: { y: 0.66 },
-    taillights: [{ w: 0.38, h: 0.15, z: 0.5, y: 0.85, r: 0.05, bezel: 'body' }],
-    plateF: 0.36, plateR: 0.62, handles: [0.2, -0.68],
-    strips: [{ y0: 0.52, y1: 0.58, x0: -2.05, x1: 2.05 }],
+    name: 'پژو پارس', L: 4.5, W: 1.72, R: 0.3, tireW: 0.185, wheels: [1.32, -1.4], rim: 'pars', planExp: 11, bodyRt: 0.1, metallic: true, mirrorPaint: true, mirrorX: 0.74,
+    top: [[-2.25, 0.6], [-2.22, 0.93], [-2.1, 0.99], [-1.5, 0.99], [-0.2, 0.93], [0.9, 0.9], [1.5, 0.855], [1.95, 0.8], [2.17, 0.77], [2.25, 0.6]],
+    cab: { xA: 0.9, xRF: 0.12, xRR: -0.98, xC: -1.52, roof: 1.43, half: 0.8, tumble: 0.2, rt: 0.13,
+      roofPts: [[-1.52, 0.99], [-1.2, 1.28], [-0.95, 1.41], [-0.3, 1.43], [0.12, 1.42], [0.5, 1.22], [0.9, 0.91]] },
+    windows: [[0.7, -0.02], [-0.1, -1.24]],
+    bumpers: [
+      { y0: 0.38, y1: 0.52, mat: 'black', depth: 0.36, grow: 0.028 },
+      { y0: 0.515, y1: 0.53, mat: 'teal', depth: 0.34, grow: 0.034 },
+    ],
+    headlights: [], taillights: [],
+    plateF: 0.45, plateR: 0.66, handles: [0.2, -0.68],
+    strips: [{ y0: 0.47, y1: 0.55, x0: -0.92, x1: 0.88, mat: 'plastic' }],
+    extra: parsExtra,
   },
   // IKCO Samand: rounded body, big chrome grille; Tehran's yellow taxi.
   samand: {
@@ -781,4 +788,115 @@ export function buildJeep(color, opts = {}) {
   const pl = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ map: plateTex({ a: 39, letter: 'ج', b: 135, city: 10 }), roughness: 0.5 }));
   pl.position.set(hl + 0.01, 0.55, 0); pl.rotation.y = Math.PI / 2; pl.scale.setScalar(0.8); g.add(pl);
   return g;
+}
+
+
+// ───── Peugeot Pars details ─────
+const parsMats = {};
+function parsMat(key, w, h, draw, o = {}) {
+  if (parsMats[key]) return parsMats[key];
+  const t = tex(w, h, draw); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  return (parsMats[key] = new THREE.MeshPhysicalMaterial({ map: t, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04, ...o }));
+}
+// Wedge headlamp: tall at the nose (u=0), low and swept at the fender (u=1). Clear lens, big stepped reflectors, amber indicator.
+const headTex = () => parsMat('pars-head', 512, 128, (g, w, h) => {
+  const top = (u) => 6 + u * 20, bot = (u) => h - 6 - u * 4;
+  g.beginPath(); g.moveTo(0, top(0)); for (let i = 1; i <= 24; i++) g.lineTo(w * i / 24, top(i / 24)); g.lineTo(w, bot(1)); for (let i = 23; i >= 0; i--) g.lineTo(w * i / 24, bot(i / 24)); g.closePath();
+  g.save(); g.clip();
+  const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#aeb9c3'); bg.addColorStop(1, '#6f7b87'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const bowl = (cx, cy, rx, ry) => { for (let k = 0; k < 5; k++) { const f = 1 - k * 0.2; const gr = g.createRadialGradient(cx - rx * 0.2, cy - ry * 0.2, 1, cx, cy, rx * f); gr.addColorStop(0, k % 2 ? '#ffffff' : '#c9d2da'); gr.addColorStop(1, k % 2 ? '#5d6975' : '#8b97a3'); g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy, rx * f, ry * f, 0, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#fff6d0'; g.beginPath(); g.ellipse(cx, cy, rx * 0.14, ry * 0.2, 0, 0, Math.PI * 2); g.fill(); };
+  bowl(w * 0.18, h * 0.5, 54, 46); bowl(w * 0.46, h * 0.52, 50, 36); bowl(w * 0.72, h * 0.55, 40, 28);
+  g.fillStyle = '#ffb228'; g.fillRect(w * 0.88, 0, w, h); g.fillStyle = '#ffd877'; g.fillRect(w * 0.89, h * 0.3, w * 0.1, h * 0.5);
+  g.strokeStyle = 'rgba(70,82,95,.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.88, 0); g.lineTo(w * 0.88, h); g.stroke();
+  g.restore();
+  g.strokeStyle = '#2a3036'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, top(0)); for (let i = 1; i <= 24; i++) g.lineTo(w * i / 24, top(i / 24)); g.lineTo(w, bot(1)); for (let i = 23; i >= 0; i--) g.lineTo(w * i / 24, bot(i / 24)); g.closePath(); g.stroke();
+}, { emissive: 0xfff1cc, emissiveIntensity: 0.12 });
+// Tail lamp: smoked red wedge, horizontal ribs, amber and white sections inside.
+const tailTex = () => parsMat('pars-tail', 512, 128, (g, w, h) => {
+  const top = (u) => 4 + u * 36, bot = (u) => h - 4 - u * 2;
+  const path = () => { g.beginPath(); g.moveTo(0, top(0)); for (let i = 1; i <= 24; i++) g.lineTo(w * i / 24, top(i / 24)); g.lineTo(w, bot(1)); g.lineTo(0, bot(0)); g.closePath(); };
+  path(); g.save(); g.clip();
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#9c0f1a'); gr.addColorStop(0.7, '#b3101d'); gr.addColorStop(1, '#6b0a12'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, 0, w, h * 0.3);
+  g.strokeStyle = 'rgba(40,0,0,.5)'; g.lineWidth = 2; for (let y = 14; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  g.fillStyle = '#ff7a12'; g.fillRect(w * 0.04, h * 0.55, w * 0.22, h * 0.3);
+  g.fillStyle = '#e9ecee'; g.fillRect(w * 0.3, h * 0.62, w * 0.14, h * 0.24);
+  g.restore(); g.strokeStyle = '#1b1012'; g.lineWidth = 4; path(); g.stroke();
+}, { emissive: 0x7a0008, emissiveIntensity: 0.35 });
+// Slatted grille panel in body colour: dark recesses between three raised bars.
+const grilleTex = () => parsMat('pars-grille', 512, 96, (g, w, h) => {
+  g.fillStyle = '#d9dee2'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 3; i++) { const y = 14 + i * 26; g.fillStyle = '#3b4148'; g.fillRect(10, y + 14, w - 20, 5); g.fillStyle = '#f4f6f8'; g.fillRect(10, y, w - 20, 13); }
+  g.fillStyle = '#23272b'; g.fillRect(0, h - 10, w, 10);
+}, { roughness: 0.3, clearcoat: 0.6 });
+const lionTex = () => parsMat('pars-lion', 128, 128, (g, w, h) => {
+  g.fillStyle = '#16181b'; g.beginPath(); g.roundRect(8, 6, w - 16, h - 10, [10, 10, 40, 40]); g.fill();
+  g.strokeStyle = '#cfd5da'; g.lineWidth = 4; g.beginPath(); g.roundRect(14, 12, w - 28, h - 22, [8, 8, 34, 34]); g.stroke();
+  g.fillStyle = '#d9dee3'; g.beginPath(); // rearing lion, simplified
+  g.moveTo(44, 100); g.lineTo(52, 74); g.lineTo(40, 56); g.lineTo(50, 40); g.lineTo(62, 28); g.lineTo(76, 34); g.lineTo(82, 46); g.lineTo(72, 54); g.lineTo(84, 70); g.lineTo(92, 100); g.lineTo(80, 100); g.lineTo(72, 80); g.lineTo(62, 100); g.closePath(); g.fill();
+}, { roughness: 0.25, metalness: 0.3 });
+const wordTex = (word) => parsMat('pars-word-' + word, 256, 56, (g, w, h) => {
+  g.fillStyle = '#c9cfd5'; g.font = '700 44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(word, w / 2, h / 2 + 2);
+}, { roughness: 0.2, metalness: 0.5, transparent: true, alphaTest: 0.2 });
+
+function parsExtra(car, { top, P, body }) {
+  const hl = 2.25, hw = 0.86;
+  // Shrink-wrap a textured patch onto the body: a grid whose vertices are ray-projected onto the surface.
+  const strips = (from, dir, o) => {
+    const { z0, z1, n, yAt, hAt, mat, lift = 0.004 } = o, rows = 4;
+    for (const sg of [1, -1]) {
+      const pos = [], uvs = [], idx = [], ok = [];
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, zt = z0 + t * (z1 - z0), yc = yAt(t), h = hAt(t);
+        for (let j = 0; j <= rows; j++) {
+          const y = yc + (j / rows - 0.5) * h;
+          let z = zt, hit = null;
+          for (let r = 0; r < 12 && !hit; r++, z *= 0.97) {
+            ray.set(new THREE.Vector3(from, y, sg * z), dir.clone().normalize());
+            hit = ray.intersectObject(body, false)[0];
+          }
+          if (!hit) { pos.push(0, 0, 0); ok.push(0); } else {
+            const nn = hit.face.normal.clone().transformDirection(body.matrixWorld);
+            pos.push(hit.point.x + nn.x * lift, hit.point.y + nn.y * lift, hit.point.z + nn.z * lift); ok.push(1);
+          }
+          uvs.push(t, 1 - j / rows);
+        }
+      }
+      for (let i = 0; i < n; i++) for (let j = 0; j < rows; j++) {
+        const a = i * (rows + 1) + j, b = a + 1, c = a + rows + 1, d = c + 1;
+        if (!(ok[a] && ok[b] && ok[c] && ok[d])) continue;
+        if (sg > 0) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx);
+      g.computeVertexNormals();
+      const m = new THREE.Mesh(g, mat); m.frustumCulled = false; car.add(m);
+    }
+  };
+  const F = new THREE.Vector3(-1, 0, 0), Bk = new THREE.Vector3(1, 0, 0);
+  // Headlamps: z from 0.32 (nose) to 0.84 (fender), taller at the nose.
+  strips(hl + 1, F, { z0: 0.3, z1: 0.84, n: 16, yAt: (t) => 0.69 - t * 0.03, hAt: (t) => 0.2 - t * 0.065, mat: headTex(), lift: 0.006 });
+  // Grille panel between the lamps, and the lion badge above it.
+  strips(hl + 1, F, { z0: 0, z1: 0.3, n: 6, yAt: () => 0.665, hAt: () => 0.13, mat: grilleTex(), lift: 0.004 });
+  const lion = new THREE.Mesh(new THREE.PlaneGeometry(0.115, 0.125), lionTex());
+  if (stick(body, new THREE.Vector3(hl + 1, 0.735, 0), F, lion, 0.016)) car.add(lion);
+  // Fog lamps in the lower bumper corners.
+  for (const sg of [1, -1]) {
+    const f = new THREE.Group();
+    f.add(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.012, 20).rotateX(Math.PI / 2), M.trim));
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.014, 20).rotateX(Math.PI / 2), M.lens); l.position.z = 0.003; f.add(l);
+    f.scale.set(1.35, 0.8, 1);
+    if (stick(body, new THREE.Vector3(hl + 1, 0.31, sg * 0.56), F, f, 0.012)) car.add(f);
+  }
+  // Tail lamps: bigger on the fender side, wrapping round the corner.
+  strips(-hl - 1, Bk, { z0: 0.34, z1: 0.76, n: 14, yAt: (t) => 0.83, hAt: (t) => 0.15 + t * 0.06, mat: tailTex(), lift: 0.006 });
+  // Reverse the u direction on the mirrored side isn't needed: the strips are laid out outward on both sides.
+  // Boot lid: lettering, badge, number-plate lip.
+  const rl = (obj, y, z, lift) => { if (stick(body, new THREE.Vector3(-hl - 1, y, z), Bk, obj, lift)) car.add(obj); };
+  rl(new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.057), wordTex('PEUGEOT')), 0.9, 0.2, 0.012);
+  rl(new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.04), wordTex('PARS')), 0.9, -0.34, 0.012);
+  rl(new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.11), lionTex()), 0.88, 0, 0.014);
+  const lip = new THREE.Mesh(new RoundedBoxGeometry(0.66, 0.05, 0.03, 1, 0.012), P); rl(lip, 0.78, 0, 0.02);
+  // Black rear bumper band + teal pinstripe come from the shared bumper spec (both ends); chrome-free, like the real car.
+  // Roof antenna.
 }
