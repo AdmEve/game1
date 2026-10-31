@@ -37,7 +37,7 @@ import { persist, save } from './save';
 import * as sfx from './audio';
 import { disposeTree } from './render/dispose';
 import { click, coin } from './audio';
-import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
+import { MOODS as WEATHER_MOODS, Weather, type WeatherKind } from './render/weather';
 import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
@@ -687,6 +687,8 @@ async function boot() {
   warmFleet([]);
   performance.measure('fleet', 'b1');
   performance.mark('b2');
+  // Let the splash paint before the heavy synchronous work of building the first world.
+  await new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   startLevel(undefined, undefined, debug.has('play'));
   performance.measure('level', 'b2');
   // Compile the shaders without blocking the main thread (the splash keeps animating), instead of stalling the first frame.
@@ -709,6 +711,16 @@ async function boot() {
   setTimeout(warm, 2500);
   // The music loop is built behind the menu, a slice at a time, so it is ready by the first tap.
   setTimeout(prepareMusic, 1800);
+  // Compile the effect shaders (weather, puffs, confetti) once, off the main thread, so the first rain or win
+  // doesn't stall a frame.
+  setTimeout(() => {
+    const g = new THREE.Group();
+    for (const k of ['rain', 'snow', 'mist'] as WeatherKind[]) g.add(new Weather(k, 8, 8).object);
+    g.add(new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.Texture(), transparent: true, depthTest: false })));
+    const conf = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), 2);
+    conf.setColorAt(0, new THREE.Color(1, 1, 1)); g.add(conf);
+    renderer.compileAsync(g, camera, scene).catch(() => {}).finally(() => disposeTree(g));
+  }, 1200);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
@@ -763,6 +775,8 @@ async function boot() {
   performance.mark('b3');
   renderer.render(scene, camera);
   performance.measure('first-frame', 'b3');
+  const splash = document.getElementById('splash');
+  if (splash) { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); }
   document.title = 'ready';
 }
 void boot();
