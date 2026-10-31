@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import * as sfx from '../audio';
+import { disposeTree } from '../render/dispose';
 import { haptic } from '../haptics';
 import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
@@ -17,6 +18,19 @@ import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
 export const MAX_BAYS = 6;
+
+/**
+ * The last world built. Levels of one chapter share their scenery, so going on to the next level (or trying
+ * again) reuses it instead of rebuilding hundreds of meshes.
+ */
+let cached: { key: string; world: ReturnType<typeof buildWorld> } | null = null;
+function worldFor(w: number, h: number, seed: number, o: WorldOpts) {
+  const key = [w, h, seed, o.night, o.snow, o.landmark, o.autumn, o.boulevard, o.yalda, o.nowruz, o.stop].join('|');
+  if (cached?.key === key) return cached.world;
+  if (cached) disposeTree(cached.world.group);
+  cached = { key, world: buildWorld(w, h, MAX_BAYS, seed, o) };
+  return cached.world;
+}
 
 export interface SessionHooks {
   queueLeft(n: number, total: number): void;
@@ -87,7 +101,8 @@ export class Session {
     this.s = newState(level);
     this.colorblind = !!worldOpts.colorblind;
     performance.mark('w0');
-    const world = buildWorld(level.w, level.h, MAX_BAYS, seed, worldOpts);
+    const world = worldFor(level.w, level.h, worldOpts.worldSeed ?? seed, worldOpts);
+    this.worldGroup = world.group;
     performance.measure('world', 'w0');
     performance.mark('v0');
     this.L = world.L;
@@ -185,6 +200,8 @@ export class Session {
 
   // ───── Weather ─────
   weather: Weather | null = null;
+  /** The scenery (kept between levels of a chapter). */
+  readonly worldGroup: THREE.Object3D;
   private lastT = 0;
   private makeWeather(kind: WeatherKind) {
     this.weather = new Weather(kind, this.L.lotW, this.L.lotH);

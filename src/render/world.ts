@@ -100,7 +100,7 @@ export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'
   }, 1);
 }
 
-export interface WorldOpts { weather?: import('./weather').WeatherKind; stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; /** «نوروز» decorations. */ nowruz?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
+export interface WorldOpts { /** Scenery seed shared by a chapter's levels. */ worldSeed?: number; weather?: import('./weather').WeatherKind; stop?: string; night?: boolean; snow?: boolean; landmark?: 'milad' | 'azadi' | 'both' | 'tochal' | 'bazaar' | 'darband' | 'tabiat'; autumn?: boolean; /** «شب یلدا» decorations. */ yalda?: boolean; /** «نوروز» decorations. */ nowruz?: boolean; boulevard?: boolean; /** Restored garage classics that may stand in for sedans. */ skins?: string[]; colorblind?: boolean; }
 
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;

@@ -35,6 +35,7 @@ import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
+import { disposeTree } from './render/dispose';
 import { click, coin } from './audio';
 import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
 import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './music';
@@ -293,16 +294,9 @@ function disposeSession() {
   if (!session) return;
   resetTraffic();
   scene.remove(session.group);
-  session.group.traverse((o) => {
-    const m = o as THREE.Mesh;
-    // Vehicle geometry and materials are shared between levels; free only the world's.
-    if (!m.isMesh || m.geometry.userData.keep) return;
-    m.geometry.dispose();
-    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
-      (mat as THREE.MeshStandardMaterial).map?.dispose();
-      mat.dispose();
-    }
-  });
+  // The world is kept for the next level of the same chapter; everything else of the session is freed.
+  session.group.remove(session.worldGroup);
+  disposeTree(session.group);
   session = null;
 }
 
@@ -345,7 +339,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, worldSeed: ev ? 9000 + ev.i : custom ? 8000 + ch.n : 100 + ch.n, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
   scene.add(session.group);
   renderer.shadowMap.needsUpdate = true;
   if (session.weather) session.weather.onThunder = () => sfx.thunder();
@@ -695,6 +689,10 @@ async function boot() {
   performance.mark('b2');
   startLevel(undefined, undefined, debug.has('play'));
   performance.measure('level', 'b2');
+  // Compile the shaders without blocking the main thread (the splash keeps animating), instead of stalling the first frame.
+  performance.mark('b2c');
+  await renderer.compileAsync(scene, camera).catch(() => {});
+  performance.measure('compile', 'b2c');
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);

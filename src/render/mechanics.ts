@@ -197,7 +197,8 @@ export function colorSymbol(color: string, size = 0.42): THREE.Sprite {
       g.fillStyle = '#fff'; g.strokeStyle = '#fff';
       (SHAPES[color] ?? SHAPES.yellow)(g);
     });
-    symbolCache.set(color, new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    const sm = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }); sm.userData.keep = true;
+    symbolCache.set(color, sm);
   }
   const s = new THREE.Sprite(symbolCache.get(color)!);
   s.renderOrder = 11;

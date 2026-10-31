@@ -21,6 +21,8 @@ const coinTex = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 })();
 const coinMat = new THREE.SpriteMaterial({ map: coinTex, transparent: true, depthTest: false });
+// Shared between levels: the level cleanup must not free them.
+smokeMat.userData.keep = true; coinMat.userData.keep = true;
 
 export function puff(parent: THREE.Object3D, at: THREE.Vector3, size = 0.6) {
   const s = new THREE.Sprite(smokeMat.clone());
@@ -51,6 +53,7 @@ export function coinBurst(parent: THREE.Object3D, at: THREE.Vector3, n = 6) {
 const CONFETTI = [0xff4d4f, 0xffc31a, 0x4b8bff, 0x2fc26b, 0xa66bff, 0xff8a3d, 0xffffff];
 const confettiGeo = new THREE.PlaneGeometry(0.16, 0.26);
 const confettiMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+confettiMat.userData.keep = true;
 /** A confetti burst: every piece is one instance of a single mesh, so it costs one draw call. */
 export function confetti(parent: THREE.Object3D, at: THREE.Vector3, n = 140) {
   const mesh = new THREE.InstancedMesh(confettiGeo, confettiMat, n);

@@ -23,12 +23,12 @@ const geo = {
 const mats = new Map<number, THREE.Material>();
 const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
   const k = c * 7 + (o.roughness ?? 0.6) * 1000;
-  if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, ...o }));
+  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, ...o }); m.userData.keep = true; mats.set(k, m); }
   return mats.get(k)!;
 };
 const shirt = (c: Color) => {
   const k = -PAINT[c] - 1;
-  if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, 0.05, 0.06), roughness: 0.5 }));
+  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, 0.05, 0.06), roughness: 0.5 }); m.userData.keep = true; mats.set(k, m); }
   return mats.get(k)!;
 };
 
@@ -76,7 +76,7 @@ function chadorMat(color: Color) {
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
   const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.75, side: THREE.DoubleSide });
-  chadors.set(color, m);
+  m.userData.keep = true; chadors.set(color, m);
   return m;
 }
 
