@@ -118,7 +118,8 @@ export class Session {
       // Each classic stands in for its own kind of vehicle.
       const skins = sedan ? owned.filter((k) => k !== 'vanet' && k !== 'benz') : v.kind === 'zamyad' ? owned.filter((k) => k === 'vanet') : v.kind === 'bus' ? owned.filter((k) => k === 'benz') : [];
       const roll = (idx * 2654435761 + seed * 40503) >>> 0;
-      const skin = skins.length && roll % (sedan ? 4 : 2) === 0 ? skins[(roll >>> 4) % skins.length] : undefined;
+      let skin = skins.length && roll % (sedan ? 4 : 2) === 0 ? skins[(roll >>> 4) % skins.length] : undefined;
+      if (!skin && v.kind === 'p405' && (roll >>> 9) % 2 === 0) skin = 'pars'; // half the 405s are Peugeot Pars
       const o = makeVehicle(v.kind, v.color, skin);
       const cells = cellsOf(v);
       const a = this.L.cell(...cells[0]), b = this.L.cell(...cells[cells.length - 1]);

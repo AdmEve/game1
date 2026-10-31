@@ -141,3 +141,8 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - All Journey levels are open (`UNLOCK_ALL_LEVELS` in config.ts, set it false to restore progress locking).
 - Covered cars keep their cover until they actually drive out; a stuck covered car gives nothing away.
 - Tried and dropped: a home-screen camera on the chapter landmark (the fog washes it out), and a moving-traffic boulevard behind the park (hidden under the HUD).
+
+## Iranian car accuracy pass
+- Headlamps/tail lamps now carry printed faces (reflector bowl + amber indicator; red lens with reverse light), thinner bezels, body-coloured bezels on Samand/Pars.
+- New `pars` spec (Peugeot Pars): half of the 405s render as Pars. Peykan: round twin lamps, wide chrome grille.
+- `scripts/showroom.html` renders one car for comparison with reference photos.

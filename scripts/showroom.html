@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#cfd6dd;overflow:hidden}</style></head>
+<body><script type="module">
+// Dev showroom: one car, big, from a chosen angle. /scripts/showroom.html?car=samand&color=ffffff&az=40&el=14&fov=24
+import * as THREE from 'three';
+import { CARS, buildCar } from '/src/render/cars.js';
+import { outdoorEnv } from '/src/render/env.js';
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') ?? 1100), H = +(q.get('h') ?? 700);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.95; r.outputColorSpace = THREE.SRGBColorSpace; r.shadowMap.enabled = true;
+document.body.append(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xd9dee3);
+scene.environment = outdoorEnv(r); scene.environmentIntensity = 0.9;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 0.6));
+const sun = new THREE.DirectionalLight(0xfff2dc, 2.2); sun.position.set(6, 12, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8 }); scene.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.9 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const key = q.get('car') ?? 'samand';
+const car = buildCar(CARS[key], parseInt(q.get('color') ?? 'ffffff', 16), { q: 1, taxi: q.get('taxi') === '1' });
+car.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+// Model faces +x. Camera orbits on the front-left (like most reference photos).
+scene.add(car);
+const az = THREE.MathUtils.degToRad(+(q.get('az') ?? 38)), el = THREE.MathUtils.degToRad(+(q.get('el') ?? 14)), d = +(q.get('d') ?? 9.5);
+const cam = new THREE.PerspectiveCamera(+(q.get('fov') ?? 26), W / H, 0.1, 100);
+cam.position.set(Math.cos(az) * Math.cos(el) * d, Math.sin(el) * d + 0.4, -Math.sin(az) * Math.cos(el) * d); cam.lookAt(0, 0.65, 0);
+r.render(scene, cam);
+document.title = 'ready';
+</script></body></html>

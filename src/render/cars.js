@@ -259,10 +259,42 @@ function rrShape(w, h, r) {
 }
 const slab = (w, h, r, d = 0.012) => new THREE.ExtrudeGeometry(rrShape(w, h, r), { depth: d, bevelEnabled: DETAIL >= 0.6, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2, curveSegments: DETAIL < 0.6 ? 2 : 6 });
 // A lamp: a bezel with a glossy lens inside.
+const faceCache = new Map();
+// Printed lamp faces: reflector bowl with bulb + amber indicator, or red tail lens with a white reverse light.
+function faceMat(kind, w, h) {
+  const key = kind + ':' + Math.round(w * 100) + 'x' + Math.round(h * 100);
+  if (faceCache.has(key)) return faceCache.get(key);
+  const W = 256, H = Math.max(48, Math.round(256 * h / w));
+  const t = tex(W, H, (g) => {
+    if (kind === 'head') {
+      const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#f5f8fb'); gr.addColorStop(1, '#c9d2da');
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      const ax = W * 0.74;
+      g.fillStyle = '#ffae1f'; g.fillRect(ax, 0, W - ax, H); g.fillStyle = '#ffd36b'; g.fillRect(ax + 6, 6, W - ax - 12, H - 12);
+      // reflector rings + bulb
+      const cx = W * 0.36, cy = H / 2;
+      for (const [r, c] of [[H * 0.46, '#aab4be'], [H * 0.36, '#e6ebf0'], [H * 0.25, '#98a3ae'], [H * 0.13, '#fff8dc']]) { g.fillStyle = c; g.beginPath(); g.ellipse(cx, cy, r * 1.25, r, 0, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = 'rgba(80,92,104,.55)'; g.lineWidth = 2; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * ax / 4, 4); g.lineTo(i * ax / 4 + 8, H - 4); g.stroke(); }
+    } else {
+      g.fillStyle = '#b00d19'; g.fillRect(0, 0, W, H);
+      const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,.35)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.25)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#f2f4f6'; g.fillRect(W * 0.78, 5, W * 0.22 - 5, H - 10);
+      g.fillStyle = '#ff9a1a'; g.fillRect(W * 0.04, H * 0.12, W * 0.2, H * 0.76);
+      g.strokeStyle = 'rgba(40,0,0,.45)'; g.lineWidth = 2; for (let i = 1; i < 9; i++) { g.beginPath(); g.moveTo(W * (0.24 + i * 0.06), 4); g.lineTo(W * (0.24 + i * 0.06), H - 4); g.stroke(); }
+    }
+  });
+  const m = new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.08, clearcoat: 1, emissive: kind === 'head' ? 0xfff3d6 : 0x7a0008, emissiveMap: t, emissiveIntensity: kind === 'head' ? 0.22 : 0.4 });
+  faceCache.set(key, m); return m;
+}
 function lamp(w, h, r, lensMat, bezel = M.trim) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(slab(w, h, r, 0.01), bezel));
-  const l = new THREE.Mesh(slab(w * 0.86, h * 0.76, r * 0.8, 0.012), lensMat); l.position.z = 0.006; g.add(l);
+  const kind = lensMat === M.lens ? 'head' : lensMat === M.red ? 'tail' : null;
+  if (kind) {
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, h * 0.8), faceMat(kind, w, h)); f.position.z = 0.0195; g.add(f);
+  } else {
+    const l = new THREE.Mesh(slab(w * 0.88, h * 0.78, r * 0.8, 0.012), lensMat); l.position.z = 0.006; g.add(l);
+  }
   return g;
 }
 function grille(w, h, bars, barMat = M.chrome, base = M.trim) {
@@ -377,13 +409,13 @@ export function buildCar(spec, color, opts = {}) {
   }
 
   // Lights, grille, badge, plates.
-  for (const l of spec.headlights) for (const sg of [1, -1]) front(lamp(l.w, l.h, l.r ?? 0.02, M.lens, l.bezel === 'chrome' ? M.chrome : M.trim), l.y, sg * l.z, 0.003);
+  for (const l of spec.headlights) for (const sg of [1, -1]) front(lamp(l.w, l.h, l.r ?? 0.02, M.lens, l.bezel === 'chrome' ? M.chrome : l.bezel === 'body' ? P : M.trim), l.y, sg * l.z, 0.003);
   for (const l of spec.indicators ?? []) for (const sg of [1, -1]) front(lamp(l.w, l.h, l.r ?? 0.01, M.amber), l.y, sg * l.z, 0.004);
   if (spec.grille) front(grille(spec.grille.w, spec.grille.h, spec.grille.bars ?? 4, spec.grille.barMat === 'trim' ? M.plastic : M.chrome), spec.grille.y, 0, 0.003);
   if (spec.badge) front(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.01, 20).rotateX(Math.PI / 2), M.chrome), spec.badge.y, 0, 0.012);
   for (const l of spec.taillights) for (const sg of [1, -1]) {
     const g = new THREE.Group();
-    g.add(lamp(l.w, l.h, l.r ?? 0.015, M.red));
+    g.add(lamp(l.w, l.h, l.r ?? 0.015, M.red, l.bezel === 'body' ? P : M.trim));
     if (l.amber) { const a = new THREE.Mesh(slab(l.w * 0.3, l.h * 0.7, 0.01, 0.014), M.amber); a.position.set(sg * l.w * 0.28, 0, 0.008); g.add(a); }
     rear(g, l.y, sg * l.z, 0.003);
   }
@@ -444,9 +476,9 @@ export const CARS = {
     cab: { xA: 0.84, xRF: 0.14, xRR: -0.86, xC: -1.38, roof: 1.4, half: 0.75, tumble: 0.17, rt: 0.08 },
     windows: [[0.66, -0.04], [-0.14, -1.0]],
     bumpers: [{ y0: 0.37, y1: 0.47, mat: 'chrome', depth: 0.3, grow: 0.045 }],
-    headlights: [{ w: 0.3, h: 0.16, z: 0.56, y: 0.67, r: 0.015, bezel: 'chrome' }],
-    indicators: [{ w: 0.12, h: 0.05, z: 0.6, y: 0.53 }],
-    grille: { w: 0.66, h: 0.15, y: 0.67, bars: 5 },
+    headlights: [{ w: 0.21, h: 0.21, z: 0.64, y: 0.66, r: 0.105, bezel: 'chrome' }],
+    indicators: [{ w: 0.12, h: 0.05, z: 0.6, y: 0.5 }],
+    grille: { w: 0.92, h: 0.17, y: 0.67, bars: 9 },
     taillights: [{ w: 0.28, h: 0.13, z: 0.56, y: 0.71, amber: true }],
     plateF: 0.42, plateR: 0.58, handles: [0.16, -0.62],
     strips: [{ y0: 0.6, y1: 0.615, mat: 'chrome', x0: -2.05, x1: 2.05 }],
@@ -482,6 +514,21 @@ export const CARS = {
     plateF: 0.38, plateR: 0.62, handles: [0.2, -0.66],
     strips: [{ y0: 0.5, y1: 0.56, x0: -2.0, x1: 2.0 }],
   },
+  // Peugeot Pars (Iran Khodro, 2000s): the 405 reskinned — long sloping nose, big wrap headlamps, wide chrome-barred grille, black lower bumper.
+  pars: {
+    name: 'پژو پارس', L: 4.5, W: 1.72, R: 0.3, tireW: 0.19, wheels: [1.32, -1.4], rim: 'alloy', planExp: 7, bodyRt: 0.11, metallic: true,
+    top: [[-2.25, 0.62], [-2.22, 0.93], [-2.08, 0.985], [-1.6, 0.985], [0.9, 0.88], [1.85, 0.74], [2.2, 0.66], [2.25, 0.5]],
+    cab: { xA: 0.92, xRF: 0.1, xRR: -0.95, xC: -1.62, roof: 1.42, half: 0.8, tumble: 0.21, rt: 0.12,
+      roofPts: [[-1.62, 0.985], [-1.2, 1.28], [-0.9, 1.4], [-0.3, 1.43], [0.1, 1.42], [0.55, 1.2], [0.92, 0.9]] },
+    windows: [[0.72, -0.02], [-0.12, -1.3]],
+    bumpers: [{ y0: 0.28, y1: 0.5, mat: 'plastic', depth: 0.34, grow: 0.03 }],
+    headlights: [{ w: 0.4, h: 0.17, z: 0.5, y: 0.69, r: 0.07, bezel: 'body' }],
+    grille: { w: 0.6, h: 0.12, y: 0.66, bars: 4 },
+    badge: { y: 0.66 },
+    taillights: [{ w: 0.38, h: 0.15, z: 0.5, y: 0.85, r: 0.05, bezel: 'body' }],
+    plateF: 0.36, plateR: 0.62, handles: [0.2, -0.68],
+    strips: [{ y0: 0.52, y1: 0.58, x0: -2.05, x1: 2.05 }],
+  },
   // IKCO Samand: rounded body, big chrome grille; Tehran's yellow taxi.
   samand: {
     name: 'سمند', L: 4.52, W: 1.73, R: 0.31, tireW: 0.19, wheels: [1.33, -1.4], rim: 'alloy', planExp: 6, bodyRt: 0.12,
@@ -490,10 +537,10 @@ export const CARS = {
       roofPts: [[-1.64, 0.99], [-1.2, 1.3], [-0.84, 1.44], [-0.3, 1.46], [0.16, 1.44], [0.55, 1.2], [0.95, 0.9]] },
     windows: [[0.74, 0.0], [-0.12, -1.28]],
     bumpers: [{ y0: 0.3, y1: 0.5, mat: 'body', depth: 0.34, grow: 0.025 }],
-    headlights: [{ w: 0.42, h: 0.17, z: 0.57, y: 0.67, r: 0.07 }],
-    grille: { w: 0.4, h: 0.13, y: 0.65, bars: 3 },
+    headlights: [{ w: 0.4, h: 0.16, z: 0.54, y: 0.68, r: 0.07, bezel: 'body' }],
+    grille: { w: 0.5, h: 0.12, y: 0.66, bars: 3 },
     badge: { y: 0.66 },
-    taillights: [{ w: 0.42, h: 0.16, z: 0.52, y: 0.84, r: 0.05 }],
+    taillights: [{ w: 0.4, h: 0.14, z: 0.5, y: 0.83, r: 0.04, bezel: 'body' }],
     plateF: 0.38, plateR: 0.6, handles: [0.2, -0.68],
   },
   // ───── Classics for «گاراژ من» ─────
