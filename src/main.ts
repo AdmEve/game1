@@ -776,7 +776,7 @@ async function boot() {
   renderer.render(scene, camera);
   performance.measure('first-frame', 'b3');
   const splash = document.getElementById('splash');
-  if (splash) { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); }
+  if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }
   document.title = 'ready';
 }
 void boot();
