@@ -135,3 +135,9 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Music is rendered once offline (two stems, 8 bars) and looped: no live synthesis, no crackle. Settings shows the build (commit) so testers know which APK they run.
 - Levels from 9 on were hardened by hill-climbing (`src/game/harden.ts`, `scripts/harden-levels.ts`): the solver tries the obvious move first, so the nodes it explores measure how often that move is a trap. Average went from ~60 to ~2300 nodes (181 of 232 levels ≥ 1000). Re-run order: `gen-levels.ts` → `harden-levels.ts` (parts, then `--merge`) → `challenges.ts` → `pack-levels.ts`.
 - Covered cars only lose their cover when pressed themselves (also when stuck), never when a neighbour leaves.
+
+## Art pass 2 (Oct 2026)
+- Camera pitch 54° → 48°: the park and its fountain now sit in the top third instead of a flat grass strip. Cars get a dark back-face outline (`bake(..., { outline })` in fleet.ts: normals welded per position so hard edges don't tear). Park: flower beds (plain meshes: InstancedMesh does not survive `bake`), blue fountain water, benches, hedges, strolling passengers-to-be, lamp posts.
+- All Journey levels are open (`UNLOCK_ALL_LEVELS` in config.ts, set it false to restore progress locking).
+- Covered cars keep their cover until they actually drive out; a stuck covered car gives nothing away.
+- Tried and dropped: a home-screen camera on the chapter landmark (the fog washes it out), and a moving-traffic boulevard behind the park (hidden under the HUD).
