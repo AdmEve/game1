@@ -299,10 +299,13 @@ function settle(s: State, ev: Event[]) {
 export function tap(s: State, i: number, force = false, prefer?: number[]): Event[] {
   const ev: Event[] = [];
   if (s.over || !s.inLot[i]) return ev;
+  // Pressing a covered car lifts its cover, even if the car then turns out to be stuck: the colour stays a
+  // mystery until the player presses that car itself.
+  const unveil = () => { if (!s.revealed[i]) { s.revealed[i] = true; ev.push({ t: 'reveal', v: i }); } };
   const lk = force ? null : lock(s, i);
-  if (lk) { ev.push({ t: 'locked', v: i, ...lk }); return ev; }
+  if (lk) { unveil(); ev.push({ t: 'locked', v: i, ...lk }); return ev; }
   const b = force ? null : blocker(s, i);
-  if (b) { ev.push({ t: 'blocked', v: i, by: b }); return ev; }
+  if (b) { unveil(); ev.push({ t: 'blocked', v: i, by: b }); return ev; }
   const free = prefer ? prefer.find((k) => !s.bays[k]) ?? s.bays.findIndex((x) => !x) : s.bays.findIndex((x) => !x);
   if (free < 0) { ev.push({ t: 'bays-full', v: i }); return ev; }
   const v = s.level.vehicles[i];
@@ -312,12 +315,6 @@ export function tap(s: State, i: number, force = false, prefer?: number[]): Even
   s.revealed[i] = true;
   s.bays[free] = { v: i, color: v.color, cap: KIND[v.kind].cap, boarded: 0, ...(v.kind === 'bike' ? { wild: true } : {}) };
   ev.push({ t: 'exit', v: i, bay: free });
-  // Covers blow off the cars next to the one that just left.
-  const mine = cellsOf(v);
-  s.level.vehicles.forEach((o, k) => {
-    if (s.revealed[k] || !s.inLot[k]) return;
-    if (cellsOf(o).some(([c, r]) => mine.some(([mc, mr]) => Math.abs(mc - c) + Math.abs(mr - r) === 1))) { s.revealed[k] = true; ev.push({ t: 'reveal', v: k }); }
-  });
   moveCarts(s, ev);
   updateParity(s, ev);
   settle(s, ev);

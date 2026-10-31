@@ -61,7 +61,7 @@ describe('mechanics', () => {
     expect(tap(s, 0).at(-1)).toEqual({ t: 'won' });
   });
 
-  it('«چادر ماشین» comes off when a neighbour leaves', () => {
+  it('«چادر ماشین» stays on when a neighbour leaves, and comes off only when the car itself is pressed', () => {
     const l: Level = {
       w: 2, h: 2,
       vehicles: [
@@ -73,8 +73,26 @@ describe('mechanics', () => {
     const s = newState(l);
     expect(s.revealed).toEqual([false, true]);
     const ev = tap(s, 1);
-    expect(ev).toContainEqual({ t: 'reveal', v: 0 });
+    expect(ev.some((e) => e.t === 'reveal')).toBe(false);
+    expect(s.revealed[0]).toBe(false);
+    tap(s, 0);
     expect(s.revealed[0]).toBe(true);
+  });
+
+  it('pressing a covered car that is stuck still lifts its cover', () => {
+    const l: Level = {
+      w: 2, h: 2,
+      vehicles: [
+        { kind: 'pride', color: 'red', col: 0, row: 1, dir: 'up', covered: true },
+        { kind: 'pride', color: 'blue', col: 0, row: 0, dir: 'up' },
+      ],
+      queue: [...four('blue'), ...four('red')],
+    };
+    const s = newState(l);
+    const ev = tap(s, 0);
+    expect(ev).toEqual([{ t: 'reveal', v: 0 }, { t: 'blocked', v: 0, by: { v: 1, cell: [0, 0] } }]);
+    expect(s.revealed[0]).toBe(true);
+    expect(s.inLot[0]).toBe(true);
   });
 
   it('«دربست» rides alone in an empty car and leaves at once', () => {

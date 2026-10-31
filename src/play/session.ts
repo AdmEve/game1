@@ -502,6 +502,8 @@ export class Session {
   isFull() { return this.s.bays.every((b) => b); }
 
   private play(ev: Event[], i: number, craned = false) {
+    // A stuck covered car still loses its cover when pressed.
+    if (ev[0]?.t === 'reveal' && ev[1] && (ev[1].t === 'blocked' || ev[1].t === 'locked')) { this.uncover(ev[0].v); ev = ev.slice(1); }
     const first = ev[0];
     if (!first) return;
     if (first.t === 'blocked') { void this.animBlocked(i, first.by); return; }
