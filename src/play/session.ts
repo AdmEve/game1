@@ -11,7 +11,7 @@ import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
-import { Weather, type WeatherKind } from '../render/weather';
+import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
@@ -207,6 +207,7 @@ export class Session {
   private lastT = 0;
   private makeWeather(kind: WeatherKind) {
     this.weather = new Weather(kind, this.L.lotW, this.L.lotH);
+    if (kind === 'rain' || kind === 'storm') wetten(this.group);
     this.group.add(this.weather.object);
   }
   private officer: THREE.Group | null = null;

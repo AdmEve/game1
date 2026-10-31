@@ -68,8 +68,11 @@ const SPECS: Partial<Record<WeatherKind, Spec>> = {
 export class Weather {
   readonly object = new THREE.Group();
   private pts: THREE.Points | null = null;
-  private rain: THREE.LineSegments | null = null;
+  private rain: THREE.Mesh | null = null;
   private fireflies: THREE.Points | null = null;
+  /** Ripples where drops hit the tarmac: flat quads that grow and fade. */
+  private ripples: THREE.Mesh | null = null;
+  private rip: { x: number; z: number; age: number; life: number }[] = [];
   private pos!: Float32Array;
   private seed!: Float32Array;
   private spec: Spec | null;
@@ -86,9 +89,10 @@ export class Weather {
   constructor(readonly kind: WeatherKind, lotW: number, lotH: number) {
     this.box = { x0: -lotW / 2 - 9, x1: lotW / 2 + 9, z0: -10, z1: lotH + 9, y1: 14 };
     this.spec = SPECS[kind] ?? null;
-    if (kind === 'rain' || kind === 'storm') this.makeRain(kind === 'storm' ? 700 : 520);
+    if (kind === 'rain' || kind === 'storm') { this.makeRain(kind === 'storm' ? 900 : 640); this.makeRipples(kind === 'storm' ? 70 : 48, lotW, lotH); }
     else if (this.spec) this.makePoints(this.spec);
     if (kind === 'mist') this.makeFireflies();
+    if (this.rain) this.update(0.0001); // lay the first drops out so the very first frame already rains
   }
 
   private rnd(i: number, k: number) { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); }
@@ -116,20 +120,55 @@ export class Weather {
     this.object.add(this.pts);
   }
 
+  /** Each drop is a thin camera-facing streak: a quad that is bright at the head and fades along its tail. */
   private makeRain(n: number) {
     const { x0, x1, z0, z1, y1 } = this.box;
-    this.pos = new Float32Array(n * 6); this.seed = new Float32Array(n);
+    this.pos = new Float32Array(n * 3); this.seed = new Float32Array(n);
     for (let i = 0; i < n; i++) {
-      const x = x0 + this.rnd(i, 1) * (x1 - x0), y = this.rnd(i, 2) * y1, z = z0 + this.rnd(i, 3) * (z1 - z0);
-      this.pos.set([x, y, z, x, y, z], i * 6);
+      this.pos.set([x0 + this.rnd(i, 1) * (x1 - x0), this.rnd(i, 2) * y1, z0 + this.rnd(i, 3) * (z1 - z0)], i * 3);
       this.seed[i] = 0.75 + this.rnd(i, 4) * 0.5;
     }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
-    const mat = new THREE.LineBasicMaterial({ color: 0xd6e4ff, transparent: true, opacity: 0.75, depthWrite: false, fog: false });
-    this.rain = new THREE.LineSegments(geo, mat);
-    this.rain.frustumCulled = false;
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 12), 3));
+    const col = new Float32Array(n * 16), idx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = 0.55 + (i % 5) * 0.08;
+      col.set([0.84, 0.9, 1, a, 0.84, 0.9, 1, a, 0.84, 0.9, 1, 0, 0.84, 0.9, 1, 0], i * 16);
+      idx.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4 + 1, i * 4 + 3, i * 4 + 2);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 4)); geo.setIndex(idx);
+    const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide });
+    this.rain = new THREE.Mesh(geo, mat);
+    this.rain.frustumCulled = false; this.rain.renderOrder = 3;
     this.object.add(this.rain);
+  }
+
+  private makeRipples(n: number, lotW: number, lotH: number) {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d')!; g.strokeStyle = '#fff'; g.lineWidth = 3;
+    g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.stroke(); g.lineWidth = 2; g.beginPath(); g.arc(32, 32, 14, 0, Math.PI * 2); g.stroke();
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 12), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 16).fill(1), 4));
+    const uv = new Float32Array(n * 8), idx: number[] = [];
+    for (let i = 0; i < n; i++) { uv.set([0, 0, 1, 0, 1, 1, 0, 1], i * 8); idx.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3); this.rip.push({ x: 0, z: 0, age: 99, life: 1 }); }
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx);
+    const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, depthWrite: false, fog: false });
+    this.ripples = new THREE.Mesh(geo, mat); this.ripples.frustumCulled = false; this.ripples.renderOrder = 2;
+    this.rippleBox = { x0: -lotW / 2 - 3, x1: lotW / 2 + 3, z0: -4, z1: lotH + 3 };
+    this.object.add(this.ripples);
+  }
+  private rippleBox = { x0: 0, x1: 0, z0: 0, z1: 0 };
+  private updateRipples(dt: number) {
+    const m = this.ripples!, pos = m.geometry.getAttribute('position') as THREE.BufferAttribute, col = m.geometry.getAttribute('color') as THREE.BufferAttribute, b = this.rippleBox;
+    for (let i = 0; i < this.rip.length; i++) {
+      const r = this.rip[i]; r.age += dt;
+      if (r.age > r.life) { r.x = b.x0 + Math.random() * (b.x1 - b.x0); r.z = b.z0 + Math.random() * (b.z1 - b.z0); r.age = 0; r.life = 0.5 + Math.random() * 0.4; }
+      const k = r.age / r.life, s = 0.08 + k * 0.5, a = (1 - k) * 0.55;
+      pos.setXYZ(i * 4, r.x - s, 0.06, r.z - s); pos.setXYZ(i * 4 + 1, r.x + s, 0.06, r.z - s); pos.setXYZ(i * 4 + 2, r.x + s, 0.06, r.z + s); pos.setXYZ(i * 4 + 3, r.x - s, 0.06, r.z + s);
+      for (let v = 0; v < 4; v++) col.setXYZW(i * 4 + v, 0.85, 0.92, 1, a);
+    }
+    pos.needsUpdate = true; col.needsUpdate = true;
   }
 
   /** Warm little lights drifting over the lot at dusk. */
@@ -148,16 +187,18 @@ export class Weather {
     this.t += dt;
     const { x0, x1, z0, z1, y1 } = this.box;
     if (this.rain) {
-      const storm = this.kind === 'storm', speed = storm ? 22 : 16, slant = storm ? -6 : -3, len = 0.95;
-      const p = this.pos, n = this.seed.length;
+      const storm = this.kind === 'storm', speed = storm ? 22 : 16, gust = 1 + 0.55 * Math.sin(this.t * 0.45) * Math.sin(this.t * 0.17 + 1), slant = (storm ? -6 : -3) * gust, len = 0.95;
+      if (this.ripples) this.updateRipples(dt);
+      const p = this.pos, n = this.seed.length, q = this.rain.geometry.getAttribute('position') as THREE.BufferAttribute, hw = 0.022;
       for (let i = 0; i < n; i++) {
-        const k = i * 6, s = this.seed[i];
+        const k = i * 3, s = this.seed[i];
         let x = p[k] + slant * dt * s, y = p[k + 1] - speed * dt * s, z = p[k + 2];
         if (y < 0) { y += y1; x = x0 + Math.random() * (x1 - x0); z = z0 + Math.random() * (z1 - z0); }
         p[k] = x; p[k + 1] = y; p[k + 2] = z;
-        p[k + 3] = x - slant * 0.02; p[k + 4] = y + len * s; p[k + 5] = z;
+        const tx = x - slant * 0.02 * 2, ty = y + len * s * 1.6;
+        q.setXYZ(i * 4, x - hw, y, z); q.setXYZ(i * 4 + 1, x + hw, y, z); q.setXYZ(i * 4 + 2, tx - hw, ty, z); q.setXYZ(i * 4 + 3, tx + hw, ty, z);
       }
-      (this.rain.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+      q.needsUpdate = true;
       if (storm) this.lightning(dt);
     } else if (this.pts && this.spec) {
       const s = this.spec, p = this.pos, n = this.seed.length, t = this.t;
@@ -203,4 +244,18 @@ export class Weather {
       (m.material as THREE.Material | undefined)?.dispose();
     });
   }
+}
+
+/** Rain leaves the ground dark and glossy: tarmac and paving take on a mirror-ish sheen (once per material). */
+export function wetten(root: THREE.Object3D) {
+  root.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!m || !m.isMeshStandardMaterial || m.userData.wet ) return;
+    m.userData.wet = true;
+    const lum = m.color.r * 0.3 + m.color.g * 0.59 + m.color.b * 0.11;
+    const g = (o as THREE.Mesh).geometry; g.computeBoundingBox();
+    const flat = g.boundingBox!.max.y - g.boundingBox!.min.y < 0.45 * Math.max(1, o.getWorldScale(new THREE.Vector3()).y);
+    if (!flat || o.position.y > 0.6 || m.roughness < 0.6 || m.transparent || lum > 0.5 || m.metalness > 0.2) return;
+    m.roughness = 0.34; m.color.multiplyScalar(0.72); m.envMapIntensity = Math.max(m.envMapIntensity ?? 1, 1.6);
+  });
 }

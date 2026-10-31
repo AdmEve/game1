@@ -146,3 +146,6 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Headlamps/tail lamps now carry printed faces (reflector bowl + amber indicator; red lens with reverse light), thinner bezels, body-coloured bezels on Samand/Pars.
 - New `pars` spec (Peugeot Pars): half of the 405s render as Pars. Peykan: round twin lamps, wide chrome grille.
 - `scripts/showroom.html` renders one car for comparison with reference photos.
+
+## Realistic weather pass
+- Rain is now camera-facing streaks with a fading tail (not 1px lines), wind gusts vary the slant, ripples bloom on the tarmac, and rainy chapters wet the ground (darker, glossy, reflects the env map). First frame already rains (drops laid out in the constructor).
