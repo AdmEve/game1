@@ -126,7 +126,7 @@ function applyFlash(f: number) {
 }
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 260);
-const PITCH = THREE.MathUtils.degToRad(54);
+const PITCH = THREE.MathUtils.degToRad(48);
 
 let session: Session | null = null;
 let hud: Hud;

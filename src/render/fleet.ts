@@ -33,7 +33,25 @@ function extract(geo: THREE.BufferGeometry, start: number, count: number, keepUv
 }
 
 /** Merge every mesh under root into one mesh per material family. */
-export function bake(root: THREE.Object3D, opts: { shadows?: boolean } = {}): THREE.Group {
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0x101826, side: THREE.BackSide });
+outlineMat.userData.keep = true;
+
+/** A copy of `g` pushed out along its normals: drawn back-faces only, it shows as a dark outline around the paint. */
+function inflated(g: THREE.BufferGeometry, by: number): THREE.BufferGeometry {
+  const o = g.clone();
+  const p = o.getAttribute('position') as THREE.BufferAttribute, n = o.getAttribute('normal') as THREE.BufferAttribute;
+  // Vertices at the same spot share one averaged normal, so hard edges don't tear open when pushed outward.
+  const sums = new Map<string, THREE.Vector3>();
+  const key = (i: number) => `${Math.round(p.getX(i) * 400)},${Math.round(p.getY(i) * 400)},${Math.round(p.getZ(i) * 400)}`;
+  for (let i = 0; i < p.count; i++) { const k = key(i); const v = sums.get(k) ?? new THREE.Vector3(); v.x += n.getX(i); v.y += n.getY(i); v.z += n.getZ(i); sums.set(k, v); }
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { tmp.copy(sums.get(key(i))!).normalize(); p.setXYZ(i, p.getX(i) + tmp.x * by, p.getY(i) + tmp.y * by, p.getZ(i) + tmp.z * by); }
+  o.deleteAttribute('uv'); o.deleteAttribute('color'); o.deleteAttribute('normal');
+  o.userData.keep = true;
+  return o;
+}
+
+export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: number } = {}): THREE.Group {
   root.updateMatrixWorld(true);
   const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const casts = new Set<THREE.Material>();
@@ -73,6 +91,8 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean } = {}): TH
     m.castShadow = (opts.shadows ?? true) && casts.has(mat) && !(mat as THREE.Material).transparent;
     m.receiveShadow = true;
     out.add(m);
+    const ph = mat as THREE.MeshPhysicalMaterial;
+    if (opts.outline && ph.isMeshPhysicalMaterial && ph.clearcoat === 1 && !ph.transparent && ph.roughness >= 0.2) out.add(new THREE.Mesh(inflated(merged, opts.outline), outlineMat));
   }
   return out;
 }
@@ -111,7 +131,7 @@ function template(kind: Kind, color: Color, skin?: string): Template {
   }
   // Zamyad's model is offset: its cab sits forward of the origin.
   if (kind === 'zamyad') raw.position.x = -0.04;
-  const t = { mesh: bake(raw), length, width, roofX, roofY, tilt };
+  const t = { mesh: bake(raw, { outline: 0.07 }), length, width, roofX, roofY, tilt };
   cache.set(key, t);
   return t;
 }

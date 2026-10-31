@@ -787,34 +787,32 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
       const hh = 0.42 + rnd() * 0.18;
       const hedge = box(1.1, hh, 0.55, leaf, x, 0.18 + hh / 2, z0, 0.12); hedge.castShadow = true; add(hedge);
     }
-    const stone = std(0xd9d2c4, { roughness: 0.8 });
+    const stone = std(0xb7b0a2, { roughness: 0.8 });
     const pav2 = pavingTex(); pav2.repeat.set(30, 1);
     const pathZ = L.walkZ - 5.2;
     add(plane(46, 1.3, std(0xffffff, { map: pav2 }), 0, 0.04, pathZ));
     for (const x of [-9, 9]) add(plane(1.3, 5.2, std(0xffffff, { map: pav2 }), x, 0.04, (z0 + pathZ) / 2));
     // Fountain on a round plaza.
-    const plaza = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.06, 40), std(0xe6dfd2, { roughness: 0.85 })); plaza.position.set(0, 0.05, pathZ); plaza.receiveShadow = true; add(plaza);
+    const plaza = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.06, 40), std(0xc9c2b4, { roughness: 0.85 })); plaza.position.set(0, 0.05, pathZ); plaza.receiveShadow = true; add(plaza);
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.42, 36), stone); basin.position.set(0, 0.27, pathZ); basin.castShadow = basin.receiveShadow = true; add(basin);
-    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.36, 0.05, 36), std(snow ? 0xcfe6f2 : 0x4aa3d8, { roughness: 0.1, metalness: 0.25, emissive: night ? 0x1d5f8f : 0x0b3a5c, emissiveIntensity: 0.35 })); water.position.set(0, 0.44, pathZ); add(water);
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.36, 0.05, 36), std(snow ? 0xcfe6f2 : 0x2f9ad6, { roughness: 0.1, metalness: 0.25, emissive: night ? 0x1d6fb0 : 0x0f5a96, emissiveIntensity: 0.55 })); water.position.set(0, 0.5, pathZ); add(water);
     const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.95, 16), stone); pil.position.set(0, 0.85, pathZ); pil.castShadow = true; add(pil);
     const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.3, 0.2, 24), stone); bowl.position.set(0, 1.35, pathZ); bowl.castShadow = true; add(bowl);
     const jet = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8, 12), std(0xcfeeff, { transparent: true, opacity: 0.7, roughness: 0.1 })); jet.position.set(0, 1.85, pathZ); add(jet);
-    // Flower beds, one instanced mesh with a colour per bloom.
+    // Flower beds: little spheres in six colours (the world is baked into a few meshes per material afterwards).
     const blooms: [number, number][] = [];
     for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, r = 3.5 + (k % 2) * 0.3; blooms.push([Math.cos(a) * r, pathZ + Math.sin(a) * r * 0.75]); }
     for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) blooms.push([sx * (4.8 + k * 1.1), z0 - 1.0 - (k % 2) * 0.6]);
-    const palette = [0xf472b6, 0xfacc15, 0xef4444, 0xffffff, 0xfb923c, 0xa78bfa].map((c) => new THREE.Color(c));
-    const per = 7, flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.13, 0), std(0xffffff, { roughness: 0.6 }), blooms.length * per);
-    const mtx = new THREE.Matrix4();
+    const petalMats = [0xf472b6, 0xfacc15, 0xef4444, 0xffffff, 0xfb923c, 0xa78bfa].map((c) => std(snow ? 0xf4f9fc : c, { roughness: 0.6 }));
+    const bloomGeo = new THREE.IcosahedronGeometry(0.14, 0);
     blooms.forEach(([bx, bz], bi) => {
-      const base = palette[bi % palette.length];
-      for (let j = 0; j < per; j++) {
-        mtx.makeTranslation(bx + (rnd() - 0.5) * 0.55, 0.2 + rnd() * 0.1, bz + (rnd() - 0.5) * 0.4);
-        flowers.setMatrixAt(bi * per + j, mtx); flowers.setColorAt(bi * per + j, snow ? new THREE.Color(0xf4f9fc) : base);
+      for (let j = 0; j < 7; j++) {
+        const m = new THREE.Mesh(bloomGeo, petalMats[bi % petalMats.length]);
+        m.position.set(bx + (rnd() - 0.5) * 0.55, 0.22 + rnd() * 0.1, bz + (rnd() - 0.5) * 0.4);
+        add(m);
       }
       add(box(0.75, 0.12, 0.55, std(0x5b4636), bx, 0.08, bz, 0.04));
     });
-    flowers.castShadow = true; add(flowers);
     // Benches facing the fountain.
     const wood = std(0x9a6a3a, { roughness: 0.7 }), iron = std(0x2b3340, { metalness: 0.5, roughness: 0.5 });
     for (const [bx, bz, ry] of [[-2.6, pathZ + 2.2, 0], [2.6, pathZ + 2.2, 0], [-5.8, pathZ - 1.4, Math.PI / 2], [5.8, pathZ - 1.4, -Math.PI / 2]] as const) {

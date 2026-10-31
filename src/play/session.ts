@@ -107,6 +107,7 @@ export class Session {
     performance.mark('v0');
     this.L = world.L;
     this.landmark = world.landmark;
+    this.chapterPlace = worldOpts.landmark ?? 'both';
     this.landmarkView = world.view;
     this.group.add(world.group);
     for (let k = 0; k < MAX_BAYS; k++) this.bayGate.push({ started: Promise.resolve(), freed: Promise.resolve(), isFreed: () => true });
@@ -210,6 +211,9 @@ export class Session {
   private officer: THREE.Group | null = null;
 
   // ───── Street life: cars parked on the kerbs, pigeons on the pavement ─────
+  /** Passengers-to-be strolling along the park path behind the sidewalk. */
+  private chapterPlace = '';
+  private walkers: { p: Person; x: number; dir: number; speed: number; phase: number }[] = [];
   private pigeons: { o: THREE.Group; home: THREE.Vector3; away: boolean }[] = [];
   private dressStreets(seed: number) {
     let r = seed * 48271 % 2147483647;
@@ -223,6 +227,18 @@ export class Session {
         o.root.position.set(x, 0, z + 1);
         o.root.rotation.y = rnd() < 0.5 ? 0 : Math.PI;
         this.group.add(o.root);
+      }
+    }
+    // The park behind the sidewalk (every chapter with one) has people strolling along its path.
+    if (this.chapterPlace !== 'bazaar' && this.chapterPlace !== 'darband' && this.chapterPlace !== 'tabiat') {
+      const colors = ['red', 'yellow', 'blue', 'green', 'purple', 'orange'] as const;
+      for (let k = 0; k < 5; k++) {
+        const p = person(colors[Math.floor(rnd() * colors.length)], 7 + k * 3);
+        p.root.scale.setScalar(1.0);
+        const x = -11 + rnd() * 22, dir = rnd() < 0.5 ? 1 : -1;
+        p.root.position.set(x, 0.04, this.L.walkZ - 5.2 + (rnd() - 0.5) * 0.7);
+        this.group.add(p.root);
+        this.walkers.push({ p, x, dir, speed: 0.45 + rnd() * 0.5, phase: rnd() * 6 });
       }
     }
     const grey = new THREE.MeshStandardMaterial({ color: 0x8b93a1, roughness: 0.8 }), neck = new THREE.MeshStandardMaterial({ color: 0x4b6b74, roughness: 0.5, metalness: 0.3 });
@@ -862,6 +878,14 @@ export class Session {
       if (this.timeLeft <= 0) void this.loseBy('time');
     }
     this.weather?.update(dt);
+    for (const w of this.walkers) {
+      w.x += w.dir * w.speed * dt;
+      if (w.x > 12) w.dir = -1; else if (w.x < -12) w.dir = 1;
+      w.p.root.position.x = w.x;
+      w.p.root.rotation.y = w.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const bob = Math.abs(Math.sin(t * 5.5 * w.speed + w.phase));
+      w.p.body.position.y = bob * 0.05; w.p.body.rotation.z = Math.sin(t * 5.5 * w.speed + w.phase) * 0.06;
+    }
     this.pigeons.forEach((p, k) => {
       if (p.away) return;
       const hd = p.o.getObjectByName('head')!;
