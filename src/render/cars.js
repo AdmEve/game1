@@ -504,10 +504,7 @@ export const CARS = {
     cab: { xA: 0.98, xRF: 0.26, xRR: -0.74, xC: -1.34, roof: 1.44, half: 0.74, tumble: 0.2, rt: 0.09 },
     windows: [[0.8, 0.0], [-0.08, -0.98]],
     bumpers: [{ y0: 0.3, y1: 0.52, mat: 'plastic', depth: 0.32, grow: 0.04 }],
-    headlights: [{ w: 0.34, h: 0.15, z: 0.52, y: 0.66, r: 0.02 }],
-    grille: { w: 0.3, h: 0.08, y: 0.67, bars: 2, barMat: 'trim' },
-    badge: { y: 0.67 },
-    taillights: [{ w: 0.32, h: 0.14, z: 0.53, y: 0.77, amber: true }],
+    headlights: [], taillights: [], extra: prideExtra,
     plateF: 0.4, plateR: 0.42, handles: [0.18, -0.6],
     strips: [{ y0: 0.56, y1: 0.6, x0: -1.85, x1: 1.85 }],
   },
@@ -918,4 +915,13 @@ function samandExtra(car, { body }) {
   strips(-hl - 1, Bk, { z0: 0.3, z1: 0.78, n: 14, yAt: () => 0.84, hAt: (t) => 0.13 + t * 0.07, mat: tailTex(), lift: 0.006 });
   const lip = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.04), wordTex('SAMAND'));
   if (stick(body, new THREE.Vector3(-hl - 1, 0.9, -0.3), Bk, lip, 0.012)) car.add(lip);
+}
+
+// Saipa Pride 131: compact wedge headlamps, small slatted grille between them, tall rear lamps.
+function prideExtra(car, { body }) {
+  const strips = wrapper(car, body), hl = 1.965;
+  const F = new THREE.Vector3(-1, 0, 0), Bk = new THREE.Vector3(1, 0, 0);
+  strips(hl + 1, F, { z0: 0.26, z1: 0.8, n: 14, yAt: (t) => 0.63, hAt: (t) => 0.16 - t * 0.04, mat: headTex(), lift: 0.006 });
+  strips(hl + 1, F, { z0: 0, z1: 0.26, n: 5, yAt: () => 0.63, hAt: () => 0.09, mat: grilleTex(), lift: 0.004 });
+  strips(-hl - 1, Bk, { z0: 0.3, z1: 0.68, n: 12, yAt: () => 0.8, hAt: (t) => 0.17 + t * 0.04, mat: tailTex(), lift: 0.006 });
 }
