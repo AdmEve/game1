@@ -206,13 +206,23 @@ const RATE = 32000;
  * Render one stem of the current mood: `BARS` bars of music plus the reverb tail, with the tail folded back
  * onto the start so the loop has no seam.
  */
-async function renderStem(which: 'base' | 'tension'): Promise<AudioBuffer> {
+async function renderStem(which: 'base' | 'tension', yieldBetweenBars = false): Promise<AudioBuffer | null> {
+  const mood = currentMood;
   const bar = 8 * E, len = bar * BARS, tail = 2.6;
   const off = new OfflineAudioContext(2, Math.ceil(RATE * (len + tail)), RATE);
   const comp = off.createDynamicsCompressor(); comp.threshold.value = -14; comp.connect(off.destination);
   c = off as unknown as AudioContext; layer = which;
   init({ c, out: comp });
-  for (let i = 0; i < 8 * BARS; i++) schedule(i, 0.05 + i * E);
+  const g = { c, bus, padFilter, noiseBuf };
+  for (let b = 0; b < BARS; b++) {
+    for (let i = b * 8; i < b * 8 + 8; i++) schedule(i, 0.05 + i * E);
+    // Build the graph a bar at a time, so no single frame of the game has to wait for it.
+    if (yieldBetweenBars) {
+      await new Promise((r) => setTimeout(r, 12));
+      if (currentMood !== mood) { c = null; return null; }
+      c = g.c; bus = g.bus; padFilter = g.padFilter; noiseBuf = g.noiseBuf; layer = which;
+    }
+  }
   const buf = await off.startRendering();
   const n = Math.round(RATE * len);
   for (let ch = 0; ch < 2; ch++) {
@@ -259,12 +269,15 @@ async function ensureStems() {
   const mood = currentMood;
   building = mood;
   try {
-    const base = await renderStem('base');
-    if (currentMood !== mood) return; // the chapter changed while rendering: the parameters moved on
-    const tension = await renderStem('tension');
-    if (currentMood === mood) { stems = { mood, base, tension }; begin(); }
+    const base = await renderStem('base', true);
+    if (!base || currentMood !== mood) return; // the chapter changed while rendering: the parameters moved on
+    const tension = await renderStem('tension', true);
+    if (tension && currentMood === mood) { stems = { mood, base, tension }; begin(); }
   } finally { if (building === mood) building = null; }
 }
+
+/** Build the current chapter's loop ahead of time, in small slices, so the first tap doesn't pay for it. */
+export function prepareMusic() { if (save.settings.music) void ensureStems(); }
 
 export function startMusic() {
   if (!save.settings.music || playing) return;
@@ -286,7 +299,7 @@ export function setTension(x: number) {
 
 /** Test hook: render the current mood's loop (base plus, optionally, tension) into a 16-bit WAV. */
 export async function renderMusicWav(_sec = 0, tens = 0): Promise<Blob> {
-  const base = await renderStem('base'), tn = tens > 0 ? await renderStem('tension') : null;
+  const base = (await renderStem('base'))!, tn = tens > 0 ? await renderStem('tension') : null;
   const n = base.length, data = new DataView(new ArrayBuffer(44 + n * 4));
   const w = (o: number, s: string) => { for (let k = 0; k < s.length; k++) data.setUint8(o + k, s.charCodeAt(k)); };
   w(0, 'RIFF'); data.setUint32(4, 36 + n * 4, true); w(8, 'WAVEfmt '); data.setUint32(16, 16, true); data.setUint16(20, 1, true); data.setUint16(22, 2, true);

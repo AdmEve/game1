@@ -37,7 +37,7 @@ import { persist, save } from './save';
 import * as sfx from './audio';
 import { click, coin } from './audio';
 import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
-import { setMood, setTension, startMusic, stopMusic } from './music';
+import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './music';
 import { haptic } from './haptics';
 
 const levels: Level[] = (PACKED as string[]).map(unpackLevel);
@@ -706,6 +706,8 @@ async function boot() {
     setTimeout(warm, 120);
   };
   setTimeout(warm, 2500);
+  // The music loop is built behind the menu, a slice at a time, so it is ready by the first tap.
+  setTimeout(prepareMusic, 1800);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
