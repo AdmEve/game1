@@ -299,13 +299,12 @@ function settle(s: State, ev: Event[]) {
 export function tap(s: State, i: number, force = false, prefer?: number[]): Event[] {
   const ev: Event[] = [];
   if (s.over || !s.inLot[i]) return ev;
-  // Pressing a covered car lifts its cover, even if the car then turns out to be stuck: the colour stays a
-  // mystery until the player presses that car itself.
-  const unveil = () => { if (!s.revealed[i]) { s.revealed[i] = true; ev.push({ t: 'reveal', v: i }); } };
+  // A covered car's colour is a mystery until it actually drives out: pressing a stuck one reveals nothing,
+  // and neither does a neighbour leaving. Pressing blind is a real risk.
   const lk = force ? null : lock(s, i);
-  if (lk) { unveil(); ev.push({ t: 'locked', v: i, ...lk }); return ev; }
+  if (lk) { ev.push({ t: 'locked', v: i, ...lk }); return ev; }
   const b = force ? null : blocker(s, i);
-  if (b) { unveil(); ev.push({ t: 'blocked', v: i, by: b }); return ev; }
+  if (b) { ev.push({ t: 'blocked', v: i, by: b }); return ev; }
   const free = prefer ? prefer.find((k) => !s.bays[k]) ?? s.bays.findIndex((x) => !x) : s.bays.findIndex((x) => !x);
   if (free < 0) { ev.push({ t: 'bays-full', v: i }); return ev; }
   const v = s.level.vehicles[i];

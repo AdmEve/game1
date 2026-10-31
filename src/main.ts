@@ -20,6 +20,7 @@ import { emo } from './ui/emoji';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, lives, loseLife } from './lives';
+import { UNLOCK_ALL_LEVELS } from './config';
 import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
@@ -583,7 +584,7 @@ function showLevels() {
   modalOpen = true;
   const c = h('div', 'levels');
   c.innerHTML = `<h2>${emo('🗺️')} مرحله‌ها</h2>`;
-  const unlocked = save.devUnlock ? levels.length : save.level;
+  const unlocked = save.devUnlock || UNLOCK_ALL_LEVELS ? levels.length : save.level;
   let close = () => {};
   for (const ch of CHAPTERS) {
     c.append(h('h3', '', `فصل ${fa(ch.n)}: ${ch.name}`));

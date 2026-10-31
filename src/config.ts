@@ -39,3 +39,6 @@ export const PRODUCTS: Product[] = [
   { sku: 'pass', icon: '🎫', title: 'کارت طلایی', desc: 'جایزه‌های طلایی کارت بلیت این ماه', fallbackPrice: 79000, consumable: true },
   { sku: 'no_ads', icon: '🚫', title: 'حذف تبلیغات', desc: 'برای همیشه بدون تبلیغ بین مرحله‌ها', fallbackPrice: 59000, consumable: false },
 ];
+
+/** While testing, every Journey level is open from the start (the level picker ignores progress). */
+export const UNLOCK_ALL_LEVELS = true;

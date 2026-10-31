@@ -61,7 +61,7 @@ describe('mechanics', () => {
     expect(tap(s, 0).at(-1)).toEqual({ t: 'won' });
   });
 
-  it('«چادر ماشین» stays on when a neighbour leaves, and comes off only when the car itself is pressed', () => {
+  it('«چادر ماشین» stays on when a neighbour leaves, and comes off only when the car itself drives out', () => {
     const l: Level = {
       w: 2, h: 2,
       vehicles: [
@@ -79,7 +79,7 @@ describe('mechanics', () => {
     expect(s.revealed[0]).toBe(true);
   });
 
-  it('pressing a covered car that is stuck still lifts its cover', () => {
+  it('pressing a covered car that is stuck keeps its cover on: no free peeking', () => {
     const l: Level = {
       w: 2, h: 2,
       vehicles: [
@@ -90,9 +90,8 @@ describe('mechanics', () => {
     };
     const s = newState(l);
     const ev = tap(s, 0);
-    expect(ev).toEqual([{ t: 'reveal', v: 0 }, { t: 'blocked', v: 0, by: { v: 1, cell: [0, 0] } }]);
-    expect(s.revealed[0]).toBe(true);
-    expect(s.inLot[0]).toBe(true);
+    expect(ev).toEqual([{ t: 'blocked', v: 0, by: { v: 1, cell: [0, 0] } }]);
+    expect(s.revealed[0]).toBe(false);
   });
 
   it('«دربست» rides alone in an empty car and leaves at once', () => {
