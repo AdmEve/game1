@@ -543,12 +543,10 @@ export const CARS = {
     cab: { xA: 0.95, xRF: 0.16, xRR: -0.84, xC: -1.64, roof: 1.45, half: 0.81, tumble: 0.22, rt: 0.14,
       roofPts: [[-1.64, 0.99], [-1.2, 1.3], [-0.84, 1.44], [-0.3, 1.46], [0.16, 1.44], [0.55, 1.2], [0.95, 0.9]] },
     windows: [[0.74, 0.0], [-0.12, -1.28]],
-    bumpers: [{ y0: 0.3, y1: 0.5, mat: 'body', depth: 0.34, grow: 0.025 }],
-    headlights: [{ w: 0.4, h: 0.16, z: 0.54, y: 0.68, r: 0.07, bezel: 'body' }],
-    grille: { w: 0.5, h: 0.12, y: 0.66, bars: 3 },
-    badge: { y: 0.66 },
-    taillights: [{ w: 0.4, h: 0.14, z: 0.5, y: 0.83, r: 0.04, bezel: 'body' }],
+    bumpers: [{ y0: 0.3, y1: 0.5, mat: 'body', depth: 0.34, grow: 0.025 }, { y0: 0.33, y1: 0.4, mat: 'black', depth: 0.34, grow: 0.03 }],
+    headlights: [], taillights: [],
     plateF: 0.38, plateR: 0.6, handles: [0.2, -0.68],
+    extra: samandExtra,
   },
   // ───── Classics for «گاراژ من» ─────
   // Paykan Javanan (1970s sporty Paykan): twin round lamps, black vinyl roof, chrome everywhere.
@@ -839,10 +837,8 @@ const wordTex = (word) => parsMat('pars-word-' + word, 256, 56, (g, w, h) => {
   g.fillStyle = '#c9cfd5'; g.font = '700 44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(word, w / 2, h / 2 + 2);
 }, { roughness: 0.2, metalness: 0.5, transparent: true, alphaTest: 0.2 });
 
-function parsExtra(car, { top, P, body }) {
-  const hl = 2.25, hw = 0.86;
-  // Shrink-wrap a textured patch onto the body: a grid whose vertices are ray-projected onto the surface.
-  const strips = (from, dir, o) => {
+function wrapper(car, body) {
+  return (from, dir, o) => {
     const { z0, z1, n, yAt, hAt, mat, lift = 0.004 } = o, rows = 4;
     for (const sg of [1, -1]) {
       const pos = [], uvs = [], idx = [], ok = [];
@@ -873,6 +869,11 @@ function parsExtra(car, { top, P, body }) {
       const m = new THREE.Mesh(g, mat); m.frustumCulled = false; car.add(m);
     }
   };
+}
+
+function parsExtra(car, { top, P, body }) {
+  const hl = 2.25, hw = 0.86;
+  const strips = wrapper(car, body);
   const F = new THREE.Vector3(-1, 0, 0), Bk = new THREE.Vector3(1, 0, 0);
   // Headlamps: z from 0.32 (nose) to 0.84 (fender), taller at the nose.
   strips(hl + 1, F, { z0: 0.3, z1: 0.84, n: 16, yAt: (t) => 0.69 - t * 0.03, hAt: (t) => 0.2 - t * 0.065, mat: headTex(), lift: 0.006 });
@@ -899,4 +900,17 @@ function parsExtra(car, { top, P, body }) {
   const lip = new THREE.Mesh(new RoundedBoxGeometry(0.66, 0.05, 0.03, 1, 0.012), P); rl(lip, 0.78, 0, 0.02);
   // Black rear bumper band + teal pinstripe come from the shared bumper spec (both ends); chrome-free, like the real car.
   // Roof antenna.
+}
+
+// IKCO Samand: swept-back wedge headlamps, trapezoid chrome-edged grille with the Samand lion, wide rear lamps with a black bumper strip.
+function samandExtra(car, { body }) {
+  const strips = wrapper(car, body), hl = 2.26;
+  const F = new THREE.Vector3(-1, 0, 0), Bk = new THREE.Vector3(1, 0, 0);
+  strips(hl + 1, F, { z0: 0.3, z1: 0.84, n: 16, yAt: (t) => 0.64 - t * 0.01, hAt: (t) => 0.17 - t * 0.05, mat: headTex(), lift: 0.006 });
+  strips(hl + 1, F, { z0: 0, z1: 0.3, n: 6, yAt: () => 0.66, hAt: () => 0.12, mat: grilleTex(), lift: 0.004 });
+  const lion = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.11), lionTex());
+  if (stick(body, new THREE.Vector3(hl + 1, 0.74, 0), F, lion, 0.016)) car.add(lion);
+  strips(-hl - 1, Bk, { z0: 0.3, z1: 0.78, n: 14, yAt: () => 0.84, hAt: (t) => 0.13 + t * 0.07, mat: tailTex(), lift: 0.006 });
+  const lip = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.04), wordTex('SAMAND'));
+  if (stick(body, new THREE.Vector3(-hl - 1, 0.9, -0.3), Bk, lip, 0.012)) car.add(lip);
 }
