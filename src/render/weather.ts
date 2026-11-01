@@ -29,10 +29,10 @@ export interface WeatherMood {
 export const MOODS: Record<WeatherKind, WeatherMood> = {
   clear: { light: 1, fogNear: 40, fogFar: 95, tint: 0xffffff, tintAmount: 0 },
   leaves: { light: 1, fogNear: 40, fogFar: 95, tint: 0xffd9a0, tintAmount: 0.08 },
-  rain: { light: 0.72, fogNear: 32, fogFar: 84, tint: 0x7a8696, tintAmount: 0.55, overcast: { turbidity: 16, rayleigh: 0.25 }, grade: { saturation: 0.86, contrast: 1.08, shadows: [0, 0.012, 0.03], highlights: [-0.005, 0.005, 0.02] } },
+  rain: { light: 0.75, fogNear: 36, fogFar: 88, tint: 0x7a8696, tintAmount: 0.55, overcast: { turbidity: 16, rayleigh: 0.25 }, grade: { saturation: 0.86, contrast: 1.08, shadows: [0, 0.012, 0.03], highlights: [-0.005, 0.005, 0.02] } },
   storm: { light: 0.62, fogNear: 30, fogFar: 82, tint: 0x1b2433, tintAmount: 0.5, overcast: { turbidity: 18, rayleigh: 0.2 }, grade: { saturation: 0.82, contrast: 1.1, shadows: [0, 0.01, 0.04] } },
   snow: { light: 0.8, fogNear: 32, fogFar: 88, tint: 0xe4ebf2, tintAmount: 0.5, overcast: { turbidity: 20, rayleigh: 0.15 }, grade: { saturation: 0.9, contrast: 1.02, shadows: [0, 0.008, 0.03], highlights: [0, 0.006, 0.02] } },
-  dust: { light: 0.92, fogNear: 30, fogFar: 85, tint: 0xd9b27a, tintAmount: 0.45, grade: { saturation: 0.85, highlights: [0.05, 0.03, 0.0] } },
+  dust: { light: 0.95, fogNear: 38, fogFar: 92, tint: 0xd9b27a, tintAmount: 0.3, grade: { saturation: 0.85, highlights: [0.05, 0.03, 0.0] } },
   petals: { light: 1, fogNear: 40, fogFar: 95, tint: 0xfff0f5, tintAmount: 0.1 },
   mist: { light: 0.85, fogNear: 26, fogFar: 80, tint: 0x6a6898, tintAmount: 0.45, grade: { saturation: 0.9 } },
 };
@@ -224,7 +224,7 @@ export class Weather {
       const tex = fogBillows().clone(); tex.needsUpdate = true; tex.repeat.set(2.2 + l * 0.6, 2 + l * 0.5);
       const full = l === 0, w = x1 - x0 + 40, d = full ? z1 - z0 + 30 : 34;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: full ? opacity * 0.4 : opacity * (1 - l * 0.12), depthWrite: false, fog: true }));
+        new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: full ? opacity * 0.2 : opacity * (1 - l * 0.12), depthWrite: false, fog: true }));
       m.position.set((x0 + x1) / 2, full ? 1.6 : 0.6 + l * 0.8, full ? (z0 + z1) / 2 - 8 : z0 - 15 + l * 2); m.renderOrder = 4 + l; m.frustumCulled = false;
       m.userData.drift = [0.004 + l * 0.003, 0.002 - l * 0.001];
       this.banks.push(m); this.object.add(m);
