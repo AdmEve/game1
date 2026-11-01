@@ -948,7 +948,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     // Fountain on a round plaza.
     const plaza = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.06, 40), std(0xc9c2b4, { roughness: 0.85 })); plaza.position.set(0, 0.05, pathZ); plaza.receiveShadow = true; add(plaza);
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.42, 36), stone); basin.position.set(0, 0.27, pathZ); basin.castShadow = basin.receiveShadow = true; add(basin);
-    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.36, 0.05, 36), std(snow ? 0xcfe6f2 : 0x2f9ad6, { roughness: 0.1, metalness: 0.25, emissive: night ? 0x1d6fb0 : 0x0f5a96, emissiveIntensity: 0.55 })); water.position.set(0, 0.5, pathZ); add(water);
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.36, 0.05, 36), new THREE.MeshPhysicalMaterial({ color: snow ? 0xcfe6f2 : 0x24505c, roughness: snow ? 0.6 : 0.03, metalness: 0, clearcoat: 1, envMapIntensity: 1.6, emissive: night ? 0x123a55 : 0x000000, emissiveIntensity: 0.6 })); water.position.set(0, 0.5, pathZ); add(water);
     const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.95, 16), stone); pil.position.set(0, 0.85, pathZ); pil.castShadow = true; add(pil);
     const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.3, 0.2, 24), stone); bowl.position.set(0, 1.35, pathZ); bowl.castShadow = true; add(bowl);
     const jet = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8, 12), std(0xcfeeff, { transparent: true, opacity: 0.7, roughness: 0.1 })); jet.position.set(0, 1.85, pathZ); add(jet);
@@ -956,14 +956,11 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     const blooms: [number, number][] = [];
     for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, r = 3.5 + (k % 2) * 0.3; blooms.push([Math.cos(a) * r, pathZ + Math.sin(a) * r * 0.75]); }
     for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) blooms.push([sx * (4.8 + k * 1.1), z0 - 1.0 - (k % 2) * 0.6]);
-    const petalMats = [0xf472b6, 0xfacc15, 0xef4444, 0xffffff, 0xfb923c, 0xa78bfa].map((c) => std(snow ? 0xf4f9fc : c, { roughness: 0.6 }));
-    const bloomGeo = new THREE.IcosahedronGeometry(0.14, 0);
+    // Flower beds: blossoms among leaves, as leaf cards (petunias, marigolds, geraniums...).
+    const flowers = [['#d9468f', '#ef7bb5'], ['#f2b705', '#ffd34d'], ['#c81d25', '#e5484d'], ['#f4f1ea', '#ffffff'], ['#e8661c', '#f59e3b'], ['#7d5cc6', '#a08be0']];
+    const bedMats = flowers.map((f, i) => foliageMat(snow ? ['#eef3f7', '#dfe7ee', '#c7d2db'] : [...f, ...f, '#4a6f30', '#3b5a27'], 20 + i, 'blossom'));
     blooms.forEach(([bx, bz], bi) => {
-      for (let j = 0; j < 7; j++) {
-        const m = new THREE.Mesh(bloomGeo, petalMats[bi % petalMats.length]);
-        m.position.set(bx + (rnd() - 0.5) * 0.55, 0.22 + rnd() * 0.1, bz + (rnd() - 0.5) * 0.4);
-        add(m);
-      }
+      const c = canopy(0.36, 0.12, 0.26, 26, bedMats[bi % bedMats.length], rnd, 0.24); c.position.set(bx, 0.24, bz); add(c);
       add(box(0.75, 0.12, 0.55, std(0x5b4636), bx, 0.08, bz, 0.04));
     });
     // Benches facing the fountain.
