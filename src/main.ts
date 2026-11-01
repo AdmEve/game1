@@ -9,7 +9,8 @@ import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
-import { outdoorEnv } from './render/env.js';
+import { skyEnv } from './render/env.js';
+import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarShadows, warmFleet } from './render/fleet';
 import { sky } from './render/world';
 import { Session } from './play/session';
@@ -59,40 +60,40 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.append(renderer.domElement);
-// Lens look: a tilt-shift blur on the far city (miniature feel) and a soft vignette.
-const tilt = document.createElement('div'); tilt.className = mobile ? 'tiltshift lite' : 'tiltshift';
-const vignette = document.createElement('div'); vignette.className = 'vignette';
-const tint = document.createElement('div'); tint.className = 'tint';
-app.append(tilt, tint, vignette);
+// Film look: HDR scene, bloom, filmic tone mapping, color grade, lens vignette, grain (see render/post.ts).
+const post = new Post(renderer, { samples: mobile ? 2 : 4 });
 
 const scene = new THREE.Scene();
 scene.background = sky();
 scene.fog = new THREE.Fog(0xdfe9f2, 40, 95);
-scene.environment = outdoorEnv(renderer);
-scene.environmentIntensity = 0.8;
-scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.7));
+scene.environment = skyEnv(renderer);
+scene.environmentIntensity = 1;
+scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.25));
 const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
-sun.shadow.radius = 3;
+sun.shadow.radius = mobile ? 2 : 3;
 scene.add(sun, sun.target);
 
 const hemi = scene.children.find((o) => (o as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight;
 
 /** Per-chapter time of day: sky, fog, sun angle and color, exposure, how much lamps and headlights glow. */
-const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [number, number, number]; sun: [number, number, [number, number, number]]; exposure: number; env: number; lamps: number }> = {
-  day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32 },
-  sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0 },
-  bazaar: { sky: [[0, '#5a8fd0'], [0.5, '#bcd6ee'], [0.85, '#f3e6cf'], [1, '#f6d9a8']], fog: 0xf0e2c8, hemi: [0xfff1d8, 0x7a5a3a, 0.62], sun: [0xffd49a, 2.8, [-14, 16, 9]], exposure: 0.95, env: 0.7, lamps: 0.4 },
-  dusk: { sky: [[0, '#0f1b4d'], [0.45, '#3b3f8f'], [0.75, '#c2607a'], [1, '#f6a96b']], fog: 0x3a3570, hemi: [0x8a8fe0, 0x2a2238, 0.45], sun: [0xff9a6a, 1.4, [-22, 7, 4]], exposure: 1.1, env: 0.35, lamps: 2.0 },
-  spring: { sky: [[0, '#3f8fe0'], [0.5, '#9fd3fb'], [0.85, '#e9f5f2'], [1, '#fdf0f5']], fog: 0xe4f1f6, hemi: [0xeaf6ff, 0x5f7a45, 0.75], sun: [0xfff6e6, 2.7, [-10, 20, 12]], exposure: 0.96, env: 0.85, lamps: 0.3 },
-  autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8 },
-  snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5 },
-  night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6 },
+type SkyOpts = { turbidity: number; rayleigh: number; mie?: number; night?: boolean; ground?: number };
+const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [number, number, number]; sun: [number, number, [number, number, number]]; exposure: number; env: number; lamps: number; air: SkyOpts; grade: Partial<Grade> }> = {
+  day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32, air: { turbidity: 3.2, rayleigh: 1.1 }, grade: {} },
+  sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0, air: { turbidity: 8, rayleigh: 2.6, mie: 0.007 }, grade: { saturation: 1.0, shadows: [0.012, 0.0, 0.03], highlights: [0.05, 0.02, -0.01], bloom: 0.5 } },
+  bazaar: { sky: [[0, '#5a8fd0'], [0.5, '#bcd6ee'], [0.85, '#f3e6cf'], [1, '#f6d9a8']], fog: 0xf0e2c8, hemi: [0xfff1d8, 0x7a5a3a, 0.62], sun: [0xffd49a, 2.8, [-14, 16, 9]], exposure: 0.95, env: 0.7, lamps: 0.4, air: { turbidity: 7, rayleigh: 1.4, mie: 0.006 }, grade: { saturation: 0.9, highlights: [0.045, 0.025, 0.0] } },
+  dusk: { sky: [[0, '#0f1b4d'], [0.45, '#3b3f8f'], [0.75, '#c2607a'], [1, '#f6a96b']], fog: 0x3a3570, hemi: [0x8a8fe0, 0x2a2238, 0.45], sun: [0xff9a6a, 1.4, [-22, 7, 4]], exposure: 1.1, env: 0.35, lamps: 2.0, air: { turbidity: 6, rayleigh: 3, mie: 0.006 }, grade: { saturation: 0.95, shadows: [0.015, 0.0, 0.04], highlights: [0.04, 0.012, 0.0], bloom: 0.6 } },
+  spring: { sky: [[0, '#3f8fe0'], [0.5, '#9fd3fb'], [0.85, '#e9f5f2'], [1, '#fdf0f5']], fog: 0xe4f1f6, hemi: [0xeaf6ff, 0x5f7a45, 0.75], sun: [0xfff6e6, 2.7, [-10, 20, 12]], exposure: 0.96, env: 0.85, lamps: 0.3, air: { turbidity: 2.6, rayleigh: 1.0 }, grade: { saturation: 0.95 } },
+  autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8, air: { turbidity: 7, rayleigh: 1.8, mie: 0.005 }, grade: { saturation: 0.9, highlights: [0.045, 0.02, -0.005] } },
+  snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5, air: { turbidity: 10, rayleigh: 0.5, ground: 0x8a8f96 }, grade: { saturation: 0.82, shadows: [0.0, 0.01, 0.035], highlights: [0.0, 0.005, 0.015] } },
+  night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6, air: { turbidity: 2, rayleigh: 0.4, night: true }, grade: { saturation: 0.85, shadows: [0.0, 0.008, 0.04], highlights: [0.03, 0.02, 0.0], bloom: 0.9, threshold: 0.9 } },
 };
 let sunOffset = new THREE.Vector3(-9, 22, 11);
+let envFor: (over?: Partial<SkyOpts>) => void = () => {};
+let grade: Grade = DEFAULT_GRADE;
 function applyLight(light: Light) {
   const L = LIGHTS[light];
   (scene.background as THREE.Texture)?.dispose();
@@ -101,7 +102,17 @@ function applyLight(light: Light) {
   hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
   sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sunOffset = new THREE.Vector3(...L.sun[2]);
   renderer.toneMappingExposure = L.exposure;
-  scene.environmentIntensity = L.env;
+  // Image-based light from a real sky with the sun where the shadows say it is.
+  const sd = new THREE.Vector3(...L.sun[2]).normalize();
+  envFor = (over?: Partial<SkyOpts>) => {
+    const a = { ...L.air, ...over };
+    scene.environment = skyEnv(renderer, { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground });
+  };
+  envFor();
+  scene.environmentIntensity = L.env * 1.25;
+  hemi.intensity = L.hemi[2] * 0.4;
+  grade = { ...DEFAULT_GRADE, ...L.grade };
+  post.setGrade(grade);
   lightsMaterial.emissiveIntensity = L.lamps;
   document.body.dataset.light = light;
 }
@@ -155,6 +166,7 @@ function updateHand() {
 function fitCamera() {
   const W = window.innerWidth, H = window.innerHeight;
   renderer.setSize(W, H);
+  post.setSize();
   camera.aspect = W / H;
   camera.updateProjectionMatrix();
   if (!session) return;
@@ -730,8 +742,8 @@ async function boot() {
   let probeFrames = 0, probeTime = 0, tier = 2;
   const stepDown = () => {
     tier--;
-    if (tier === 1) { tilt.style.display = 'none'; renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); }
-    if (tier === 0) { sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.shadowMap.type = THREE.BasicShadowMap; renderer.setPixelRatio(1); }
+    if (tier === 1) { renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1)); }
+    if (tier === 0) { sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.shadowMap.type = THREE.BasicShadowMap; renderer.setPixelRatio(1); post.enabled = false; }
     fitCamera();
   };
   const loop = (t: number) => {
@@ -755,10 +767,10 @@ async function boot() {
     applyShake(dt);
     updateHand();
     if (mobile && ++shadowTick % 4 === 0) renderer.shadowMap.needsUpdate = true;
-    renderer.render(scene, camera);
+    post.render(scene, camera, dt);
     requestAnimationFrame(loop);
   };
-  if (debug.has('shot')) renderer.render(scene, camera);
+  if (debug.has('shot')) post.render(scene, camera);
   else requestAnimationFrame(loop);
   if (Capacitor.isNativePlatform()) {
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
@@ -767,14 +779,14 @@ async function boot() {
   }
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
-    session: () => session, save, startLevel, levels, camera, renderer,
+    session: () => session, save, startLevel, levels, camera, renderer, post, scene,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
-    swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); renderer.render(scene, camera); },
+    swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
-    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); renderer.render(scene, camera); },
+    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); post.render(scene, camera, 1 / 30); },
   };
   performance.mark('b3');
-  renderer.render(scene, camera);
+  post.render(scene, camera);
   performance.measure('first-frame', 'b3');
   const splash = document.getElementById('splash');
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }

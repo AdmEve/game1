@@ -4,12 +4,13 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve } from './cars.js';
+import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve, paint } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
 import { courierBike } from './mechanics';
 
+/** Real automotive paints (still far apart in hue so every color reads at a glance). */
 export const PAINT: Record<Color, number> = {
-  red: 0xc8141c, yellow: 0xf5b400, blue: 0x1857c9, green: 0x138a3f, purple: 0x6a2bc2, orange: 0xe85a0c, white: 0xeeeeea, pink: 0xe0508c, silver: 0x9aa3ad, black: 0x1c1f24,
+  red: 0xa3121a, yellow: 0xe2a400, blue: 0x1c58b8, green: 0x1a6e3f, purple: 0x5b2c86, orange: 0xd2561a, white: 0xe8e8e4, pink: 0xc44a7e, silver: 0x9aa3ad, black: 0x16181c,
 };
 export const CELL = 1.25;
 
@@ -105,7 +106,7 @@ function tint(g: THREE.BufferGeometry, c: THREE.Color) {
 
 interface Template { mesh: THREE.Group; length: number; width: number; roofX: number; roofY: number; tilt: number; }
 const cache = new Map<string, Template>();
-const QUALITY = 0.14;
+const QUALITY = 0.3;
 
 function template(kind: Kind, color: Color, skin?: string): Template {
   const key = kind + color + (skin ?? '');
@@ -120,7 +121,7 @@ function template(kind: Kind, color: Color, skin?: string): Template {
   else if (skin === 'jeep') { raw = buildJeep(PAINT[color], { q: QUALITY }); length = 3.5; width = 1.57; roofX = 1.05; roofY = 1.12; }
   else {
     const spec = CARS[skin ?? kind];
-    raw = buildCar(spec, PAINT[color], { taxi: kind === 'samand', q: QUALITY });
+    raw = buildCar(spec, paint(PAINT[color], color !== 'yellow' && color !== 'white'), { taxi: kind === 'samand', q: QUALITY });
     length = spec.L; width = spec.W;
     const taxi = kind === 'samand';
     roofX = taxi ? (spec.cab.xA + spec.L / 2) / 2 + 0.05 : (spec.cab.xRF + spec.cab.xRR) / 2;
@@ -131,17 +132,20 @@ function template(kind: Kind, color: Color, skin?: string): Template {
   }
   // Zamyad's model is offset: its cab sits forward of the origin.
   if (kind === 'zamyad') raw.position.x = -0.04;
-  const t = { mesh: bake(raw, { outline: 0.07 }), length, width, roofX, roofY, tilt };
+  const t = { mesh: bake(raw), length, width, roofX, roofY, tilt };
   cache.set(key, t);
   return t;
 }
 
 const arrowShape = new THREE.Shape();
-arrowShape.moveTo(0, 0.42); arrowShape.lineTo(0.3, 0.06); arrowShape.lineTo(0.12, 0.06); arrowShape.lineTo(0.12, -0.32); arrowShape.lineTo(-0.12, -0.32); arrowShape.lineTo(-0.12, 0.06); arrowShape.lineTo(-0.3, 0.06); arrowShape.closePath();
+// A slim navigation arrow: narrow stem, crisp head.
+arrowShape.moveTo(0, 0.4); arrowShape.lineTo(0.25, 0.12); arrowShape.lineTo(0.075, 0.12); arrowShape.lineTo(0.075, -0.3); arrowShape.quadraticCurveTo(0.075, -0.33, 0.045, -0.33);
+arrowShape.lineTo(-0.045, -0.33); arrowShape.quadraticCurveTo(-0.075, -0.33, -0.075, -0.3); arrowShape.lineTo(-0.075, 0.12); arrowShape.lineTo(-0.25, 0.12); arrowShape.closePath();
 const arrowGeo = new THREE.ShapeGeometry(arrowShape).rotateX(-Math.PI / 2).rotateY(-Math.PI / 2).center();
 arrowGeo.userData.keep = true;
-const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const arrowEdge = new THREE.MeshBasicMaterial({ color: 0x0b1220, transparent: true, opacity: 0.45 });
+// Slightly over-bright so it reads as clean white after the filmic tone curve.
+const arrowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.7, 1.66), transparent: true, opacity: 0.94 });
+const arrowEdge = new THREE.MeshBasicMaterial({ color: 0x05080d, transparent: true, opacity: 0.35 });
 
 /**
  * A vehicle as placed in the game: the root faces board "up" (−z) at rotation 0, sits on the ground,
@@ -153,10 +157,11 @@ export interface VehicleObj { root: THREE.Group; body: THREE.Group; arrow: THREE
 let blobMat: THREE.MeshBasicMaterial | null = null;
 function blobShadow(w: number, d: number): THREE.Mesh {
   if (!blobMat) {
-    const c = document.createElement('canvas'); c.width = c.height = 64;
-    const g = c.getContext('2d')!, gr = g.createRadialGradient(32, 32, 4, 32, 32, 32);
-    gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    // Ambient occlusion under the body: a dark core the shape of the car with a soft falloff.
+    const c = document.createElement('canvas'); c.width = 64; c.height = 128;
+    const g = c.getContext('2d')!;
+    g.filter = 'blur(7px)'; g.fillStyle = 'rgba(0,0,0,0.62)'; g.beginPath(); g.roundRect(14, 16, 36, 96, 12); g.fill();
+    g.filter = 'blur(3px)'; g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.roundRect(18, 22, 28, 84, 10); g.fill();
     blobMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false });
   }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), blobMat);
@@ -192,7 +197,7 @@ export function makeVehicle(kind: Kind, color: Color, skin?: string, opts: { arr
   turn.add(body);
   const root = new THREE.Group();
   root.add(turn);
-  if (kind !== 'bike') root.add(blobShadow(1.35, L * 1.08)); else root.add(blobShadow(0.8, L * 1.1));
+  if (kind !== 'bike') root.add(blobShadow(1.3, L * 1.12)); else root.add(blobShadow(0.7, L * 1.15));
   return { root, body, arrow, length: L };
 }
 
