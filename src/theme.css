@@ -25,7 +25,13 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 
 /* Line icons */
 .ico { width: 22px; height: 22px; flex: none; vertical-align: -5px; }
-.ico.coin { color: var(--accent); }
+.ico.coin, .ico.star, .ico.key { color: var(--accent); }
+.ico.heart { color: var(--bad); fill: rgba(239, 83, 80, .35); }
+.ico.xs { width: 14px; height: 14px; vertical-align: -2px; }
+.ico.sm { width: 18px; height: 18px; vertical-align: -4px; }
+.ico.huge { width: 72px; height: 72px; color: var(--accent); stroke-width: 1.4; filter: drop-shadow(0 10px 24px rgba(242, 177, 36, .35)); }
+.hand .ico { width: 56px; height: 56px; color: #fff; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .6)); animation: tapme 1.1s ease-in-out infinite; }
+.reward .ico, .rewards .ico { width: 26px; height: 26px; }
 .emo { filter: saturate(.85); }
 
 /* ───── HUD ───── */

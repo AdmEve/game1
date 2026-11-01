@@ -25,6 +25,13 @@ const P: Record<string, string> = {
   bolt: '<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z"/>',
   chevron: '<path d="m14.5 6-6 6 6 6"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  gift: '<rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M3 9h18M12 9v11.5M12 9c-1.5-3.5-5.5-4.5-6-2s3 2 6 2c3 0 6.5.5 6-2s-4.5-1.5-6 2"/>',
+  map: '<path d="M9 4.5 3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/>',
+  doc: '<path d="M6 3.5h9l4 4v13H6z"/><path d="M15 3.5v4h4M9 12h7M9 15.5h7"/>',
+  check: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12.3 2.7 2.7L16.2 9.5"/>',
+  book: '<path d="M4 5.5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20.5a2 2 0 0 1 2-2h13v2"/>',
+  medal: '<circle cx="12" cy="15" r="5"/><path d="M8.5 3.5 10.5 10M15.5 3.5 13.5 10M8 3.5h8"/><path d="m12 12.6.8 1.6 1.7.2-1.3 1.2.3 1.7-1.5-.8-1.5.8.3-1.7-1.3-1.2 1.7-.2z"/>',
+  hammer: '<path d="m14 10-9.5 9.5a1.6 1.6 0 0 1-2.2-2.2L11.8 7.8"/><path d="m10.5 6.5 4-4 6.5 6.5-4 4z"/>',
   grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
 };
 export function icon(name: keyof typeof P | string, cls = 'ico'): string {
