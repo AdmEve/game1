@@ -685,24 +685,54 @@ function trafficLight(): THREE.Group {
   return g;
 }
 
+/** Milad Tower: an octagonal podium, a tapering concrete shaft, the multi-storey head (a glass-banded pod
+ * flaring out and back in) and a long antenna mast with service rings. */
 function miladTower(): THREE.Group {
   const g = new THREE.Group();
-  const mm = std(0xdfe6ee, { roughness: 0.45, metalness: 0.2 });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.65, 15, 16), mm); shaft.position.y = 7.5; g.add(shaft);
-  const pod = new THREE.Mesh(new THREE.SphereGeometry(1.5, 24, 12), mm); pod.scale.set(1, 0.55, 1); pod.position.y = 14; g.add(pod);
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.3, 0.5, 24), std(0x26405a, { roughness: 0.1, metalness: 0.5 })); ring.position.y = 13.7; g.add(ring);
-  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.2, 6, 8), mm); spire.position.y = 18; g.add(spire);
+  const concrete = std(0xd9dde2, { roughness: 0.6, metalness: 0.05 }), glass = std(0x3a5672, { roughness: 0.08, metalness: 0.6 }), steel = std(0xb9c2cc, { roughness: 0.3, metalness: 0.8 });
+  const lathe = (pts: [number, number][], m: THREE.Material, seg = 32) => { const o = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg), m); o.castShadow = true; return o; };
+  g.add(lathe([[0, 0], [2.4, 0], [2.3, 0.9], [1.6, 1.4], [0.9, 1.6], [0, 1.6]], concrete, 8)); // podium
+  g.add(lathe([[0.62, 1.5], [0.5, 6], [0.4, 11], [0.36, 12.6], [0, 12.6]], concrete, 24)); // shaft
+  // The head: struts, a stack of glass and concrete rings bulging out, a cap.
+  g.add(lathe([[0.36, 12.4], [0.9, 12.7], [1.35, 13.05], [1.5, 13.4], [1.52, 13.65], [1.4, 13.9], [1.05, 14.15], [0.6, 14.3], [0.3, 14.35], [0, 14.35]], concrete));
+  for (const [y, r] of [[13.25, 1.47], [13.55, 1.56], [13.82, 1.45]] as const) { const band = lathe([[r, y - 0.09], [r + 0.02, y], [r, y + 0.09]], glass); g.add(band); }
+  g.add(lathe([[0.3, 14.3], [0.24, 16], [0.16, 18.5], [0.06, 20.5], [0, 20.5]], steel, 12)); // mast
+  for (const y of [15.2, 16.4, 17.6]) g.add(lathe([[0.42, y - 0.06], [0.44, y], [0.42, y + 0.06], [0.2, y + 0.06], [0.2, y - 0.06]], steel, 16));
   return g;
 }
 
+/** Azadi Tower: a flared white-marble arch whose front sweeps up into a narrow crown, its depth tapering with
+ * height, faced with the tower's diamond lattice of stone; a crown block with a little dome on top. */
+let marbleTex: THREE.Texture | null = null;
 function azadiTower(): THREE.Group {
+  marbleTex ??= canvasTex(512, 512, (c) => {
+    c.fillStyle = '#efe6d3'; c.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 3000; i++) { c.globalAlpha = 0.06; c.fillStyle = Math.random() < 0.5 ? '#c9bca3' : '#fffaf0'; c.fillRect(Math.random() * 512, Math.random() * 512, 3, 3); }
+    c.globalAlpha = 1; c.strokeStyle = 'rgba(150,135,110,.55)'; c.lineWidth = 2.2;
+    for (let k = -512; k < 1024; k += 48) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k + 512, 512); c.stroke(); c.beginPath(); c.moveTo(k, 512); c.lineTo(k + 512, 0); c.stroke(); }
+  }, 1);
+  const tex = marbleTex.clone(); tex.needsUpdate = true; tex.repeat.set(0.55, 0.55);
+  const mat = std(0xffffff, { map: tex, roughness: 0.55 });
   const az = new THREE.Shape();
-  az.moveTo(-2.2, 0); az.quadraticCurveTo(-1.2, 2.2, -0.7, 4.2); az.lineTo(0.7, 4.2); az.quadraticCurveTo(1.2, 2.2, 2.2, 0); az.lineTo(1.0, 0);
-  az.quadraticCurveTo(0.8, 2.0, 0, 2.6); az.quadraticCurveTo(-0.8, 2.0, -1.0, 0); az.closePath();
-  const mat = std(0xf3ead6, { roughness: 0.6 });
+  // Front silhouette: concave flanks flaring to a wide base, a tall pointed arch through the middle.
+  az.moveTo(-2.5, 0); az.bezierCurveTo(-1.65, 0.55, -1.05, 2.3, -0.92, 3.9); az.lineTo(0.92, 3.9); az.bezierCurveTo(1.05, 2.3, 1.65, 0.55, 2.5, 0);
+  az.lineTo(1.05, 0); az.bezierCurveTo(1.0, 1.4, 0.55, 2.35, 0, 2.75); az.bezierCurveTo(-0.55, 2.35, -1.0, 1.4, -1.05, 0); az.closePath();
+  const D0 = 3.2, geo = new THREE.ExtrudeGeometry(az, { depth: D0, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, curveSegments: 24, steps: 1 });
+  geo.translate(0, 0, -D0 / 2);
+  // The depth narrows toward the crown, so the side view tapers too.
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const k = 1 - 0.58 * Math.pow(Math.min(1, Math.max(0, p.getY(i) / 3.9)), 0.85); p.setZ(i, p.getZ(i) * k); }
+  geo.computeVertexNormals();
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(new THREE.ExtrudeGeometry(az, { depth: 1.6, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08 }), mat));
-  const top = new THREE.Mesh(new RoundedBoxGeometry(1.7, 0.5, 1.9, 2, 0.08), mat); top.position.set(0, 4.4, 0.8); g.add(top);
+  const body = new THREE.Mesh(geo, mat); body.castShadow = body.receiveShadow = true; g.add(body);
+  // Crown: a block with a band of small arched openings and a turquoise-tiled dome.
+  const crown = new THREE.Mesh(new RoundedBoxGeometry(2.0, 0.62, 1.5, 2, 0.06), mat); crown.position.y = 4.2; g.add(crown);
+  const band = std(0x8f8471, { roughness: 0.7 });
+  for (let k = -3; k <= 3; k++) { const o = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.2, 0.02), band); o.position.set(k * 0.24, 4.2, 0.76); g.add(o); const o2 = o.clone(); o2.position.z = -0.76; g.add(o2); }
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0x2e8b8f, { roughness: 0.35, metalness: 0.2 })); dome.position.y = 4.5; g.add(dome);
+  // Plinth.
+  const plinth = new THREE.Mesh(new RoundedBoxGeometry(6.0, 0.16, 4.2, 2, 0.05), std(0xd8d0bf, { roughness: 0.8 })); plinth.position.y = 0.06; g.add(plinth);
+  g.traverse((m) => { m.castShadow = true; });
   return g;
 }
 
@@ -737,7 +767,7 @@ function cityTextures() {
   const mk = (c: HTMLCanvasElement) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
   return (cityTex = { wall: mk(wall), lit: mk(lit) });
 }
-function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][]): THREE.InstancedMesh {
+function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][], sight?: THREE.Vector3): THREE.InstancedMesh {
   const { wall, lit } = cityTextures(), night = !!opts.night;
   const mat = new THREE.MeshStandardMaterial({ map: wall, roughness: 0.85, emissive: night ? 0xffffff : 0x000000, emissiveMap: lit, emissiveIntensity: night ? 1.6 : 0 });
   // One floor is 0.62 tall and one window bay about 0.7 wide, wherever the face is.
@@ -755,7 +785,9 @@ function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number
     const px = x + (rnd() - 0.5) * 1.4, pz = z + (rnd() - 0.5) * 1.4;
     if (avoid.some(([ax, az, r]) => Math.hypot(px - ax, pz - az) < r)) continue;
     if (rnd() < 0.08) continue; // a park or an empty lot here and there
-    const tall = rnd() < 0.06, floors = tall ? 14 + Math.floor(rnd() * 12) : 4 + Math.floor(rnd() * 5);
+    // Keep the sightline to the chapter's landmark clear of high-rises.
+    const inFront = !!sight && Math.abs(px - sight.x) < 9 && pz > sight.z;
+    const tall = !inFront && rnd() < 0.06, floors = tall ? 14 + Math.floor(rnd() * 12) : inFront ? 3 + Math.floor(rnd() * 3) : 4 + Math.floor(rnd() * 5);
     const w = 2.4 + rnd() * 1.4, d = 2.4 + rnd() * 1.4, h = floors * 0.62;
     const m = new THREE.Matrix4().compose(new THREE.Vector3(px, h / 2, pz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (rnd() - 0.5) * 0.12), new THREE.Vector3(w, h, d));
     items.push(m); cols.push(new THREE.Color(tones[Math.floor(rnd() * tones.length)]).multiplyScalar(0.9 + rnd() * 0.15));
@@ -1076,7 +1108,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     if (lm === 'tochal') avoid.push([6, L.walkZ - 34, 22]);
     if (tabiat) avoid.push([0, L.walkZ - 8, 9]);
     const urban = plane(170, 80, surfaceMat(asphalt(0.85, 13), [34, 16]), 0, -0.015, L.walkZ - 52); urban.receiveShadow = false;
-    baked.add(urban, cityscape(L, rnd, opts, avoid));
+    baked.add(urban, cityscape(L, rnd, opts, avoid, lm === 'azadi' ? azadi.position : lm === 'tochal' ? undefined : milad.position));
   }
   baked.add(alborz);
   // The point the level-start camera frames first: the chapter's landmark.
