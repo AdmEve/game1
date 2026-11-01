@@ -164,3 +164,4 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Weather: fine motion-blurred rain (2–2.6k streaks), ripples, puddle reflections, drifting fog banks, three-size snow, patchy snow on roofs and slushy roads, tumbling 3D leaves, multi-stroke lightning. Night: moonlight, warm city glow, floodlights over the lot.
 - UI: premium theme (`theme.css`): dark glass, hairlines, amber accent, line icons (`ui/icons.ts`), cinematic wordmark.
 - City: instanced Tehran blocks out to the Alborz (world-space window facades, lit windows at night, sightline kept clear of high-rises in front of the landmark), urban ground, physical sky as the backdrop. Azadi and Milad towers rebuilt to their real shapes. Flower beds as blossom cards, reflective fountain water.
+- Settings: «کیفیت گرافیک» (auto / high / balanced / simple). Auto keeps the frame-rate probe that steps down; fixed tiers set pixel ratio, post on/off and shadow resolution.

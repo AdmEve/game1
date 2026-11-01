@@ -191,3 +191,9 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .intro .new { background: var(--accent); color: var(--accent-ink); transform: none; border-radius: 6px; }
 .result.yalda .hafez { background: rgba(242, 177, 36, .08); border-color: rgba(242, 177, 36, .4); box-shadow: none; }
 .result.yalda .hafez p { color: var(--text); }
+
+/* Segmented control (graphics quality) */
+.settings .row.quality { flex-wrap: wrap; gap: 8px; }
+.seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+.seg button { padding: 5px 10px; border-radius: 8px; background: none; color: var(--muted); font: 600 13px Vazirmatn, sans-serif; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }

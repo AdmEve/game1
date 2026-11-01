@@ -66,6 +66,21 @@ app.append(renderer.domElement);
 // Film look: HDR scene, bloom, filmic tone mapping, color grade, lens vignette, grain (see render/post.ts).
 const post = new Post(renderer, { samples: mobile ? 2 : 4 });
 
+// ───── Graphics quality: 2 = full (film post, soft shadows), 1 = balanced (fewer pixels), 0 = simple (no post, hard shadows) ─────
+let tier = 2;
+function setTier(t: number) {
+  tier = Math.max(0, Math.min(2, t));
+  const dpr = window.devicePixelRatio;
+  if (debug.has('shot')) return;
+  renderer.setPixelRatio(Math.min(dpr, tier === 2 ? (mobile ? 1.25 : 2) : tier === 1 ? (mobile ? 1.05 : 1.5) : 1));
+  post.enabled = tier > 0;
+  const size = tier === 0 ? 512 : mobile || tier === 1 ? 1024 : 2048;
+  if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+  renderer.shadowMap.needsUpdate = true;
+  fitCamera();
+}
+function applyQuality(q: typeof save.settings.quality) { setTier(q === 'balanced' ? 1 : q === 'low' ? 0 : 2); }
+
 const scene = new THREE.Scene();
 scene.background = sky();
 scene.fog = new THREE.Fog(0xdfe9f2, 40, 95);
@@ -583,7 +598,7 @@ function showSettings() {
   modalOpen = true;
   const c = h('div', 'settings');
   c.innerHTML = `<h2>${emo('⚙️')} تنظیمات</h2>`;
-  const row = (label: string, key: keyof typeof save.settings) => {
+  const row = (label: string, key: 'sound' | 'music' | 'haptics' | 'colorblind') => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
     t.onchange = () => {
@@ -594,6 +609,15 @@ function showSettings() {
     r.append(t); c.append(r);
   };
   row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics'); row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
+  // Graphics quality: automatic (steps down if the phone struggles), or fixed.
+  const qr = h('div', 'row quality', '<span>کیفیت گرافیک</span>');
+  const seg = h('div', 'seg');
+  for (const [k, label] of [['auto', 'خودکار'], ['high', 'بالا'], ['balanced', 'متوسط'], ['low', 'ساده']] as const) {
+    const b = h('button', save.settings.quality === k ? 'on' : '', label);
+    b.onclick = () => { save.settings.quality = k; persist(); applyQuality(k); seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); };
+    seg.append(b);
+  }
+  qr.append(seg); c.append(qr);
   let needsRestart = false;
   const close = modal(c, 'pop');
   c.append(button(`${emo('🗺️', 'emo sm')} انتخاب مرحله`, 'ghost', () => { close(); showLevels(); }));
@@ -753,17 +777,13 @@ async function boot() {
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
   let last = performance.now(), shadowTick = 0;
-  // Adaptive quality: watch the frame rate over the first seconds of play and step down if the phone struggles.
-  let probeFrames = 0, probeTime = 0, tier = 2;
-  const stepDown = () => {
-    tier--;
-    if (tier === 1) { renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1)); }
-    if (tier === 0) { sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; renderer.shadowMap.type = THREE.BasicShadowMap; renderer.setPixelRatio(1); post.enabled = false; }
-    fitCamera();
-  };
+  applyQuality(save.settings.quality);
+  // Adaptive quality ('auto'): watch the frame rate during play and step down if the phone struggles.
+  let probeFrames = 0, probeTime = 0;
+  const stepDown = () => setTier(tier - 1);
   const loop = (t: number) => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
-    if (tier > 0 && !modalOpen && document.visibilityState === 'visible') {
+    if (save.settings.quality === 'auto' && tier > 0 && !modalOpen && document.visibilityState === 'visible') {
       probeFrames++; probeTime += dt;
       if (probeTime > 2.5) {
         if (probeFrames / probeTime < 50) stepDown();

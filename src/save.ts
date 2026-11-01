@@ -3,7 +3,7 @@ export interface Save {
   level: number;
   coins: number;
   boosters: { crane: number; whistle: number; bay: number };
-  settings: { sound: boolean; music: boolean; haptics: boolean; colorblind: boolean };
+  settings: { sound: boolean; music: boolean; haptics: boolean; colorblind: boolean; quality: 'auto' | 'high' | 'balanced' | 'low' };
   stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
   /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
   ach: Record<string, number>;
@@ -40,7 +40,7 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true, colorblind: false },
+  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto' },
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
   ach: {},
   achSeen: {},
