@@ -1,6 +1,8 @@
 /** 3D pieces for the special mechanics: car covers, broken-car props, plate badges, VIP markers. */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { curve, loft } from './cars.js';
+import { fbm } from './surfaces';
 
 const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
 
@@ -11,40 +13,56 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
   return t;
 }
 
-// ───── «چادر ماشین»: a fitted grey car cover with folds and a strap ─────
-let fabric: THREE.MeshStandardMaterial | null = null;
+// ───── «چادر ماشین»: a silver car cover draped over the car's shape ─────
+let fabric: THREE.MeshPhysicalMaterial | null = null;
 function fabricMat() {
   if (fabric) return fabric;
-  const tex = canvasTex(256, 256, (g) => {
-    g.fillStyle = '#8f969e'; g.fillRect(0, 0, 256, 256);
-    // Soft folds: long light and dark streaks.
-    for (let i = 0; i < 40; i++) {
-      const x = Math.random() * 256, w = 6 + Math.random() * 18;
-      const gr = g.createLinearGradient(x, 0, x + w, 0);
-      const dark = Math.random() < 0.5;
-      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, dark ? 'rgba(40,45,52,.22)' : 'rgba(255,255,255,.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(x, 0, w, 256);
-    }
-    for (let i = 0; i < 3000; i++) { g.globalAlpha = 0.08; g.fillStyle = Math.random() < 0.5 ? '#000' : '#fff'; g.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5); }
-  });
-  fabric = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, color: 0xd5d9de });
+  // Wrinkles: long soft folds running down the sides, from a stretched noise height field.
+  const S = 256, n = fbm(S, 5, 3, 91), f = fbm(S, 22, 2, 93);
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d')!, img = g.createImageData(S, S);
+  const h = (x: number, y: number) => { const xx = (x + S) % S, yy = (y + S) % S; return n[yy * S + xx] * 0.7 + f[yy * S + ((xx * 3) % S)] * 0.3; };
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = (h(x + 1, y) - h(x - 1, y)) * 9, dy = (h(x, y + 1) - h(x, y - 1)) * 2.5, l = Math.hypot(dx, dy, 1), i = (y * S + x) * 4;
+    img.data[i] = (-dx / l * 0.5 + 0.5) * 255; img.data[i + 1] = (dy / l * 0.5 + 0.5) * 255; img.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const nm = new THREE.CanvasTexture(c); nm.wrapS = nm.wrapT = THREE.RepeatWrapping; nm.colorSpace = THREE.NoColorSpace;
+  fabric = new THREE.MeshPhysicalMaterial({ color: 0xaab1b9, roughness: 0.48, metalness: 0.25, sheen: 0.7, sheenColor: new THREE.Color(0xe8eef5), sheenRoughness: 0.45, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9) });
+  fabric.userData.keep = true;
   return fabric;
 }
+const hemMat = new THREE.MeshStandardMaterial({ color: 0x23272d, roughness: 0.8 });
+hemMat.userData.keep = true;
 
-/** A cover sized for a vehicle of length L (along −z when the vehicle faces up). */
+/** UVs projected from the side and the top, so the folds run down the flanks and lie flat on the roof. */
+function projectUv(geo: THREE.BufferGeometry) {
+  const p = geo.getAttribute('position'), n = geo.getAttribute('normal'), uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const up = Math.abs(n.getY(i)) > 0.7;
+    uv[i * 2] = p.getX(i) * 0.9; uv[i * 2 + 1] = up ? p.getZ(i) * 0.9 : p.getY(i) * 0.9 + p.getZ(i) * 0.2;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+}
+
+/** A cover sized for a vehicle of length L (along −z when the vehicle faces up); `top` = its roof height. */
 export function carCover(L: number, top = 0.95): THREE.Group {
   const g = new THREE.Group();
-  // Tall enough to hide the model underneath (`top` = its roof height).
-  const bh = Math.max(0.8, top + 0.02);
-  const body = new THREE.Mesh(new RoundedBoxGeometry(1.12, bh, L + 0.1, 4, 0.3), fabricMat());
-  body.position.y = bh / 2 + 0.02; body.castShadow = true;
-  // The cover drapes over the cabin: a second softer hump.
-  const hump = new THREE.Mesh(new RoundedBoxGeometry(0.98, 0.42, L * 0.7, 4, 0.2), fabricMat());
-  hump.position.set(0, bh - 0.06, L * 0.02); hump.castShadow = true;
-  const strap = new THREE.Mesh(new THREE.BoxGeometry(1.1, bh + 0.04, 0.07), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 }));
-  strap.position.set(0, bh / 2 + 0.02, -L * 0.2);
-  g.userData.top = bh - 0.06 + 0.21;
-  g.add(body, hump, strap);
+  const box = top > 1.0, H = Math.max(0.8, top + 0.04), hl = L / 2 + (box ? 0.12 : 0.04), half = box ? 0.6 : 0.56;
+  // A sedan's silhouette (trunk, rear window, roof, windscreen, hood) or a van/bus box.
+  const prof = box
+    ? [[-1, 0.9], [-0.97, 0.99], [-0.85, 1], [0.6, 1], [0.86, 0.9], [0.97, 0.7], [1, 0.55]]
+    : [[-1, 0.52], [-0.95, 0.68], [-0.72, 0.72], [-0.42, 0.97], [-0.18, 1], [0.16, 1], [0.42, 0.74], [0.86, 0.64], [0.97, 0.56], [1, 0.42]];
+  const top0 = curve(prof.map(([u, y]) => [u * hl, y * H]) as [number, number][]);
+  const geo = loft({ x0: -hl, x1: hl, nx: 56, nr: 40, planExp: 6, bot: 0.1, top: top0, half, rt: 0.22, rb: 0.04, tumble: box ? 0.06 : 0.22 });
+  geo.computeVertexNormals();
+  projectUv(geo);
+  const body = new THREE.Mesh(geo, fabricMat()); body.castShadow = true; body.receiveShadow = true;
+  // The elastic hem that holds it under the bumpers.
+  const hem = new THREE.Mesh(loft({ x0: -hl - 0.012, x1: hl + 0.012, nx: 40, nr: 24, planExp: 6, bot: 0.09, top: 0.15, half: half + 0.012, rt: 0.02, rb: 0.02 }), hemMat);
+  const shape = new THREE.Group(); shape.add(body, hem); shape.rotation.y = Math.PI / 2;
+  g.userData.top = H + 0.01;
+  g.add(shape);
   return g;
 }
 
