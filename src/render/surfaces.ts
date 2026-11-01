@@ -85,9 +85,9 @@ export function surfaceMat(s: Surface, repeat: [number, number], o: THREE.MeshSt
 export function asphalt(tone = 1, seed = 3, snow = false): Surface {
   return once('asphalt' + tone + seed + snow, () => {
     const S = 512;
-    const big = fbm(S, 4, 3, seed), grain = fbm(S, 96, 1, seed + 7), mid = fbm(S, 24, 2, seed + 3);
+    const big = fbm(S, 4, 3, seed), grain = fbm(S, 170, 1, seed + 7), mid = fbm(S, 24, 2, seed + 3);
     const height = new Float32Array(S * S);
-    for (let i = 0; i < height.length; i++) height[i] = grain[i] * 0.7 + mid[i] * 0.3;
+    for (let i = 0; i < height.length; i++) height[i] = grain[i] * 0.88 + mid[i] * 0.12;
     const { c, g } = rgb(S, (i) => {
       const stone = grain[i] > 0.72 ? (grain[i] - 0.72) * 2.2 : 0;
       const v = (0.21 + big[i] * 0.07 + mid[i] * 0.035 + stone * 0.16) * tone;
@@ -117,7 +117,7 @@ export function asphalt(tone = 1, seed = 3, snow = false): Surface {
       }
       g.putImageData(img, 0, 0);
     }
-    return { map: tex(c, true), normalMap: normalFrom(height, S, 6), roughnessMap: grey(rough, S) };
+    return { map: tex(c, true), normalMap: normalFrom(height, S, 3), roughnessMap: grey(rough, S) };
   });
 }
 
