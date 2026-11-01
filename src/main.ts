@@ -1,5 +1,6 @@
 import './fonts.css';
 import './style.css';
+import './theme.css';
 import * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -18,6 +19,7 @@ import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
+import { icon } from './ui/icons';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, lives, loseLife } from './lives';
@@ -623,9 +625,9 @@ function showHome() {
   const c = h('div', 'home');
   const ch = chapterOf(Math.min(save.level, levels.length - 1));
   const done = Math.min(save.level, ch.to) - ch.from, total = ch.to - ch.from;
-  const map = CHAPTERS.map((k) => `<span class="${save.level >= k.to ? 'done' : k === ch ? 'now' : 'locked'}">${save.level >= k.from ? fa(k.n) : emo('🔒', 'emo xs')}</span>`).join('<i></i>');
-  c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><small>ترافیک تهران، تو دستای تو</small></div>
-    <div class="chapter"><div class="ch-map">${map}</div><div class="ch-t">${emo('📍')} فصل ${fa(ch.n)}: ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)}</div></div>`;
+  const map = CHAPTERS.map((k) => `<span class="${save.level >= k.to ? 'done' : k === ch ? 'now' : 'locked'}">${save.level >= k.from ? fa(k.n) : icon('lock')}</span>`).join('<i></i>');
+  c.innerHTML = `<div class="logo"><span class="sign">راه‌بندون</span><span class="en">TEHRAN · GRIDLOCK</span><small>ترافیک تهران، تو دستای تو</small></div>
+    <div class="chapter"><div class="ch-map">${map}</div><div class="ch-k">فصل ${fa(ch.n)}</div><div class="ch-t">${icon('pin')} ${ch.name}</div><div class="ch-bar"><i style="width:${Math.round((done / total) * 100)}%"></i></div><div class="ch-n">${fa(done)} از ${fa(total)} مرحله</div></div>`;
   c.prepend(radioCard());
   const yb = yaldaBanner((night) => {
     const lvl = yaldaLevel(night);
@@ -643,19 +645,19 @@ function showHome() {
   if (nb) c.querySelector('.chapter')!.before(nb);
   const close = modal(c, 'home-card');
 
-  const gar = button(`${emo('🔧', 'emo sm')} گاراژ من<small>${emo('🔑', 'emo xs')} ${fa(save.garage.keys)} سوئیچ</small>`, 'garage-btn', () => {
+  const gar = button(`${icon('wrench')}<span>گاراژ من<small>${icon('key')} ${fa(save.garage.keys)} سوئیچ</small></span>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
   });
   const next = nextRenovation();
   const ready = !!next && save.agency.stars >= next.cost;
-  c.append(button(`<span>${emo('🏠', 'emo sm')} آژانس آقاجون<small>${next ? `بعدی: ${next.name}` : 'آژانس کامل بازسازی شد!'}</small></span><span class="sb ${ready ? 'ready' : ''}">${emo('⭐', 'emo xs')} ${fa(save.agency.stars)}</span>`, 'agency-btn', () => {
+  c.append(button(`<span class="al">${icon('home')}<span>آژانس آقاجون<small>${next ? `بعدی: ${next.name}` : 'آژانس کامل بازسازی شد!'}</small></span></span><span class="sb ${ready ? 'ready' : ''}">${icon('star')} ${fa(save.agency.stars)}</span>`, 'agency-btn', () => {
     close(); showAgency(() => showHome());
   }));
   const rowEl = h('div', 'home-row');
   rowEl.append(gar);
   c.append(rowEl);
   const rushDone = save.rush.day === today();
-  const rushBtn = button(rushDone ? `${emo('✅', 'emo sm')} ساعت شلوغی<small>امروز رد شد!</small>` : `${emo('⏰', 'emo sm')} ساعت شلوغی<small>چالش امروز ${emo('🔑', 'emo xs')}</small>`, rushDone ? 'rush-btn done' : 'rush-btn', () => {
+  const rushBtn = button(rushDone ? `${icon('clock')}<span>ساعت شلوغی<small>امروز رد شد!</small></span>` : `${icon('clock')}<span>ساعت شلوغی<small>چالش امروز ${icon('key')}</small></span>`, rushDone ? 'rush-btn done' : 'rush-btn', () => {
     if (rushDone) return;
     const lvl = dailyLevel();
     if (!lvl) { hud.toast('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
@@ -664,15 +666,15 @@ function showHome() {
   });
   rowEl.append(rushBtn);
   const tickets = passReady();
-  rowEl.append(button(`${emo('🎫')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
+  rowEl.append(button(`${icon('ticket')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
     close(); showPass(() => hud.refresh(), () => showHome());
   }));
   const waiting = claimable();
-  rowEl.append(button(`${emo('🏆')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
+  rowEl.append(button(`${icon('trophy')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
     close(); showAchievements(() => showHome(), () => hud.refresh());
   }));
   c.querySelector('.chapter')!.append(livesPill());
-  c.append(button(`بزن بریم! <small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+  c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
     await maybeDaily(() => hud.refresh());

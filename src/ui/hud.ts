@@ -1,7 +1,7 @@
 /** The DOM layer over the 3D view: top bar, booster bar, toasts and the modal screens. */
 import { click } from '../audio';
 import { save } from '../save';
-import { emo } from './emoji';
+import { icon } from './icons';
 
 export const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
 export const faNum = (n: number) => fa(n.toLocaleString('en-US'));
@@ -15,9 +15,9 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html 
 
 export type BoosterId = 'crane' | 'whistle' | 'bay';
 export const BOOSTERS: { id: BoosterId; name: string; icon: string; price: number; hint: string }[] = [
-  { id: 'bay', name: 'جای پارک', icon: '🅿️', price: 300, hint: 'یه جای پارک اضافه باز می‌شه' },
-  { id: 'whistle', name: 'سوت پلیس', icon: '👮', price: 250, hint: 'مسافرها به ترتیب ماشین‌های منتظر صف می‌کشن' },
-  { id: 'crane', name: 'جرثقیل', icon: '🏗️', price: 400, hint: 'یه ماشین رو انتخاب کن تا جرثقیل برش داره' },
+  { id: 'bay', name: 'جای پارک', icon: 'parking', price: 300, hint: 'یه جای پارک اضافه باز می‌شه' },
+  { id: 'whistle', name: 'سوت پلیس', icon: 'whistle', price: 250, hint: 'مسافرها به ترتیب ماشین‌های منتظر صف می‌کشن' },
+  { id: 'crane', name: 'جرثقیل', icon: 'crane', price: 400, hint: 'یه ماشین رو انتخاب کن تا جرثقیل برش داره' },
 ];
 
 export class Hud {
@@ -37,7 +37,7 @@ export class Hud {
 
   constructor(parent: HTMLElement) {
     const top = h('div', 'topbar');
-    const gear = h('button', 'iconbtn gear', emo('⚙️'));
+    const gear = h('button', 'iconbtn gear', icon('settings'));
     gear.onclick = () => { click(); this.onSettings(); };
     this.coins.onclick = () => { click(); this.onCoins(); };
     top.append(gear, this.plate, this.coins);
@@ -62,13 +62,13 @@ export class Hud {
     if (p === null) return;
     const dots = Array.from({ length: Math.max(0, left) }, () => '<i></i>').join('');
     this.camSign.className = 'camsign ' + (p ? 'odd' : 'even');
-    this.camSign.innerHTML = `${emo('📸', 'emo sm')}<span>طرح <b>${p ? 'فرد' : 'زوج'}</b></span><span class="dots">${dots}</span>`;
+    this.camSign.innerHTML = `${icon('camera')}<span>طرح <b>${p ? 'فرد' : 'زوج'}</b></span><span class="dots">${dots}</span>`;
   }
   /** «پلیس راهور» sign: which direction may go. */
   setOfficer(axis: 'v' | 'h' | null) {
     this.copSign.classList.toggle('hidden', axis === null);
     if (!axis) return;
-    this.copSign.innerHTML = `${emo('👮', 'emo sm')}<span>نوبت <b>${axis === 'v' ? 'عمودی‌ها ↕' : 'افقی‌ها ↔'}</b></span>`;
+    this.copSign.innerHTML = `${icon('shield')}<span>نوبت <b>${axis === 'v' ? 'عمودی‌ها ↕' : 'افقی‌ها ↔'}</b></span>`;
     this.copSign.classList.remove('pulse'); void this.copSign.offsetWidth; this.copSign.classList.add('pulse');
   }
   setEvent(title: string, icon: string) {
@@ -77,27 +77,27 @@ export class Hud {
   }
   setRush() {
     this.plate.className = 'plate plate-rush';
-    this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>چالش روزانه</small>${emo('⏰', 'emo')}</span>`;
+    this.plate.innerHTML = `<span class="ir"><i></i><b>IR</b></span><span class="lv"><small>چالش روزانه</small>${icon('clock')}</span>`;
   }
   /** Hard-mode counters: seconds left and/or taps left (null hides that part). */
   setLimits(time: number | null, moves: number | null) {
     this.limit.classList.toggle('hidden', time === null && moves === null);
     const low = (time !== null && time <= 10) || (moves !== null && moves <= 3);
     this.limit.classList.toggle('low', low);
-    const t = time === null ? '' : `<span class="lim">${emo('⏱️', 'emo xs')}<b>${fa(time)}</b></span>`;
-    const m = moves === null ? '' : `<span class="lim">${emo('👆', 'emo xs')}<b>${fa(moves)}</b><small>حرکت</small></span>`;
+    const t = time === null ? '' : `<span class="lim">${icon('timer')}<b>${fa(time)}</b></span>`;
+    const m = moves === null ? '' : `<span class="lim">${icon('tap')}<b>${fa(moves)}</b><small>حرکت</small></span>`;
     this.limit.innerHTML = t + m;
   }
   setQueue(n: number, total = n) {
     const pct = total ? Math.round(((total - n) / total) * 100) : 0;
-    this.people.innerHTML = `${emo('🧍')}<b>${fa(n)}</b><span>مسافر</span><span class="pbar"><i style="width:${pct}%"></i></span>`;
+    this.people.innerHTML = `${icon('person')}<b>${fa(n)}</b><span>مسافر</span><span class="pbar"><i style="width:${pct}%"></i></span>`;
   }
   refresh() {
-    this.coins.innerHTML = `${emo('🪙')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
+    this.coins.innerHTML = `${icon('coin', 'ico coin')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
     for (const b of BOOSTERS) {
       const n = save.boosters[b.id];
-      this.btns.get(b.id)!.innerHTML = `<span class="ic">${emo(b.icon)}</span><span class="nm">${b.name}</span>` +
-        (n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${emo('🪙', 'emo xs')}${fa(b.price)}</span>`);
+      this.btns.get(b.id)!.innerHTML = `<span class="ic">${icon(b.icon)}</span><span class="nm">${b.name}</span>` +
+        (n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${icon('coin', 'ico coin')}${fa(b.price)}</span>`);
     }
   }
   active(id: BoosterId | null) { for (const [k, b] of this.btns) b.classList.toggle('on', k === id); }
