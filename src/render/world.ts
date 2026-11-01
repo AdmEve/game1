@@ -211,7 +211,11 @@ function ridge(width: number, depth: number, height: number, seed: number, snowL
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: null }));
+  // Far beyond the scene fog: it carries its own haze (a blue-grey veil over rock, less over the snow).
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, fog: false }));
+  m.material.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.62, 0.68, 0.76), 0.42);');
+  };
   m.receiveShadow = false;
   return m;
 }
@@ -705,6 +709,63 @@ function azadiTower(): THREE.Group {
 /** `landmark`: the chapter's landmark, where the level-start camera looks first. */
 export interface World { group: THREE.Group; L: Layout; landmark: THREE.Vector3; /** A hand-placed opening shot where the generic one is blocked or fogged. */ view?: { from: THREE.Vector3; look: THREE.Vector3 }; }
 
+/**
+ * Tehran to the horizon: hundreds of mid-rise blocks (and a few towers) in one instanced mesh. The facade is
+ * mapped in world space, so every block, whatever its size, gets correctly sized floors and windows; roofs are
+ * grey «ایزوگام». At night some windows glow.
+ */
+let cityTex: { wall: THREE.Texture; lit: THREE.Texture } | null = null;
+function cityTextures() {
+  if (cityTex) return cityTex;
+  const W = 256, H = 256, bays = 4, floors = 4, bw = W / bays, fh = H / floors;
+  const wall = document.createElement('canvas'); wall.width = W; wall.height = H;
+  const lit = document.createElement('canvas'); lit.width = W; lit.height = H;
+  const g = wall.getContext('2d')!, l = lit.getContext('2d')!;
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  l.fillStyle = '#000'; l.fillRect(0, 0, W, H);
+  let k = 3; const rr = () => ((k = (k * 16807) % 2147483647) / 2147483647);
+  for (let f = 0; f < floors; f++) for (let b = 0; b < bays; b++) {
+    const x = b * bw + bw * 0.18, y = f * fh + fh * 0.22, w = bw * 0.64, h = fh * 0.5;
+    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x - 3, y - 3, w + 6, h + 8); // frame and sill shadow
+    const glass = g.createLinearGradient(0, y, 0, y + h); glass.addColorStop(0, '#4d5a68'); glass.addColorStop(1, '#2a323b');
+    g.fillStyle = glass; g.fillRect(x, y, w, h);
+    if (rr() < 0.5) { g.fillStyle = 'rgba(236,228,212,.85)'; g.fillRect(x, y, w * (0.3 + rr() * 0.4), h); } // curtains
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(x - 4, y + h + 2, w + 8, 3);
+    if (rr() < 0.3) { l.fillStyle = rr() < 0.5 ? '#ffcf86' : '#fff1d0'; l.fillRect(x, y, w, h); }
+  }
+  for (let f = 0; f < floors; f++) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, f * fh, W, 3); }
+  const mk = (c: HTMLCanvasElement) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  return (cityTex = { wall: mk(wall), lit: mk(lit) });
+}
+function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][]): THREE.InstancedMesh {
+  const { wall, lit } = cityTextures(), night = !!opts.night;
+  const mat = new THREE.MeshStandardMaterial({ map: wall, roughness: 0.85, emissive: night ? 0xffffff : 0x000000, emissiveMap: lit, emissiveIntensity: night ? 1.6 : 0 });
+  // One floor is 0.62 tall and one window bay about 0.7 wide, wherever the face is.
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCity; varying vec3 vCityN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 cwp = modelMatrix * instanceMatrix * vec4(transformed, 1.0); vCity = cwp.xyz; vCityN = normalize(mat3(instanceMatrix) * objectNormal);');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCity; varying vec3 vCityN;')
+      .replace('#include <map_fragment>', 'vec2 cuv = (abs(vCityN.x) > 0.5 ? vCity.zy : vCity.xy) * vec2(1.0 / 2.8, 1.0 / 2.48);\nbool roof = vCityN.y > 0.5;\nvec4 tc = texture2D(map, cuv);\ndiffuseColor.rgb *= roof ? vec3(0.62, 0.63, 0.66) : tc.rgb;')
+      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= roof ? vec3(0.0) : texture2D(emissiveMap, cuv).rgb;');
+  };
+  const tones = [0xe7dcc8, 0xd9cbb3, 0xefe4cf, 0xcfc4b4, 0xb98468, 0xa86c50, 0xdedad2, 0xc9c1b4];
+  const items: THREE.Matrix4[] = [], cols: THREE.Color[] = [];
+  const zNear = L.walkZ - 13, zFar = L.walkZ - 82;
+  for (let z = zNear; z > zFar; z -= 4.2) for (let x = -72; x < 72; x += 4.2) {
+    const px = x + (rnd() - 0.5) * 1.4, pz = z + (rnd() - 0.5) * 1.4;
+    if (avoid.some(([ax, az, r]) => Math.hypot(px - ax, pz - az) < r)) continue;
+    if (rnd() < 0.08) continue; // a park or an empty lot here and there
+    const tall = rnd() < 0.06, floors = tall ? 14 + Math.floor(rnd() * 12) : 4 + Math.floor(rnd() * 5);
+    const w = 2.4 + rnd() * 1.4, d = 2.4 + rnd() * 1.4, h = floors * 0.62;
+    const m = new THREE.Matrix4().compose(new THREE.Vector3(px, h / 2, pz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (rnd() - 0.5) * 0.12), new THREE.Vector3(w, h, d));
+    items.push(m); cols.push(new THREE.Color(tones[Math.floor(rnd() * tones.length)]).multiplyScalar(0.9 + rnd() * 0.15));
+  }
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, items.length);
+  items.forEach((m, i) => { im.setMatrixAt(i, m); im.setColorAt(i, cols[i]); });
+  im.castShadow = false; im.receiveShadow = true;
+  return im;
+}
+
 export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
   const night = !!opts.night, snow = !!opts.snow;
   let s = seed;
@@ -955,8 +1016,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     azadi.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0x7fa6ff); mat.emissiveIntensity = 0.35; mm.material = mat; } });
     milad.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0xc9a3ff); mat.emissiveIntensity = 0.45; mm.material = mat; } });
   }
-  // The Alborz behind the city.
-  const alborz = ridge(190, 40, 30, (seed % 97) + 3, snow ? 0.25 : 0.55); alborz.position.set(4, -1, L.walkZ - 62); g.add(alborz);
+  // The Alborz behind the city (added after baking: it keeps its own vertex colors and aerial haze).
+  const alborz = ridge(320, 60, 62, (seed % 97) + 3, snow ? 0.22 : 0.5); alborz.position.set(4, -1, L.walkZ - 120);
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
     if (Math.abs(x - shelter.position.x) < 1.6) continue;
@@ -1009,6 +1070,15 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // Everything here is static: merge it into one mesh per material to keep draw calls low.
   const baked = bake(g);
   baked.traverse((m) => { (m as THREE.Mesh).receiveShadow = true; });
+  // Urban ground and the city out to the mountains (instanced: kept out of the bake).
+  if (!darband) {
+    const avoid: [number, number, number][] = [[milad.position.x, milad.position.z, 5], [azadi.position.x, azadi.position.z, lm === 'azadi' ? 11 : 5]];
+    if (lm === 'tochal') avoid.push([6, L.walkZ - 34, 22]);
+    if (tabiat) avoid.push([0, L.walkZ - 8, 9]);
+    const urban = plane(170, 80, surfaceMat(asphalt(0.85, 13), [34, 16]), 0, -0.015, L.walkZ - 52); urban.receiveShadow = false;
+    baked.add(urban, cityscape(L, rnd, opts, avoid));
+  }
+  baked.add(alborz);
   // The point the level-start camera frames first: the chapter's landmark.
   const top = (o: THREE.Object3D, h: number) => o.position.clone().add(new THREE.Vector3(0, h * o.scale.y, 0));
   const landmark = {

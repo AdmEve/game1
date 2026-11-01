@@ -24,8 +24,8 @@ export function outdoorEnv(renderer, { sky = 0x6aa8e8, horizon = 0xf4f1ea, groun
 // Physically based sky (Preetham) with a city around the horizon and a dark ground, baked into a PMREM
 // cube: cars and glass reflect a real sky gradient, a hot sun and a skyline, like photos of real streets.
 const skyCache = new Map();
-export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4, rayleigh = 1.4, mie = 0.004, ground = 0x2a2a28, city = 0x3a3d42, night = false } = {}) {
-  const key = [elevation, azimuth, turbidity, rayleigh, mie, ground, city, night].join();
+export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4, rayleigh = 1.4, mie = 0.004, ground = 0x2a2a28, city = 0x3a3d42, night = false, bare = false } = {}) {
+  const key = [elevation, azimuth, turbidity, rayleigh, mie, ground, city, night, bare].join();
   if (skyCache.has(key)) return skyCache.get(key);
   const s = new THREE.Scene();
   const sky = new Sky(); sky.scale.setScalar(10);
@@ -41,7 +41,8 @@ export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4,
     geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     s.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false })));
   }
-  // Ground and a ring of buildings: what the lower half of every car body reflects.
+  // Ground and a ring of buildings: what the lower half of every car body reflects (not in the bare sky backdrop).
+  if (!bare) {
   const g = new THREE.Mesh(new THREE.CircleGeometry(9, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ground }));
   g.position.y = -0.6; s.add(g);
   const cityMat = new THREE.MeshBasicMaterial({ color: city }), lit = new THREE.MeshBasicMaterial({ color: night ? new THREE.Color(1.6, 1.2, 0.7) : new THREE.Color(0.55, 0.6, 0.66) });
@@ -54,6 +55,7 @@ export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4,
       const wdw = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, 0.05), lit);
       wdw.position.copy(b.position).multiplyScalar(0.955); wdw.position.y = -0.6 + h * (0.3 + k * 0.22); wdw.lookAt(0, wdw.position.y, 0); s.add(wdw);
     }
+  }
   }
   const pm = new THREE.PMREMGenerator(renderer);
   const tex = pm.fromScene(s, 0.01, 0.1, 30).texture;

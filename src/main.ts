@@ -101,8 +101,6 @@ let envFor: (over?: Partial<SkyOpts>) => void = () => {};
 let grade: Grade = DEFAULT_GRADE;
 function applyLight(light: Light) {
   const L = LIGHTS[light];
-  (scene.background as THREE.Texture)?.dispose();
-  scene.background = sky(L.sky);
   (scene.fog as THREE.Fog).color.setHex(L.fog);
   hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
   sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sunOffset = new THREE.Vector3(...L.sun[2]);
@@ -112,7 +110,10 @@ function applyLight(light: Light) {
   const sd = new THREE.Vector3(...L.sun[2]).normalize();
   envFor = (over?: Partial<SkyOpts>) => {
     const a = { ...L.air, ...over };
-    scene.environment = skyEnv(renderer, { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground });
+    const o = { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground };
+    scene.environment = skyEnv(renderer, o);
+    // The backdrop is the same sky, without the reflection-only city ring.
+    scene.background = skyEnv(renderer, { ...o, bare: true });
   };
   envFor();
   scene.environmentIntensity = L.env * 1.25;
