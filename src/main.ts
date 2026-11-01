@@ -85,14 +85,14 @@ scene.add(flood, flood.target);
 const hemi = scene.children.find((o) => (o as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight;
 
 /** Per-chapter time of day: sky, fog, sun angle and color, exposure, how much lamps and headlights glow. */
-type SkyOpts = { turbidity: number; rayleigh: number; mie?: number; night?: boolean; ground?: number };
+type SkyOpts = { turbidity: number; rayleigh: number; mie?: number; night?: boolean; ground?: number; glow?: number; glowK?: number };
 const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [number, number, number]; sun: [number, number, [number, number, number]]; exposure: number; env: number; lamps: number; air: SkyOpts; grade: Partial<Grade> }> = {
   day: { sky: [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']], fog: 0xdfe9f2, hemi: [0xe3f0ff, 0x6b5a45, 0.7], sun: [0xfff0d8, 2.6, [-9, 22, 11]], exposure: 0.95, env: 0.8, lamps: 0.32, air: { turbidity: 3.2, rayleigh: 1.1 }, grade: {} },
-  sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0, air: { turbidity: 8, rayleigh: 2.6, mie: 0.007 }, grade: { saturation: 1.0, shadows: [0.012, 0.0, 0.03], highlights: [0.05, 0.02, -0.01], bloom: 0.5 } },
+  sunset: { sky: [[0, '#34477f'], [0.45, '#c9708a'], [0.75, '#f6a05e'], [1, '#ffd79a']], fog: 0xe8956a, hemi: [0xffb98c, 0x3d2a45, 0.42], sun: [0xff8a3d, 3.2, [-22, 8, 5]], exposure: 0.92, env: 0.45, lamps: 1.0, air: { turbidity: 8, rayleigh: 2.6, mie: 0.007, glow: 0xff7a3c, glowK: 1.7 }, grade: { saturation: 1.0, shadows: [0.012, 0.0, 0.03], highlights: [0.05, 0.02, -0.01], bloom: 0.5 } },
   bazaar: { sky: [[0, '#5a8fd0'], [0.5, '#bcd6ee'], [0.85, '#f3e6cf'], [1, '#f6d9a8']], fog: 0xf0e2c8, hemi: [0xfff1d8, 0x7a5a3a, 0.62], sun: [0xffd49a, 2.8, [-14, 16, 9]], exposure: 0.95, env: 0.7, lamps: 0.4, air: { turbidity: 7, rayleigh: 1.4, mie: 0.006 }, grade: { saturation: 0.9, highlights: [0.045, 0.025, 0.0] } },
-  dusk: { sky: [[0, '#0f1b4d'], [0.45, '#3b3f8f'], [0.75, '#c2607a'], [1, '#f6a96b']], fog: 0x3a3570, hemi: [0x8a8fe0, 0x2a2238, 0.45], sun: [0xff9a6a, 1.4, [-22, 7, 4]], exposure: 1.1, env: 0.35, lamps: 2.0, air: { turbidity: 6, rayleigh: 3, mie: 0.006 }, grade: { saturation: 0.95, shadows: [0.015, 0.0, 0.04], highlights: [0.04, 0.012, 0.0], bloom: 0.6 } },
+  dusk: { sky: [[0, '#0f1b4d'], [0.45, '#3b3f8f'], [0.75, '#c2607a'], [1, '#f6a96b']], fog: 0x3a3570, hemi: [0x8a8fe0, 0x2a2238, 0.45], sun: [0xff9a6a, 1.4, [-22, 7, 4]], exposure: 1.1, env: 0.35, lamps: 2.0, air: { turbidity: 6, rayleigh: 3, mie: 0.006, glow: 0xff6670, glowK: 1.3 }, grade: { saturation: 0.95, shadows: [0.015, 0.0, 0.04], highlights: [0.04, 0.012, 0.0], bloom: 0.6 } },
   spring: { sky: [[0, '#3f8fe0'], [0.5, '#9fd3fb'], [0.85, '#e9f5f2'], [1, '#fdf0f5']], fog: 0xe4f1f6, hemi: [0xeaf6ff, 0x5f7a45, 0.75], sun: [0xfff6e6, 2.7, [-10, 20, 12]], exposure: 0.96, env: 0.85, lamps: 0.3, air: { turbidity: 2.6, rayleigh: 1.0 }, grade: { saturation: 0.95 } },
-  autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8, air: { turbidity: 7, rayleigh: 1.8, mie: 0.005 }, grade: { saturation: 0.9, highlights: [0.045, 0.02, -0.005] } },
+  autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8, air: { turbidity: 7, rayleigh: 1.8, mie: 0.005, glow: 0xffa860, glowK: 0.4 }, grade: { saturation: 0.9, highlights: [0.045, 0.02, -0.005] } },
   snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5, air: { turbidity: 10, rayleigh: 0.5, ground: 0x8a8f96 }, grade: { saturation: 0.82, shadows: [0.0, 0.01, 0.035], highlights: [0.0, 0.005, 0.015] } },
   night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x7f93cc, 0x2a2420, 1.2], sun: [0xd8e2ff, 1.7, [10, 20, 8]], exposure: 1.2, env: 0.7, lamps: 2.6, air: { turbidity: 2, rayleigh: 0.4, night: true }, grade: { saturation: 0.85, shadows: [0.0, 0.008, 0.04], highlights: [0.03, 0.02, 0.0], bloom: 0.9, threshold: 0.9 } },
 };
@@ -110,7 +110,7 @@ function applyLight(light: Light) {
   const sd = new THREE.Vector3(...L.sun[2]).normalize();
   envFor = (over?: Partial<SkyOpts>) => {
     const a = { ...L.air, ...over };
-    const o = { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground };
+    const o = { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground, glow: a.glow, glowK: over?.turbidity ? 0 : a.glowK };
     scene.environment = skyEnv(renderer, o);
     // The backdrop is the same sky, without the reflection-only city ring.
     scene.background = skyEnv(renderer, { ...o, bare: true });
@@ -150,7 +150,7 @@ function applyFlash(f: number) {
   renderer.toneMappingExposure = wxBase.exposure * (1 + f * 0.5);
 }
 
-const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 260);
+const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 340);
 const PITCH = THREE.MathUtils.degToRad(48);
 
 let session: Session | null = null;

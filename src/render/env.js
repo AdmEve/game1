@@ -24,8 +24,8 @@ export function outdoorEnv(renderer, { sky = 0x6aa8e8, horizon = 0xf4f1ea, groun
 // Physically based sky (Preetham) with a city around the horizon and a dark ground, baked into a PMREM
 // cube: cars and glass reflect a real sky gradient, a hot sun and a skyline, like photos of real streets.
 const skyCache = new Map();
-export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4, rayleigh = 1.4, mie = 0.004, ground = 0x2a2a28, city = 0x3a3d42, night = false, bare = false } = {}) {
-  const key = [elevation, azimuth, turbidity, rayleigh, mie, ground, city, night, bare].join();
+export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4, rayleigh = 1.4, mie = 0.004, ground = 0x2a2a28, city = 0x3a3d42, night = false, bare = false, glow = 0, glowK = 0 } = {}) {
+  const key = [elevation, azimuth, turbidity, rayleigh, mie, ground, city, night, bare, glow, glowK].join();
   if (skyCache.has(key)) return skyCache.get(key);
   const s = new THREE.Scene();
   const sky = new Sky(); sky.scale.setScalar(10);
@@ -40,6 +40,12 @@ export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4,
     for (let i = 0; i < p.count; i++) { const y = Math.max(0, p.getY(i) / 8); const c = hor.clone().lerp(top, Math.pow(y, 0.4)); cols.push(c.r, c.g, c.b); }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     s.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false })));
+  }
+  if (glowK > 0) { // the warm band all round the horizon at golden hour, fading upward
+    const geo = new THREE.SphereGeometry(8.5, 48, 24), p = geo.attributes.position, cols = [], gc = new THREE.Color(glow);
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 8.5, k = y < -0.05 ? 0 : Math.exp(-Math.max(0, y) * 2.6) * glowK; cols.push(gc.r * k, gc.g * k, gc.b * k); }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    s.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })));
   }
   // Ground and a ring of buildings: what the lower half of every car body reflects (not in the bare sky backdrop).
   if (!bare) {

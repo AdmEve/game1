@@ -1046,7 +1046,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     milad.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0xc9a3ff); mat.emissiveIntensity = 0.45; mm.material = mat; } });
   }
   // The Alborz behind the city (added after baking: it keeps its own vertex colors and aerial haze).
-  const alborz = ridge(320, 60, 62, (seed % 97) + 3, snow ? 0.22 : 0.5); alborz.position.set(4, -1, L.walkZ - 120);
+  const alborz = ridge(380, 70, 40, (seed % 97) + 3, snow ? 0.2 : 0.45); alborz.position.set(4, -1, L.walkZ - 160);
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
     if (Math.abs(x - shelter.position.x) < 1.6) continue;
