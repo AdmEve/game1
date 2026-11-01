@@ -687,7 +687,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   add(plane(120, 120, surfaceMat(grassSurface(snow ? 'snow' : opts.landmark === 'bazaar' ? 'dry' : 'green'), [36, 36]), 0, -0.02, 0));
   // Ring road around the lot + the top road running across the whole scene.
   const ringW = L.lotW + 2 * (CURB + ROAD), ringH = L.lotH + 2 * (CURB + ROAD);
-  const road = asphalt(1, 3);
+  const road = asphalt(1, 3, snow);
   add(plane(ringW, ringH, surfaceMat(road, [ringW / 5, ringH / 5]), cx, 0.0, lotCZ));
   add(plane(80, ROAD, surfaceMat(road, [16, ROAD / 5]), 0, 0.002, L.topRoadZ));
   // Lane markings: dashed yellow center line on the top road, white edge lines on the ring.
@@ -710,7 +710,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // The lot: a raised slab with a curb and painted bays.
   const curbMat = surfaceMat(pavingSurface(31, 1), [1, 1], { color: 0xc9ccd0 });
   add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.077, lotCZ, 0.04)).castShadow = false;
-  add(plane(L.lotW, L.lotH, surfaceMat(asphalt(1.3, 5), [L.lotW / 4, L.lotH / 4]), cx, LOT_Y, lotCZ));
+  add(plane(L.lotW, L.lotH, surfaceMat(asphalt(1.3, 5, snow), [L.lotW / 4, L.lotH / 4]), cx, LOT_Y, lotCZ));
   // Painted stalls: a white tick at every cell corner, and a border line just inside the curb.
   const paint = new THREE.MeshStandardMaterial({ color: 0xdedcd4, roughness: 0.55, transparent: true, opacity: 0.85, alphaMap: wornPaint(), depthWrite: false });
   const ticks = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.045).rotateX(-Math.PI / 2), paint, (w + 1) * (h + 1) * 2);

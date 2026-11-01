@@ -71,8 +71,8 @@ export function surfaceMat(s: Surface, repeat: [number, number], o: THREE.MeshSt
 }
 
 /** Weathered Tehran asphalt: aggregate grain, darker patches, sealed cracks, oil stains, polished wheel paths. */
-export function asphalt(tone = 1, seed = 3): Surface {
-  return once('asphalt' + tone + seed, () => {
+export function asphalt(tone = 1, seed = 3, snow = false): Surface {
+  return once('asphalt' + tone + seed + snow, () => {
     const S = 512;
     const big = fbm(S, 4, 3, seed), grain = fbm(S, 96, 1, seed + 7), mid = fbm(S, 24, 2, seed + 3);
     const height = new Float32Array(S * S);
@@ -95,6 +95,17 @@ export function asphalt(tone = 1, seed = 3): Surface {
     for (let k = 0; k < 3; k++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '20,21,24' : '70,72,76'},.25)`; g.fillRect(Math.random() * S, Math.random() * S, 40 + Math.random() * 80, 30 + Math.random() * 60); }
     const rough = new Float32Array(S * S);
     for (let i = 0; i < rough.length; i++) rough[i] = 0.78 + grain[i] * 0.2 - (big[i] > 0.62 ? 0.12 : 0);
+    if (snow) {
+      // Packed snow and grey slush in drifts, wet black tarmac where the traffic has cleared it.
+      const drift = fbm(S, 12, 3, seed + 50), img = g.getImageData(0, 0, S, S);
+      for (let i = 0; i < drift.length; i++) {
+        const k = Math.max(0, Math.min(1, (drift[i] - 0.4) * 3.5)), wv = 170 + grain[i] * 60, sl = k * 0.8;
+        img.data[i * 4] = img.data[i * 4] * (1 - sl) + wv * sl; img.data[i * 4 + 1] = img.data[i * 4 + 1] * (1 - sl) + (wv + 4) * sl; img.data[i * 4 + 2] = img.data[i * 4 + 2] * (1 - sl) + (wv + 10) * sl;
+        rough[i] = rough[i] * (1 - sl) + 0.7 * sl - (1 - sl) * 0.35;
+        height[i] += sl * 0.6;
+      }
+      g.putImageData(img, 0, 0);
+    }
     return { map: tex(c, true), normalMap: normalFrom(height, S, 6), roughnessMap: grey(rough, S) };
   });
 }

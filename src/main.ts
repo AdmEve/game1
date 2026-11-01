@@ -13,6 +13,7 @@ import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { skyEnv } from './render/env.js';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarShadows, warmFleet } from './render/fleet';
+import { setSnow } from './render/cars.js';
 import { sky } from './render/world';
 import { Session } from './play/session';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
@@ -104,6 +105,7 @@ function applyLight(light: Light) {
   hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
   sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sunOffset = new THREE.Vector3(...L.sun[2]);
   renderer.toneMappingExposure = L.exposure;
+  sun.shadow.radius = mobile ? 2 : 3;
   // Image-based light from a real sky with the sun where the shadows say it is.
   const sd = new THREE.Vector3(...L.sun[2]).normalize();
   envFor = (over?: Partial<SkyOpts>) => {
@@ -127,6 +129,11 @@ function applyWeatherMood(kind: WeatherKind) {
   fog.near = m.fogNear; fog.far = m.fogFar;
   fog.color.lerp(new THREE.Color(m.tint), m.tintAmount);
   hemi.intensity *= m.light; sun.intensity *= m.light;
+  // Overcast weather: a grey sky in every reflection, softer sun, a cooler, flatter grade.
+  if (m.overcast) { envFor(m.overcast); scene.environmentIntensity *= 0.85; }
+  if (m.grade) post.setGrade({ ...grade, ...m.grade });
+  setSnow(kind === 'snow' ? 1 : 0);
+  if (kind === 'rain' || kind === 'storm' || kind === 'snow') sun.shadow.radius = 6;
   wxBase = { hemi: hemi.intensity, sun: sun.intensity, exposure: renderer.toneMappingExposure };
   const amb = kind === 'rain' || kind === 'storm' || kind === 'snow' || kind === 'dust' ? kind : null;
   sfx.ambience(amb);

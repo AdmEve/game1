@@ -172,11 +172,29 @@ export const M = {
   seatBeige: new THREE.MeshStandardMaterial({ color: 0x9c8466, roughness: 0.9 }),
 };
 const paintCache = new Map();
+/** How much snow has settled on the cars (0..1): whitens up-facing paint, kills the gloss there. */
+const snowU = { value: 0 };
+export function setSnow(k) { snowU.value = k; }
+function settleSnow(m) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uSnow = snowU;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec2 vSnowXZ;')
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvUp = normalize(mat3(modelMatrix) * objectNormal).y;\nvSnowXZ = (modelMatrix * vec4(position, 1.0)).xz;');
+    // A patchy dusting on the flat tops only, so the paint color still reads at a glance.
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec2 vSnowXZ;\nuniform float uSnow;\nfloat snowN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5), c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }')
+      .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowK = uSnow * smoothstep(0.82, 0.95, vUp) * smoothstep(0.35, 0.75, snowN(vSnowXZ * 7.0) * 0.6 + snowN(vSnowXZ * 23.0) * 0.4) * 0.85;\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.97), snowK);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 0.0, snowK);')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.85, snowK);')
+      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - snowK;');
+  };
+  m.customProgramCacheKey = () => 'paint-snow';
+  return m;
+}
 export function paint(color, metallic = false) {
   const key = color + ':' + metallic;
-  if (!paintCache.has(key)) paintCache.set(key, new THREE.MeshPhysicalMaterial({
+  if (!paintCache.has(key)) paintCache.set(key, settleSnow(new THREE.MeshPhysicalMaterial({
     color, metalness: metallic ? 0.5 : 0.12, roughness: metallic ? 0.36 : 0.42, clearcoat: 1, clearcoatRoughness: 0.045, envMapIntensity: 1.15,
-  }));
+  })));
   return paintCache.get(key);
 }
 
