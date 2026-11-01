@@ -12,7 +12,7 @@ import type { Color, Kind, Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { skyEnv } from './render/env.js';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
-import { setCarShadows, warmFleet } from './render/fleet';
+import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { setSnow } from './render/cars.js';
 import { sky } from './render/world';
 import { Session } from './play/session';
@@ -58,7 +58,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 :
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 // The world's shadows barely change, so phones redraw the shadow map only every few frames, and cars cast none.
-if (mobile) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); }
+if (mobile) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(0.22); }
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -80,6 +80,8 @@ sun.shadow.normalBias = 0.02;
 sun.shadow.radius = mobile ? 2 : 3;
 scene.add(sun, sun.target);
 
+const flood = new THREE.SpotLight(0xffe2b8, 0, 70, 0.75, 0.7, 1.4);
+scene.add(flood, flood.target);
 const hemi = scene.children.find((o) => (o as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight;
 
 /** Per-chapter time of day: sky, fog, sun angle and color, exposure, how much lamps and headlights glow. */
@@ -92,7 +94,7 @@ const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [numbe
   spring: { sky: [[0, '#3f8fe0'], [0.5, '#9fd3fb'], [0.85, '#e9f5f2'], [1, '#fdf0f5']], fog: 0xe4f1f6, hemi: [0xeaf6ff, 0x5f7a45, 0.75], sun: [0xfff6e6, 2.7, [-10, 20, 12]], exposure: 0.96, env: 0.85, lamps: 0.3, air: { turbidity: 2.6, rayleigh: 1.0 }, grade: { saturation: 0.95 } },
   autumn: { sky: [[0, '#4f7fb8'], [0.5, '#e7b98a'], [0.82, '#f6c27a'], [1, '#ffdca3']], fog: 0xe9c89a, hemi: [0xffe0b0, 0x5a3a20, 0.55], sun: [0xffb15c, 3.0, [-18, 12, 8]], exposure: 0.93, env: 0.55, lamps: 0.8, air: { turbidity: 7, rayleigh: 1.8, mie: 0.005 }, grade: { saturation: 0.9, highlights: [0.045, 0.02, -0.005] } },
   snow: { sky: [[0, '#8fb3d9'], [0.5, '#cfe0f0'], [1, '#f4f8fb']], fog: 0xe6eef6, hemi: [0xf0f6ff, 0xb9c4d0, 0.95], sun: [0xf2f6ff, 2.1, [-8, 24, 12]], exposure: 0.92, env: 0.9, lamps: 0.5, air: { turbidity: 10, rayleigh: 0.5, ground: 0x8a8f96 }, grade: { saturation: 0.82, shadows: [0.0, 0.01, 0.035], highlights: [0.0, 0.005, 0.015] } },
-  night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x6a7fc0, 0x10121c, 0.34], sun: [0xb4c6ff, 0.55, [10, 20, 8]], exposure: 1.25, env: 0.18, lamps: 2.6, air: { turbidity: 2, rayleigh: 0.4, night: true }, grade: { saturation: 0.85, shadows: [0.0, 0.008, 0.04], highlights: [0.03, 0.02, 0.0], bloom: 0.9, threshold: 0.9 } },
+  night: { sky: [[0, '#040918'], [0.55, '#122148'], [1, '#2c3d6e']], fog: 0x0f1a36, hemi: [0x7f93cc, 0x2a2420, 1.2], sun: [0xd8e2ff, 1.7, [10, 20, 8]], exposure: 1.2, env: 0.7, lamps: 2.6, air: { turbidity: 2, rayleigh: 0.4, night: true }, grade: { saturation: 0.85, shadows: [0.0, 0.008, 0.04], highlights: [0.03, 0.02, 0.0], bloom: 0.9, threshold: 0.9 } },
 };
 let sunOffset = new THREE.Vector3(-9, 22, 11);
 let envFor: (over?: Partial<SkyOpts>) => void = () => {};
@@ -114,7 +116,9 @@ function applyLight(light: Light) {
   };
   envFor();
   scene.environmentIntensity = L.env * 1.25;
-  hemi.intensity = L.hemi[2] * 0.4;
+  hemi.intensity = L.hemi[2] * (light === 'night' ? 1 : 0.4);
+  // Night: sodium floodlights over the lot so every car's color still reads.
+  flood.intensity = light === 'night' ? 260 : light === 'dusk' ? 120 : 0;
   grade = { ...DEFAULT_GRADE, ...L.grade };
   post.setGrade(grade);
   lightsMaterial.emissiveIntensity = L.lamps;
@@ -207,6 +211,7 @@ function fitCamera() {
   // Keep the sun's shadow box around the playfield.
   sun.position.copy(target).add(sunOffset);
   sun.target.position.copy(target);
+  flood.position.copy(center).add(new THREE.Vector3(0, 16, 6)); flood.target.position.copy(center);
   const ext = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.75 + 4;
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 1, far: 70 });
   sun.shadow.camera.updateProjectionMatrix();

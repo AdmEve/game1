@@ -14,13 +14,24 @@ export function vnoise(x: number, y: number, period: number, seed: number) {
   const a = hash(w(xi), w(yi), seed), b = hash(w(xi + 1), w(yi), seed), c = hash(w(xi), w(yi + 1), seed), d = hash(w(xi + 1), w(yi + 1), seed);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-/** Fractal noise over a tile of `size` px, base frequency `f` cells across the tile. 0..1 */
+/** Fractal noise over a tile of `size` px, base frequency `f` cells across the tile. 0..1. Each octave reads a
+ * precomputed lattice, so a 512² map costs a few milliseconds per octave. */
 export function fbm(size: number, f: number, octaves: number, seed: number, gain = 0.5): Float32Array {
   const out = new Float32Array(size * size);
   let amp = 1, total = 0;
   for (let o = 0; o < octaves; o++) {
-    const fr = f * (1 << o);
-    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) out[y * size + x] += vnoise((x / size) * fr, (y / size) * fr, fr, seed + o * 31) * amp;
+    const fr = Math.max(1, Math.round(f * (1 << o))), lat = new Float32Array(fr * fr), sd = seed + o * 31;
+    for (let y = 0; y < fr; y++) for (let x = 0; x < fr; x++) lat[y * fr + x] = hash(x, y, sd);
+    const sx = new Int32Array(size), fx = new Float32Array(size);
+    for (let x = 0; x < size; x++) { const u = (x / size) * fr, i = Math.floor(u), t = u - i; sx[x] = i % fr; fx[x] = t * t * (3 - 2 * t); }
+    for (let y = 0; y < size; y++) {
+      const y0 = sx[y] * fr, y1 = ((sx[y] + 1) % fr) * fr, v = fx[y];
+      for (let x = 0; x < size; x++) {
+        const x0 = sx[x], x1 = (x0 + 1) % fr, u = fx[x];
+        const a = lat[y0 + x0], b = lat[y0 + x1], c = lat[y1 + x0], d = lat[y1 + x1];
+        out[y * size + x] += (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v) * amp;
+      }
+    }
     total += amp; amp *= gain;
   }
   for (let i = 0; i < out.length; i++) out[i] /= total;
@@ -252,4 +263,62 @@ export function limb(a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number,
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
   m.castShadow = true;
   return m;
+}
+
+/** Laid units (bricks, cobbles, slabs): each unit gets its own tint and a bevelled edge, mortar between. */
+function units(key: string, S: number, cellOf: (x: number, y: number) => { id: number; edge: number }, palette: [number, number, number][], mortar: [number, number, number], seed: number, gloss = 0.85): Surface {
+  return once(key, () => {
+    const grain = fbm(S, 96, 1, seed), big = fbm(S, 5, 3, seed + 1);
+    const h = new Float32Array(S * S), r = new Float32Array(S * S);
+    const { c } = rgb(S, (i, x, y) => {
+      const { id, edge } = cellOf(x, y);
+      const bevel = Math.min(1, edge / 3);
+      h[i] = bevel * 0.85 + grain[i] * 0.15;
+      r[i] = edge < 1.5 ? 0.95 : gloss + grain[i] * 0.1;
+      if (edge < 1.2) return [mortar[0] * (0.9 + grain[i] * 0.2), mortar[1] * (0.9 + grain[i] * 0.2), mortar[2] * (0.9 + grain[i] * 0.2)];
+      const p = palette[Math.abs(id * 7919 + seed) % palette.length], k = (0.82 + ((id * 2654435761) >>> 0) % 1000 / 1000 * 0.3) * (0.85 + big[i] * 0.25) * (0.92 + grain[i] * 0.16) * (0.75 + bevel * 0.25);
+      return [p[0] * k, p[1] * k, p[2] * k];
+    });
+    return { map: tex(c, true), normalMap: normalFrom(h, S, 5), roughnessMap: grey(r, S) };
+  });
+}
+/** Old-Tehran clay brick in a running bond (the bazaar courtyards). */
+export function bricks(): Surface {
+  const S = 512, bw = 64, bh = 24;
+  return units('bricks', S, (x, y) => {
+    const row = Math.floor(y / bh), off = row % 2 ? bw / 2 : 0, col = Math.floor((x + off) / bw);
+    const ex = Math.min((x + off) % bw, bw - ((x + off) % bw)), ey = Math.min(y % bh, bh - (y % bh));
+    return { id: row * 97 + col, edge: Math.min(ex, ey) };
+  }, [[168, 92, 60], [156, 82, 54], [182, 106, 70], [140, 74, 50], [176, 98, 66]], [196, 182, 160], 61, 0.88);
+}
+/** Mountain-village cobbles (Darband): irregular rounded stones from a jittered Voronoi grid. */
+export function cobbles(): Surface {
+  const S = 512, n = 12, cell = S / n;
+  const pts: [number, number][] = [];
+  let sd = 9; const rr = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) pts.push([(i + 0.2 + rr() * 0.6) * cell, (j + 0.2 + rr() * 0.6) * cell]);
+  return units('cobbles', S, (x, y) => {
+    const ci = Math.floor(x / cell), cj = Math.floor(y / cell);
+    let d1 = 1e9, d2 = 1e9, id = 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const ii = (ci + di + n) % n, jj = (cj + dj + n) % n, p = pts[jj * n + ii];
+      const px = p[0] + (ci + di - ii) * cell, py = p[1] + (cj + dj - jj) * cell, d = Math.hypot(x - px, y - py);
+      if (d < d1) { d2 = d1; d1 = d; id = jj * n + ii; } else if (d < d2) d2 = d;
+    }
+    return { id, edge: (d2 - d1) * 0.9 };
+  }, [[128, 122, 112], [112, 106, 98], [146, 138, 124], [98, 94, 88], [136, 126, 110]], [70, 64, 56], 67, 0.8);
+}
+/** A modern concrete deck: big slabs, saw-cut joints, a few rust and tyre stains (Tabiat, Milad). */
+export function deck(): Surface {
+  const S = 512, cell = 128;
+  return units('deck', S, (x, y) => ({ id: Math.floor(y / cell) * 7 + Math.floor(x / cell), edge: Math.min(x % cell, cell - (x % cell), y % cell, cell - (y % cell)) * 1.6 }),
+    [[178, 176, 170], [170, 168, 162], [186, 183, 176]], [92, 90, 86], 71, 0.82);
+}
+/** Large stone plaza tiles (Azadi square). */
+export function plaza(): Surface {
+  const S = 512, w = 128, hgt = 64;
+  return units('plaza', S, (x, y) => {
+    const row = Math.floor(y / hgt), off = row % 2 ? w / 3 : 0;
+    return { id: row * 31 + Math.floor((x + off) / w), edge: Math.min((x + off) % w, w - ((x + off) % w), y % hgt, hgt - (y % hgt)) };
+  }, [[196, 186, 168], [204, 194, 176], [186, 176, 160], [210, 200, 184]], [120, 112, 100], 73, 0.7);
 }

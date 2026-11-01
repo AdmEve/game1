@@ -12,7 +12,7 @@ import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
-import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, cone, type Layout, type WorldOpts } from '../render/world';
+import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, obstacleProp, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
@@ -171,7 +171,7 @@ export class Session {
         this.group.add(m); this.carts.push(m);
         continue;
       }
-      const m = cone(); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y); m.rotation.y = c.col * 1.3; this.group.add(m); this.cones.push(m);
+      const m = obstacleProp(this.chapterPlace, c.col * 7 + c.row); m.position.copy(this.L.cell(c.col, c.row)).setY(LOT_Y); m.rotation.y += c.col * 1.3; this.group.add(m); this.cones.push(m);
     }
     performance.measure('vehicles', 'v0');
     performance.mark('q0');

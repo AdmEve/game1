@@ -3,7 +3,7 @@
  * sidewalk with its queue, and the city behind. Also owns the coordinate helpers the game uses.
  */
 import * as THREE from 'three';
-import { asphalt, bark, canopy, foliageMat, grass as grassSurface, limb, paving as pavingSurface, surfaceMat, vnoise, wornPaint } from './surfaces';
+import { asphalt, bark, bricks as brickSurface, canopy, cobbles, deck, foliageMat, grass as grassSurface, limb, paving as pavingSurface, plaza, surfaceMat, vnoise, wornPaint } from './surfaces';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CELL, bake } from './fleet';
 import { motorbike } from './mechanics';
@@ -120,11 +120,42 @@ function label(text: string, bg: string, fg: string, w = 512, h = 112, fs = 64) 
 // ───── Props ─────
 export function cone(): THREE.Group {
   const g = new THREE.Group();
-  const cm = std(0xff6a00, { roughness: 0.5 });
-  const base = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.08, 0.62, 2, 0.04), cm); base.position.y = 0.04; g.add(base);
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.8, 20), cm); body.position.y = 0.46; g.add(body);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.175, 0.13, 20), std(0xffffff)); band.position.y = 0.5; g.add(band);
+  // A real traffic cone: matte fluorescent PVC on a black rubber base, two reflective collars.
+  const cm = std(0xf05a0f, { roughness: 0.55 }), rubber = std(0x18191b, { roughness: 0.9 }), refl = std(0xe9ecef, { roughness: 0.25, metalness: 0.1 });
+  const base = new THREE.Mesh(new RoundedBoxGeometry(0.56, 0.06, 0.56, 2, 0.03), rubber); base.position.y = 0.03; g.add(base);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.2, 0.78, 24, 1, true), cm); body.position.y = 0.45; g.add(body);
+  for (const [y, r0, r1] of [[0.58, 0.115, 0.13], [0.38, 0.155, 0.17]]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, 0.09, 24, 1, true), refl); b.position.y = y; g.add(b); }
   g.traverse((m) => { m.castShadow = true; });
+  return g;
+}
+/** What blocks a cell in each chapter: a cone on the street lots, something that belongs there elsewhere. */
+export function obstacleProp(place: string | undefined, i: number): THREE.Group {
+  const g = new THREE.Group();
+  if (place === 'bazaar') {
+    // Stacked wooden produce crates.
+    const wood = std(0x9b6a3c, { roughness: 0.8 }), dark = std(0x5e3d20, { roughness: 0.9 });
+    for (const [x, y, z, r] of [[-0.12, 0.17, -0.1, 0.1], [0.16, 0.17, 0.12, -0.15], [0.02, 0.5, 0.0, 0.3]] as const) {
+      const c = new THREE.Group();
+      c.add(box(0.46, 0.32, 0.34, wood, 0, 0, 0));
+      for (const sy of [-0.06, 0.06]) c.add(box(0.47, 0.035, 0.35, dark, 0, sy, 0));
+      c.position.set(x, y, z); c.rotation.y = r; g.add(c);
+    }
+  } else if (place === 'darband' || place === 'tabiat') {
+    // A stone planter with a clipped shrub.
+    let k = i * 31 + 5; const rr = () => ((k = (k * 16807) % 2147483647) / 2147483647);
+    const stone = std(place === 'darband' ? 0x8f8578 : 0xb9b6ae, { roughness: 0.9 });
+    g.add(box(0.8, 0.36, 0.8, stone, 0, 0.18, 0, 0.04));
+    g.add(box(0.68, 0.04, 0.68, std(0x3b2a1c, { roughness: 1 }), 0, 0.37, 0));
+    const s = shrub(0.34, 0.28, 0.34, rr, false, place === 'darband'); s.position.y = 0.6; g.add(s);
+  } else if (place === 'azadi' || place === 'milad') {
+    // Orange water-filled barrier.
+    const shell = std(0xe2541a, { roughness: 0.6 });
+    g.add(box(0.9, 0.5, 0.36, shell, 0, 0.25, 0, 0.06));
+    g.add(box(0.98, 0.1, 0.42, shell, 0, 0.05, 0, 0.03));
+    g.add(box(0.5, 0.1, 0.37, std(0xf2f2ee, { roughness: 0.3 }), 0, 0.36, 0));
+    g.rotation.y = (i % 2) * Math.PI / 2;
+  } else return cone();
+  g.traverse((m) => { m.castShadow = true; m.receiveShadow = true; });
   return g;
 }
 
@@ -710,7 +741,14 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // The lot: a raised slab with a curb and painted bays.
   const curbMat = surfaceMat(pavingSurface(31, 1), [1, 1], { color: 0xc9ccd0 });
   add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.077, lotCZ, 0.04)).castShadow = false;
-  add(plane(L.lotW, L.lotH, surfaceMat(asphalt(1.3, 5, snow), [L.lotW / 4, L.lotH / 4]), cx, LOT_Y, lotCZ));
+  // Every chapter parks on its own ground: courtyard brick in the bazaar, cobbles in Darband, a concrete deck
+  // by Tabiat bridge and the tower, stone slabs on Azadi square, asphalt elsewhere.
+  const ground = opts.landmark === 'bazaar' ? surfaceMat(brickSurface(), [L.lotW / 2.6, L.lotH / 2.6])
+    : opts.landmark === 'darband' && !snow ? surfaceMat(cobbles(), [L.lotW / 3.2, L.lotH / 3.2])
+      : opts.landmark === 'tabiat' ? surfaceMat(deck(), [L.lotW / 5, L.lotH / 5])
+        : opts.landmark === 'azadi' ? surfaceMat(plaza(), [L.lotW / 4, L.lotH / 4])
+          : surfaceMat(asphalt(1.25, 5, snow), [L.lotW / 7, L.lotH / 7], { normalScale: new THREE.Vector2(0.5, 0.5) });
+  add(plane(L.lotW, L.lotH, ground, cx, LOT_Y, lotCZ));
   // Painted stalls: a white tick at every cell corner, and a border line just inside the curb.
   const paint = new THREE.MeshStandardMaterial({ color: 0xdedcd4, roughness: 0.55, transparent: true, opacity: 0.85, alphaMap: wornPaint(), depthWrite: false });
   const ticks = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.045).rotateX(-Math.PI / 2), paint, (w + 1) * (h + 1) * 2);

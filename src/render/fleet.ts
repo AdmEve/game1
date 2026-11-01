@@ -106,7 +106,9 @@ function tint(g: THREE.BufferGeometry, c: THREE.Color) {
 
 interface Template { mesh: THREE.Group; length: number; width: number; roofX: number; roofY: number; tilt: number; }
 const cache = new Map<string, Template>();
-const QUALITY = 0.3;
+let QUALITY = 0.3;
+/** Mesh density of the car models (phones use a little less; at play distance the difference is invisible). */
+export function setCarQuality(q: number) { QUALITY = q; }
 
 function template(kind: Kind, color: Color, skin?: string): Template {
   const key = kind + color + (skin ?? '');

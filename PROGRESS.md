@@ -155,3 +155,11 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - Samand: wrapped wedge headlamps, slatted grille + lion, wedge tail lamps, black lower bumper strip (shared `wrapper()` decal helper).
 - Peykan: round multi-reflector headlamp faces with chrome rims (new 'round' lamp face, alpha-cut).
 - Pride: wrapped wedge headlamps, slatted grille, wedge tail lamps.
+
+## AAA overhaul (realism pass)
+- Render: HDR multisampled scene → bloom (1/4 + 1/8 blur chain), ACES, color grade (saturation/contrast/split-tone per chapter and weather), lens vignette, film grain (`render/post.ts`). Tilt-shift (miniature look) removed. Physical Preetham sky + city ring baked to PMREM for reflections (`skyEnv`), per chapter sun direction; overcast sky in rain/snow.
+- Cars: toon outlines removed; automotive metallic paints with clearcoat; mesh density 0.14 → 0.3 (0.22 on phones); car-shaped AO under every car; slim navigation arrows. Car covers are now silver satin draped over a sedan silhouette.
+- World: procedural PBR surfaces (`render/surfaces.ts`: fast lattice fBm → albedo + normal + roughness): weathered asphalt with sealed cracks/oil, grass, concrete paving, worn road paint; leaf-card plane trees and shrubs (no back-face darkening); Alborz ridge from displaced noise; real-proportion people.
+- Level design: each chapter has its own lot ground (asphalt / bazaar brick / Darband cobbles / Tabiat concrete deck / Azadi stone plaza) and its own obstacles (cones, produce crates, stone planters, water barriers).
+- Weather: fine motion-blurred rain (2–2.6k streaks), ripples, puddle reflections, drifting fog banks, three-size snow, patchy snow on roofs and slushy roads, tumbling 3D leaves, multi-stroke lightning. Night: moonlight, warm city glow, floodlights over the lot.
+- UI: premium theme (`theme.css`): dark glass, hairlines, amber accent, line icons (`ui/icons.ts`), cinematic wordmark.

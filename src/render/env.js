@@ -36,7 +36,7 @@ export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4,
   s.add(sky);
   if (night) { // a deep blue night dome with a faint warm city glow at the horizon
     const geo = new THREE.SphereGeometry(8, 48, 24), p = geo.attributes.position, cols = [];
-    const top = new THREE.Color(0.004, 0.008, 0.03), hor = new THREE.Color(0.06, 0.045, 0.05);
+    const top = new THREE.Color(0.02, 0.03, 0.08), hor = new THREE.Color(0.35, 0.24, 0.16);
     for (let i = 0; i < p.count; i++) { const y = Math.max(0, p.getY(i) / 8); const c = hor.clone().lerp(top, Math.pow(y, 0.4)); cols.push(c.r, c.g, c.b); }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     s.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false })));
