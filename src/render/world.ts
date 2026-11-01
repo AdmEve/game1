@@ -3,6 +3,7 @@
  * sidewalk with its queue, and the city behind. Also owns the coordinate helpers the game uses.
  */
 import * as THREE from 'three';
+import { asphalt, bark, canopy, foliageMat, grass as grassSurface, limb, paving as pavingSurface, surfaceMat, vnoise, wornPaint } from './surfaces';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CELL, bake } from './fleet';
 import { motorbike } from './mechanics';
@@ -68,29 +69,11 @@ function shared(key: string, make: () => THREE.Texture): THREE.Texture {
   t.needsUpdate = true;
   return t;
 }
-const asphaltTex = () => shared('asphalt', () => canvasTex(512, 512, (g) => {
-  speckle(g, 512, 512, '#474d57', ['#3a3f47', '#5a616c', '#636a75', '#2f343b'], 14000);
-  // Patches and cracks: Tehran asphalt is never new.
-  for (let i = 0; i < 7; i++) { g.globalAlpha = 0.12; g.fillStyle = Math.random() < 0.5 ? '#2a2e34' : '#5d636d'; g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 512, 30 + Math.random() * 60, 20 + Math.random() * 40, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
-  g.globalAlpha = 0.35; g.strokeStyle = '#25292e'; g.lineWidth = 1.2;
-  for (let i = 0; i < 6; i++) { g.beginPath(); let x = Math.random() * 512, y = Math.random() * 512; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 40; y += (Math.random() - 0.5) * 40; g.lineTo(x, y); } g.stroke(); }
-  g.globalAlpha = 1;
-}, 1));
-/** The lot's surface: smoother and a shade lighter than the road, with faint tyre marks and oil stains. */
-const lotTex = () => shared('lot', () => canvasTex(512, 512, (g) => {
-  speckle(g, 512, 512, '#5b6270', ['#525967', '#666e7c', '#4a505c'], 9000);
-  g.globalAlpha = 0.1; g.fillStyle = '#20242b';
-  for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 512, 6 + Math.random() * 14, 3 + Math.random() * 7, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
-  g.globalAlpha = 0.07; g.strokeStyle = '#15181d'; g.lineWidth = 7; g.lineCap = 'round';
-  for (let i = 0; i < 6; i++) { const x = Math.random() * 512, y = Math.random() * 512; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 60, y + (Math.random() - 0.5) * 80, x + 150, y + (Math.random() - 0.5) * 30); g.stroke(); }
-  g.globalAlpha = 1;
-}, 1));
 const pavingTex = () => shared('paving', () => canvasTex(256, 256, (g) => {
   speckle(g, 256, 256, '#d9cdb5', ['#c9bb9e', '#e6dcc8', '#b8a98b'], 3000);
   g.strokeStyle = 'rgba(120,100,70,.35)'; g.lineWidth = 2;
   for (let y = 0; y <= 256; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); for (let x = (y / 32) % 2 ? 0 : 32; x <= 256; x += 64) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 32); g.stroke(); } }
 }, 1));
-const grassTex = () => shared('grass', () => canvasTex(256, 256, (g) => speckle(g, 256, 256, '#6aa84f', ['#5a9a42', '#7dbb5c', '#4e8a3a', '#8cc66a'], 9000, 2), 1));
 
 export function sky(stops: [number, string][] = [[0, '#4b93dd'], [0.5, '#9dcff7'], [0.85, '#e8eef2'], [1, '#f7e7cf']]): THREE.Texture {
   return canvasTex(4, 512, (g) => {
@@ -145,18 +128,61 @@ export function cone(): THREE.Group {
   return g;
 }
 
-/** A Tehran plane tree «چنار»: a pale mottled trunk and a layered canopy. */
+/** A Tehran plane tree «چنار»: a pale peeling trunk that forks into limbs, each carrying a crown of leaf cards. */
+const LEAVES = {
+  green: ['#4f7a34', '#5f8f3d', '#6fa047', '#46702f', '#7cab52', '#3d6429', '#88b45c'],
+  autumn: ['#c2741d', '#a9521a', '#d49a2a', '#8a3d16', '#b8862c', '#7d4a1c'],
+  snow: ['#e9eef2', '#d5dde3', '#f6f8fa', '#8c7f6c', '#bfc8cf'],
+  dark: ['#3a5c2a', '#476d33', '#2f4c22', '#557a3e', '#62874a'],
+};
 function chenar(s: number, snow = false, autumn = false): THREE.Group {
   const t = new THREE.Group();
-  const bark = std(0xb9ae94, { roughness: 0.9 });
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.6, 8), bark); trunk.position.y = 0.8; t.add(trunk);
-  const fall = [0xd97706, 0xb45309, 0xeab308, 0xb91c1c][Math.floor(s * 97) % 4];
-  const leafA = std(snow ? 0xe3ebe8 : autumn ? fall : 0x4f8f3a, { roughness: 0.8, flatShading: true }), leafB = std(snow ? 0xc8d6cf : autumn ? 0xf59e0b : 0x6aa848, { roughness: 0.8, flatShading: true });
-  const puffs: [number, number, number, number][] = [[0, 2.0, 0, 0.85], [0.55, 1.75, 0.2, 0.6], [-0.5, 1.8, -0.15, 0.62], [0.1, 2.45, 0.1, 0.6], [-0.2, 1.7, 0.45, 0.5], [0.3, 2.2, -0.4, 0.55]];
-  puffs.forEach(([x, y, z, r], i) => { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), i % 2 ? leafB : leafA); p.position.set(x, y, z); p.rotation.set(i, i * 2, 0); t.add(p); });
-  t.traverse((m) => { m.castShadow = true; });
+  let k = Math.floor(s * 9973) + 7; const rnd = () => ((k = (k * 16807) % 2147483647) / 2147483647);
+  const b = bark();
+  const pal = snow ? LEAVES.snow : autumn ? LEAVES.autumn : LEAVES.green;
+  const fm = foliageMat(pal, snow ? 3 : autumn ? 2 : 1);
+  const fork = new THREE.Vector3((rnd() - 0.5) * 0.2, 1.25 + rnd() * 0.2, (rnd() - 0.5) * 0.2);
+  t.add(limb(new THREE.Vector3(0, -0.05, 0), fork, 0.17, 0.12, b, 8));
+  const limbs = 3 + Math.floor(rnd() * 2), a0 = rnd() * Math.PI * 2;
+  for (let i = 0; i < limbs; i++) {
+    const a = a0 + (i / limbs) * Math.PI * 2 + (rnd() - 0.5) * 0.5, reach = 0.45 + rnd() * 0.35;
+    const end = fork.clone().add(new THREE.Vector3(Math.cos(a) * reach, 0.75 + rnd() * 0.45, Math.sin(a) * reach));
+    t.add(limb(fork, end, 0.09, 0.045, b, 6));
+    const c = canopy(0.65 + rnd() * 0.25, 0.5 + rnd() * 0.15, 0.65 + rnd() * 0.25, snow ? 26 : 70, fm, rnd, 0.7);
+    c.position.copy(end).add(new THREE.Vector3(0, 0.12, 0)); t.add(c);
+  }
+  const crown = canopy(1.05, 0.7, 1.05, snow ? 40 : 140, fm, rnd, 0.8); crown.position.set(fork.x, 2.35, fork.z); t.add(crown);
   t.scale.setScalar(s);
   return t;
+}
+/** A clipped hedge or a shrub: a squashed crown of small dark leaf cards. */
+function shrub(rx: number, ry: number, rz: number, rnd: () => number, snow = false, autumn = false): THREE.Mesh {
+  const pal = snow ? LEAVES.snow : autumn ? LEAVES.autumn : LEAVES.dark;
+  const m = canopy(rx, ry, rz, Math.round(20 + rx * rz * 110), foliageMat(pal, snow ? 13 : autumn ? 12 : 11), rnd, 0.36);
+  return m;
+}
+/** The Alborz: a long noise-displaced ridge, rock below and snow on the high ground. */
+function ridge(width: number, depth: number, height: number, seed: number, snowLine = 0.55): THREE.Mesh {
+  const geo = new THREE.PlaneGeometry(width, depth, 220, 30).rotateX(-Math.PI / 2);
+  const p = geo.attributes.position, cols: number[] = [];
+  const rock = new THREE.Color(0x77706a), rock2 = new THREE.Color(0x5b5650), snowC = new THREE.Color(0xf1f4f7), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), u = x / width + 0.5, v = z / depth + 0.5;
+    let n = 0, amp = 1, f = 3;
+    for (let o = 0; o < 5; o++) { n += (vnoise(u * f, v * f * 0.4, 9999, seed + o) - 0.5) * amp; amp *= 0.5; f *= 2.1; }
+    const ridgeLine = 1 - Math.abs(v - 0.55) * 1.8;
+    const y = Math.max(0, height * Math.max(0, ridgeLine) * (0.65 + n * 1.2));
+    p.setY(i, y);
+    const hgt = y / height;
+    c.copy(rock).lerp(rock2, Math.max(0, n + 0.3));
+    if (hgt > snowLine + n * 0.2) c.lerp(snowC, Math.min(1, (hgt - snowLine - n * 0.2) * 6));
+    cols.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: null }));
+  m.receiveShadow = false;
+  return m;
 }
 
 /** Tehran roofs are sealed with silver «ایزوگام» rolls: a shared texture. */
@@ -658,16 +684,16 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   const cx = 0, lotCZ = L.lotH / 2;
 
   // Ground.
-  const grass = snow ? canvasTex(256, 256, (g2) => speckle(g2, 256, 256, '#eef3f7', ['#dfe7ee', '#ffffff', '#cdd8e2'], 6000, 2), 1) : grassTex(); grass.repeat.set(30, 30);
-  add(plane(120, 120, std(0xffffff, { map: grass, roughness: snow ? 0.95 : 0.85 }), 0, -0.02, 0));
+  add(plane(120, 120, surfaceMat(grassSurface(snow ? 'snow' : opts.landmark === 'bazaar' ? 'dry' : 'green'), [36, 36]), 0, -0.02, 0));
   // Ring road around the lot + the top road running across the whole scene.
-  const asph = asphaltTex(); const ringW = L.lotW + 2 * (CURB + ROAD), ringH = L.lotH + 2 * (CURB + ROAD);
-  asph.repeat.set(ringW / 4, ringH / 4);
-  add(plane(ringW, ringH, std(0xffffff, { map: asph, roughness: 0.95 }), cx, 0.0, lotCZ));
-  const asph2 = asphaltTex(); asph2.repeat.set(20, 0.5);
-  add(plane(80, ROAD, std(0xffffff, { map: asph2, roughness: 0.95 }), 0, 0.002, L.topRoadZ));
+  const ringW = L.lotW + 2 * (CURB + ROAD), ringH = L.lotH + 2 * (CURB + ROAD);
+  const road = asphalt(1, 3);
+  add(plane(ringW, ringH, surfaceMat(road, [ringW / 5, ringH / 5]), cx, 0.0, lotCZ));
+  add(plane(80, ROAD, surfaceMat(road, [16, ROAD / 5]), 0, 0.002, L.topRoadZ));
   // Lane markings: dashed yellow center line on the top road, white edge lines on the ring.
-  const yellow = std(0xffc928, { roughness: 0.6 }), whiteLine = std(0xf2f2ee, { roughness: 0.6 });
+  // Worn road paint: chipped, a shade off pure white, slightly glossier than the tarmac.
+  const yellow = std(0xd9a42a, { roughness: 0.55, alphaMap: wornPaint(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const whiteLine = std(0xd9d8d1, { roughness: 0.55, alphaMap: wornPaint(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
   for (let x = -40; x < 40; x += 1.5) add(plane(0.7, 0.07, yellow, x, 0.01, L.topRoadZ));
   // The rest of the ring: yellow centre dashes and white edge lines, so every side reads as a road.
   const hw = ringW / 2 - 0.1, hh = ringH / 2 - 0.1;
@@ -678,17 +704,15 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // Zebra crossing to the bus stop.
   for (let i = 0; i < 7; i++) add(plane(0.22, ROAD - 0.2, whiteLine, L.bayX[0] + 1.9 + i * 0.4, 0.012, L.exitZ));
   // The exit lane above the bays: cars leave forward through it, off to either side of the screen.
-  const asph3 = asphaltTex(); asph3.repeat.set(20, 0.5);
-  add(plane(80, ROAD + 0.04, std(0xffffff, { map: asph3, roughness: 0.95 }), 0, 0.003, L.exitZ));
+  add(plane(80, ROAD + 0.04, surfaceMat(road, [16, ROAD / 5]), 0, 0.003, L.exitZ));
   for (let x = -40; x < 40; x += 1.5) add(plane(0.7, 0.07, yellow, x, 0.011, L.exitZ));
 
   // The lot: a raised slab with a curb and painted bays.
-  const curbMat = std(0xd4d8dd, { roughness: 0.7 });
+  const curbMat = surfaceMat(pavingSurface(31, 1), [1, 1], { color: 0xc9ccd0 });
   add(box(L.lotW + 2 * CURB, 0.12, L.lotH + 2 * CURB, curbMat, cx, LOT_Y - 0.077, lotCZ, 0.04)).castShadow = false;
-  const lotMap = lotTex(); lotMap.repeat.set(L.lotW / 3.4, L.lotH / 3.4);
-  add(plane(L.lotW, L.lotH, std(0xffffff, { map: lotMap, roughness: 0.78 }), cx, LOT_Y, lotCZ));
+  add(plane(L.lotW, L.lotH, surfaceMat(asphalt(1.3, 5), [L.lotW / 4, L.lotH / 4]), cx, LOT_Y, lotCZ));
   // Painted stalls: a white tick at every cell corner, and a border line just inside the curb.
-  const paint = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+  const paint = new THREE.MeshStandardMaterial({ color: 0xdedcd4, roughness: 0.55, transparent: true, opacity: 0.85, alphaMap: wornPaint(), depthWrite: false });
   const ticks = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.045).rotateX(-Math.PI / 2), paint, (w + 1) * (h + 1) * 2);
   const tm = new THREE.Matrix4(), rot = new THREE.Matrix4().makeRotationY(Math.PI / 2);
   let ti = 0;
@@ -708,14 +732,12 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), std(0xff5a3c, { emissive: 0xff3b1a, emissiveIntensity: 0.35 })); cap.position.set(bx3, LOT_Y + 0.52, bz3); add(cap);
   }
   // Pickup bays: a darker strip with white separators and numbered pavement.
-  const bayStrip = asphaltTex(); bayStrip.repeat.set(6, 1);
   const stripW = L.bayX.length * BAY_W * 1.06 + 0.6;
-  add(plane(stripW, BAY_D + 0.2, std(0xffffff, { map: bayStrip, color: 0xa6adb8 }), 0, 0.006, L.bayZ));
+  add(plane(stripW, BAY_D + 0.2, surfaceMat(asphalt(0.8, 9), [stripW / 5, 0.5]), 0, 0.006, L.bayZ));
   for (let i = 0; i <= L.bayX.length; i++) add(plane(0.06, BAY_D, whiteLine, (i - L.bayX.length / 2) * BAY_W * 1.06, 0.014, L.bayZ));
   // Sidewalk with its curb, then the city.
   const walkD = 2.2;
-  const pav = pavingTex(); pav.repeat.set(40, 1.4);
-  add(box(80, 0.18, walkD, std(0xffffff, { map: pav }), 0, 0.09, L.walkZ - 0.1));
+  add(box(80, 0.18, walkD, surfaceMat(pavingSurface(), [80 / 2.4, walkD / 2.4]), 0, 0.09, L.walkZ - 0.1));
   add(box(80, 0.22, 0.2, curbMat, 0, 0.11, L.walkZ + walkD / 2 - 0.05));
   // «جوی آب»: the open gutter between sidewalk and street, a Tehran signature.
   add(plane(80, 0.18, std(0x6b8fa8, { roughness: 0.15, metalness: 0.3 }), 0, 0.005, L.walkZ + walkD / 2 + 0.12));
@@ -785,7 +807,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     for (let x = -19, k = 0; x < 19; x += 1.15, k++) {
       if (k % 9 === 4) continue;
       const hh = 0.42 + rnd() * 0.18;
-      const hedge = box(1.1, hh, 0.55, leaf, x, 0.18 + hh / 2, z0, 0.12); hedge.castShadow = true; add(hedge);
+      const hedge = shrub(0.6, hh * 0.6, 0.3, rnd, snow, !!opts.autumn); hedge.position.set(x, 0.18 + hh * 0.55, z0); add(hedge); void leaf;
     }
     const stone = std(0xb7b0a2, { roughness: 0.8 });
     const pav2 = pavingTex(); pav2.repeat.set(30, 1);
@@ -824,8 +846,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     for (const x of [-14.5, -11.5, -6.5, 6.5, 11.5, 14.5, -17, 17]) { const t = chenar(1.0 + rnd() * 0.45, snow, !!opts.autumn); t.position.set(x + rnd() * 0.8, 0, pathZ - 2.1 - rnd() * 2.2); add(t); }
     const bush = std(snow ? 0xdce9f0 : opts.autumn ? 0xb4772a : 0x4aa043, { roughness: 0.95, flatShading: true });
     for (let k = 0; k < 18; k++) {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32 + rnd() * 0.22, 1), bush);
-      m.scale.y = 0.75; m.position.set(-18 + rnd() * 36, 0.22, pathZ - 1.4 - rnd() * 5); m.castShadow = true; add(m);
+      const r0 = 0.32 + rnd() * 0.22, m = shrub(r0, r0 * 0.7, r0, rnd, snow, !!opts.autumn); void bush;
+      m.position.set(-18 + rnd() * 36, 0.25, pathZ - 1.4 - rnd() * 5); add(m);
     }
     for (const x of [-9, 9]) { const l = streetLamp(night); l.position.set(x + 0.9, 0.04, pathZ - 0.9); add(l); }
   }
@@ -895,11 +917,8 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     azadi.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0x7fa6ff); mat.emissiveIntensity = 0.35; mm.material = mat; } });
     milad.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { const mat = (mm.material as THREE.MeshStandardMaterial).clone(); mat.emissive = new THREE.Color(0xc9a3ff); mat.emissiveIntensity = 0.45; mm.material = mat; } });
   }
-  const mtn = std(0x8fa5bf, { roughness: 1, flatShading: true }), snowCap = std(0xffffff, { roughness: 0.9, flatShading: true });
-  for (const [x, hh, r] of [[-34, 18, 15], [-14, 24, 17], [6, 20, 15], [26, 26, 18], [46, 17, 13]]) {
-    const m = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 7), mtn); m.position.set(x, hh / 2, L.walkZ - 52); g.add(m);
-    const sn = new THREE.Mesh(new THREE.ConeGeometry(r * 0.34, hh * 0.34, 7), snowCap); sn.position.set(x, hh - hh * 0.17 + 0.05, L.walkZ - 52); g.add(sn);
-  }
+  // The Alborz behind the city.
+  const alborz = ridge(190, 40, 30, (seed % 97) + 3, snow ? 0.25 : 0.55); alborz.position.set(4, -1, L.walkZ - 62); g.add(alborz);
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
     if (Math.abs(x - shelter.position.x) < 1.6) continue;

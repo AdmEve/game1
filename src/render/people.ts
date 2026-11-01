@@ -9,54 +9,73 @@ const HAIR = [0x231a14, 0x3b2a20, 0x111111, 0x5a3825, 0x8a8a8a];
 const SCARF = [0x1f2937, 0x6b4f3a, 0x334155, 0x7c2d12, 0x3f3f46, 0xe7e1d6];
 const PANTS = [0x283447, 0x1f2937, 0x3b3b46, 0x4a3b2c];
 
+// Real proportions: about 7½ heads tall. Units match the cars (a 4.4 m sedan is ~2.2 here), but people are
+// drawn a little larger than true scale so the queue stays readable on a phone.
 const geo = {
-  legs: new THREE.CapsuleGeometry(0.11, 0.24, 4, 10),
-  torso: new THREE.CapsuleGeometry(0.16, 0.26, 6, 14),
-  coat: new THREE.CylinderGeometry(0.15, 0.22, 0.52, 14),
-  head: new THREE.SphereGeometry(0.135, 18, 14),
-  hair: new THREE.SphereGeometry(0.142, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.55),
-  scarf: new THREE.SphereGeometry(0.16, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.72),
-  drape: new THREE.ConeGeometry(0.17, 0.3, 14, 1, true),
-  bag: new RoundedBoxGeometry(0.16, 0.18, 0.08, 2, 0.03),
-  arm: new THREE.CapsuleGeometry(0.05, 0.26, 4, 8),
+  leg: new THREE.CylinderGeometry(0.036, 0.03, 0.44, 8).translate(0, -0.22, 0),
+  shoe: new RoundedBoxGeometry(0.06, 0.035, 0.11, 2, 0.012),
+  hips: new THREE.CylinderGeometry(0.085, 0.09, 0.1, 12),
+  torso: new THREE.CylinderGeometry(0.11, 0.085, 0.32, 14),
+  shoulders: new THREE.CapsuleGeometry(0.05, 0.14, 4, 10).rotateZ(Math.PI / 2),
+  coat: new THREE.CylinderGeometry(0.105, 0.15, 0.56, 16, 1, true),
+  arm: new THREE.CylinderGeometry(0.03, 0.025, 0.34, 8).translate(0, -0.17, 0),
+  hand: new THREE.SphereGeometry(0.026, 8, 6),
+  neck: new THREE.CylinderGeometry(0.028, 0.032, 0.05, 8),
+  head: new THREE.SphereGeometry(0.068, 18, 14).scale(0.92, 1.12, 1),
+  hair: new THREE.SphereGeometry(0.072, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52).scale(0.94, 1.1, 1.02),
+  scarf: new THREE.SphereGeometry(0.083, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.7).scale(0.94, 1.12, 1),
+  drape: new THREE.ConeGeometry(0.1, 0.16, 14, 1, true),
+  bag: new RoundedBoxGeometry(0.11, 0.13, 0.05, 2, 0.015),
 };
 const mats = new Map<number, THREE.Material>();
 const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
-  const k = c * 7 + (o.roughness ?? 0.6) * 1000;
-  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, ...o }); m.userData.keep = true; mats.set(k, m); }
+  const k = c * 7 + (o.roughness ?? 0.85) * 1000;
+  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o }); m.userData.keep = true; mats.set(k, m); }
   return mats.get(k)!;
 };
+/** Clothes in the ride color: matte fabric, a touch less saturated than car paint. */
 const shirt = (c: Color) => {
   const k = -PAINT[c] - 1;
-  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, 0.05, 0.06), roughness: 0.5 }); m.userData.keep = true; mats.set(k, m); }
+  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, -0.04, 0.05), roughness: 0.88, side: THREE.DoubleSide }); m.userData.keep = true; mats.set(k, m); }
   return mats.get(k)!;
 };
 
 export interface Person { root: THREE.Group; body: THREE.Group; color: Color; userData?: { vip: boolean; gran: boolean } }
 
-/** i varies look (man / woman with headscarf, skin, hair, a bag). */
+/** i varies look (man in a jacket / woman in a manteau and rusari, skin, hair, a bag). */
 export function person(color: Color, i: number): Person {
   const root = new THREE.Group(), body = new THREE.Group();
   root.add(body);
   const woman = i % 5 === 1 || i % 5 === 3;
   const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; body.add(o); return o; };
-  add(geo.legs, mat(PANTS[i % PANTS.length]), 0, 0.25);
-  if (woman) add(geo.coat, shirt(color), 0, 0.56); // manteau
-  else add(geo.torso, shirt(color), 0, 0.6);
-  for (const s of [-1, 1]) { const a = add(geo.arm, shirt(color), s * 0.19, 0.58); a.rotation.z = s * 0.12; }
-  add(geo.head, mat(SKIN[i % SKIN.length], { roughness: 0.55 }), 0, 0.97);
+  const pants = mat(PANTS[i % PANTS.length]), top = shirt(color), skin = mat(SKIN[i % SKIN.length], { roughness: 0.6 });
+  const tall = 0.96 + ((i * 37) % 9) * 0.012;
+  for (const sx of [-1, 1]) {
+    add(geo.leg, pants, sx * 0.045, 0.47, (i % 2 ? 0.01 : -0.01) * sx);
+    add(geo.shoe, mat(0x1b1b1d, { roughness: 0.5 }), sx * 0.045, 0.018, 0.02);
+  }
+  add(geo.hips, pants, 0, 0.5);
+  if (woman) add(geo.coat, top, 0, 0.52 + 0.28 - 0.02); // manteau down to the knees
+  add(geo.torso, top, 0, 0.7);
+  add(geo.shoulders, top, 0, 0.84);
+  for (const sx of [-1, 1]) {
+    const a = add(geo.arm, top, sx * 0.13, 0.86); a.rotation.z = sx * 0.09; a.rotation.x = (i % 3 - 1) * 0.08 * sx;
+    add(geo.hand, skin, sx * 0.16, 0.53);
+  }
+  add(geo.neck, skin, 0, 0.9);
+  add(geo.head, skin, 0, 0.97);
   if (woman) {
-    add(geo.scarf, mat(SCARF[i % SCARF.length], { roughness: 0.8 }), 0, 0.985, -0.01).rotation.x = -0.35;
-    add(geo.drape, mat(SCARF[i % SCARF.length], { roughness: 0.8 }), 0, 0.82, -0.04);
-  } else add(geo.hair, mat(HAIR[i % HAIR.length], { roughness: 0.8 }), 0, 0.995).rotation.x = -0.3;
-  if (i % 3 === 2) { const b = add(geo.bag, mat(0x7a4b2a, { roughness: 0.5 }), 0.24, 0.45); b.rotation.y = 0.3; }
-  // One or two draw calls per person instead of eight.
+    add(geo.scarf, mat(SCARF[i % SCARF.length], { roughness: 0.9 }), 0, 0.975, -0.008).rotation.x = -0.3;
+    add(geo.drape, mat(SCARF[i % SCARF.length], { roughness: 0.9 }), 0, 0.87, -0.015);
+  } else add(geo.hair, mat(HAIR[i % HAIR.length], { roughness: 0.9 }), 0, 0.985, -0.006).rotation.x = -0.25;
+  if (i % 3 === 2) { const b = add(geo.bag, mat(0x5e3b22, { roughness: 0.55 }), 0.17, 0.55); b.rotation.y = 0.3; }
+  // One or two draw calls per person instead of a dozen.
   const baked = bake(body);
   root.remove(body);
   const merged = new THREE.Group();
   merged.add(...baked.children);
   root.add(merged);
-  root.scale.setScalar(1.12);
+  root.scale.setScalar(1.18 * tall);
   return { root, body: merged, color };
 }
 
