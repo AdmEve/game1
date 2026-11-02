@@ -1,6 +1,7 @@
 // Procedural Iranian cars. Units are meters; each car faces +x with its origin on the ground at its center.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { profile } from './profile';
 
 // ───── Curves ─────
 // Monotone cubic through [x, y] points: smooth, no overshoot, keeps flats flat.
@@ -155,18 +156,20 @@ const tex = (w, h, draw) => {
   draw(cv.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 };
+// Phones (lite profile) get standard materials: no clearcoat lobe, the same look at play distance.
+const Phys = (o) => (profile.lite ? new THREE.MeshStandardMaterial(Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith('clearcoat') && !k.startsWith('sheen')))) : new THREE.MeshPhysicalMaterial(o));
 export const M = {
-  glass: new THREE.MeshPhysicalMaterial({ color: 0x0d1620, roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.78, clearcoat: 1, envMapIntensity: 1.6 }),
-  glassDark: new THREE.MeshPhysicalMaterial({ color: 0x101a24, roughness: 0.04, metalness: 0.2, clearcoat: 1, envMapIntensity: 1.8 }),
+  glass: Phys({ color: 0x0d1620, roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.78, clearcoat: 1, envMapIntensity: 1.6 }),
+  glassDark: Phys({ color: 0x101a24, roughness: 0.04, metalness: 0.2, clearcoat: 1, envMapIntensity: 1.8 }),
   trim: new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.55 }),
   plastic: new THREE.MeshStandardMaterial({ color: 0x24272b, roughness: 0.7 }),
   under: new THREE.MeshStandardMaterial({ color: 0x0b0c0e, roughness: 0.9 }),
   chrome: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.08 }),
   steel: new THREE.MeshStandardMaterial({ color: 0x9aa1a8, metalness: 0.85, roughness: 0.32 }),
   tire: new THREE.MeshStandardMaterial({ color: 0x1a1b1d, roughness: 0.88 }),
-  lens: new THREE.MeshPhysicalMaterial({ color: 0xf4f7fb, roughness: 0.05, clearcoat: 1, emissive: 0xfff3d6, emissiveIntensity: 0.35 }),
-  amber: new THREE.MeshPhysicalMaterial({ color: 0xff9a1a, roughness: 0.1, clearcoat: 1, emissive: 0xff7a00, emissiveIntensity: 0.25 }),
-  red: new THREE.MeshPhysicalMaterial({ color: 0xc8101c, roughness: 0.1, clearcoat: 1, emissive: 0x8a0008, emissiveIntensity: 0.35 }),
+  lens: Phys({ color: 0xf4f7fb, roughness: 0.05, clearcoat: 1, emissive: 0xfff3d6, emissiveIntensity: 0.35 }),
+  amber: Phys({ color: 0xff9a1a, roughness: 0.1, clearcoat: 1, emissive: 0xff7a00, emissiveIntensity: 0.25 }),
+  red: Phys({ color: 0xc8101c, roughness: 0.1, clearcoat: 1, emissive: 0x8a0008, emissiveIntensity: 0.35 }),
   teal: new THREE.MeshStandardMaterial({ color: 0x1fa79b, roughness: 0.4 }),
   seat: new THREE.MeshStandardMaterial({ color: 0x3a3631, roughness: 0.9 }),
   seatBeige: new THREE.MeshStandardMaterial({ color: 0x9c8466, roughness: 0.9 }),
@@ -185,16 +188,16 @@ function settleSnow(m) {
       .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowK = uSnow * smoothstep(0.85, 0.97, vUp) * smoothstep(0.5, 0.8, snowN(vSnowXZ * 5.0) * 0.55 + snowN(vSnowXZ * 19.0) * 0.45) * 0.7;\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.97), snowK);')
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 0.0, snowK);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.85, snowK);')
-      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - snowK;');
+      .replace('#include <lights_physical_fragment>', m.isMeshPhysicalMaterial ? '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - snowK;' : '#include <lights_physical_fragment>');
   };
   m.customProgramCacheKey = () => 'paint-snow';
   return m;
 }
 export function paint(color, metallic = false) {
   const key = color + ':' + metallic;
-  if (!paintCache.has(key)) paintCache.set(key, settleSnow(new THREE.MeshPhysicalMaterial({
-    color, metalness: metallic ? 0.5 : 0.12, roughness: metallic ? 0.36 : 0.42, clearcoat: 1, clearcoatRoughness: 0.045, envMapIntensity: 1.15,
-  })));
+  if (!paintCache.has(key)) paintCache.set(key, settleSnow(profile.lite
+    ? new THREE.MeshStandardMaterial({ color, metalness: metallic ? 0.45 : 0.1, roughness: metallic ? 0.3 : 0.34, envMapIntensity: 1.35 })
+    : new THREE.MeshPhysicalMaterial({ color, metalness: metallic ? 0.5 : 0.12, roughness: metallic ? 0.36 : 0.42, clearcoat: 1, clearcoatRoughness: 0.045, envMapIntensity: 1.15 })));
   return paintCache.get(key);
 }
 
@@ -254,7 +257,7 @@ function wheel(R, wd, style, Q = 1) {
   pts.push(new THREE.Vector2(r0, wd / 2));
   const tire = new THREE.Mesh(new THREE.LatheGeometry(pts, seg), M.tire);
   tire.rotation.x = Math.PI / 2;
-  rimMats[style] ??= new THREE.MeshStandardMaterial({ map: rimTex(style), metalness: 0.75, roughness: 0.28 });
+  rimMats[style] ??= profile.lite ? new THREE.MeshStandardMaterial({ color: style === 'steel' ? 0x2f3337 : 0xb9c0c7, metalness: 0.6, roughness: 0.35 }) : new THREE.MeshStandardMaterial({ map: rimTex(style), metalness: 0.75, roughness: 0.28 });
   const rim = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, wd * 0.9, seg), [M.under, rimMats[style], rimMats[style]]);
   rim.rotation.x = Math.PI / 2;
   g.add(tire, rim);
@@ -318,7 +321,7 @@ function faceMat(kind, w, h) {
 function lamp(w, h, r, lensMat, bezel = M.trim) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(slab(w, h, r, 0.01), bezel));
-  const kind = lensMat === M.lens ? (Math.abs(w - h) < 0.03 ? 'round' : 'head') : lensMat === M.red ? 'tail' : null;
+  const kind = profile.lite ? null : lensMat === M.lens ? (Math.abs(w - h) < 0.03 ? 'round' : 'head') : lensMat === M.red ? 'tail' : null;
   if (kind) {
     const f = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, h * 0.8), faceMat(kind, w, h)); f.position.z = 0.0195; g.add(f);
   } else {
@@ -451,8 +454,8 @@ export function buildCar(spec, color, opts = {}) {
   const plate = opts.plate ?? plateTex({ yellow: opts.taxi });
   const plateMat = new THREE.MeshStandardMaterial({ map: plate, roughness: 0.5, metalness: 0.2 });
   const plateLift = (y) => { for (const b of spec.bumpers ?? []) if (y > b.y0 - 0.06 && y < b.y1 + 0.06) return (b.grow ?? 0.035) + 0.02; return 0.012; };
-  if (spec.plateF != null) front(new THREE.Mesh(plateGeo, plateMat), spec.plateF, 0.013, plateLift(spec.plateF));
-  if (spec.plateR != null) rear(new THREE.Mesh(plateGeo, plateMat), spec.plateR, 0.013, plateLift(spec.plateR));
+  if (spec.plateF != null && !profile.lite) front(new THREE.Mesh(plateGeo, plateMat), spec.plateF, 0.013, plateLift(spec.plateF));
+  if (spec.plateR != null && !profile.lite) rear(new THREE.Mesh(plateGeo, plateMat), spec.plateR, 0.013, plateLift(spec.plateR));
 
   // Door handles, mirrors.
   for (const x of spec.handles ?? []) for (const sg of [1, -1]) side(new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.028, 0.02, rseg(), 0.008), spec.chromeTrim ? M.chrome : M.trim), x, top(x) - 0.09, sg, 0.006);
@@ -814,7 +817,7 @@ const parsMats = {};
 function parsMat(key, w, h, draw, o = {}) {
   if (parsMats[key]) return parsMats[key];
   const t = tex(w, h, draw); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
-  return (parsMats[key] = new THREE.MeshPhysicalMaterial({ map: t, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04, ...o }));
+  return (parsMats[key] = Phys({ map: t, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04, ...o }));
 }
 // Wedge headlamp: tall at the nose (u=0), low and swept at the fender (u=1). Clear lens, big stepped reflectors, amber indicator.
 const headTex = () => parsMat('pars-head', 512, 128, (g, w, h) => {

@@ -3,7 +3,8 @@
  * into a handful of merged meshes (one per material family) so a full lot stays cheap to draw.
  */
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { profile } from './profile';
 import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve, paint } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
 import { courierBike } from './mechanics';
@@ -16,7 +17,9 @@ export const CELL = 1.25;
 
 // Vertex-colored stand-ins for the many small dark/plain materials.
 const misc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.05 });
-export const lightsMaterial = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.08, clearcoat: 1, emissive: 0xffffff, emissiveIntensity: 0.32 });
+export const lightsMaterial = profile.lite
+  ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.1, emissive: 0xffffff, emissiveIntensity: 0.32 })
+  : new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.08, clearcoat: 1, emissive: 0xffffff, emissiveIntensity: 0.32 });
 const lights = lightsMaterial;
 lights.onBeforeCompile = (sh) => {
   sh.fragmentShader = sh.fragmentShader.replace('vec3 totalEmissiveRadiance = emissive;', 'vec3 totalEmissiveRadiance = emissive * vColor;');
@@ -76,7 +79,7 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
       if (mat.flatShading) g.computeVertexNormals();
       const physical = (mat as THREE.MeshPhysicalMaterial).isMeshPhysicalMaterial;
       const plain = !hasMap && !mat.transparent && mat.metalness < 0.9;
-      if (plain && mat.emissiveIntensity > 0 && mat.emissive && mat.emissive.getHex() !== 0 && physical && (mat as THREE.MeshPhysicalMaterial).clearcoat > 0 && mat.roughness < 0.2) {
+      if (plain && mat.emissiveIntensity > 0 && mat.emissive && mat.emissive.getHex() !== 0 && mat.roughness < 0.2 && !mat.emissiveMap) {
         tint(g, mat.color); put(lights, g);
       } else if (plain && !physical) {
         tint(g, mat.color); put(misc, g);
@@ -85,8 +88,10 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
   });
   const out = new THREE.Group();
   for (const [mat, geos] of buckets) {
-    const merged = mergeGeometries(geos, false);
+    let merged = mergeGeometries(geos, false);
     if (!merged) continue;
+    // Share vertices again (the parts were un-indexed to merge): about a third of the vertex work.
+    merged = mergeVertices(merged, 1e-4);
     merged.userData.keep = true;
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = (opts.shadows ?? true) && casts.has(mat) && !(mat as THREE.Material).transparent;

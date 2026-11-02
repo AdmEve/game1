@@ -4,6 +4,7 @@
  * instead of reading as flat color. Every texture is painted once and shared.
  */
 import * as THREE from 'three';
+import { profile } from './profile';
 
 // ───── Tileable value noise ─────
 function hash(x: number, y: number, s: number) { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; }
@@ -77,14 +78,16 @@ const cache = new Map<string, Surface>();
 function once(key: string, make: () => Surface): Surface { if (!cache.has(key)) cache.set(key, make()); return cache.get(key)!; }
 /** A material for a surface, with its own repeat (the images are shared). */
 export function surfaceMat(s: Surface, repeat: [number, number], o: THREE.MeshStandardMaterialParameters = {}) {
-  const cl = (t: THREE.Texture) => { const k = t.clone(); k.repeat.set(...repeat); k.needsUpdate = true; k.userData.keep = false; return k; };
+  const cl = (t: THREE.Texture) => { const k = t.clone(); k.repeat.set(...repeat); k.anisotropy = profile.lite ? 2 : 8; k.needsUpdate = true; k.userData.keep = false; return k; };
+  // Phones skip the normal map (a full-screen texture fetch plus per-pixel tangent maths).
+  if (profile.lite) { const { normalScale: _n, ...rest } = o; void _n; return new THREE.MeshStandardMaterial({ map: cl(s.map), roughnessMap: cl(s.roughnessMap), roughness: 1, ...rest }); }
   return new THREE.MeshStandardMaterial({ map: cl(s.map), normalMap: cl(s.normalMap), roughnessMap: cl(s.roughnessMap), roughness: 1, normalScale: new THREE.Vector2(0.8, 0.8), ...o });
 }
 
 /** Weathered Tehran asphalt: aggregate grain, darker patches, sealed cracks, oil stains, polished wheel paths. */
 export function asphalt(tone = 1, seed = 3, snow = false): Surface {
   return once('asphalt' + tone + seed + snow, () => {
-    const S = 512;
+    const S = profile.lite ? 256 : 512;
     const big = fbm(S, 4, 3, seed), grain = fbm(S, 170, 1, seed + 7), mid = fbm(S, 24, 2, seed + 3);
     const height = new Float32Array(S * S);
     for (let i = 0; i < height.length; i++) height[i] = grain[i] * 0.88 + mid[i] * 0.12;
@@ -124,7 +127,7 @@ export function asphalt(tone = 1, seed = 3, snow = false): Surface {
 /** Grass with clumps, dry patches and blade grain. */
 export function grass(kind: 'green' | 'dry' | 'snow' = 'green', seed = 11): Surface {
   return once('grass' + kind + seed, () => {
-    const S = 512;
+    const S = profile.lite ? 256 : 512;
     const big = fbm(S, 5, 3, seed), blades = fbm(S, 128, 1, seed + 5), clump = fbm(S, 18, 2, seed + 9);
     const base = kind === 'snow' ? [232, 238, 244] : kind === 'dry' ? [138, 124, 72] : [74, 104, 46];
     const dry = kind === 'snow' ? [205, 214, 224] : [142, 128, 76];
@@ -179,7 +182,7 @@ export function leafTexture(palette: string[], seed = 1, kind: 'broad' | 'needle
   // Twigs, then leaves densest in the middle, each a pointed blade with a lit and a shaded half.
   g.strokeStyle = 'rgba(70,52,34,.9)'; g.lineWidth = 2;
   for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + (rnd() - 0.5) * S * 0.8, S / 2 + (rnd() - 0.5) * S * 0.8); g.stroke(); }
-  const n = kind === 'needle' ? 700 : 430;
+  const n = kind === 'needle' ? 900 : 620;
   for (let k = 0; k < n; k++) {
     const a = rnd() * Math.PI * 2, r = Math.pow(rnd(), 0.6) * S * 0.47, x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
     const len = kind === 'needle' ? 6 + rnd() * 6 : 14 + rnd() * 14, wid = kind === 'needle' ? 1.2 : len * (kind === 'blossom' ? 0.75 : 0.5);
@@ -217,6 +220,9 @@ export function foliageMat(palette: string[], seed = 1, kind: 'broad' | 'needle'
  * shades like a volume (lit side, shaded side) while the cutout leaves keep the silhouette ragged.
  */
 export function canopy(rx: number, ry: number, rz: number, cards: number, mat: THREE.Material, rnd: () => number, cardSize = 0.7): THREE.Mesh {
+  // Leaf cards are alpha-tested and overlap heavily: the costliest pixels in the scene. Keep them few and big.
+  cards = Math.max(6, Math.round(cards * (profile.lite ? 0.18 : 0.4)));
+  cardSize *= profile.lite ? 1.75 : 1.3;
   const pos: number[] = [], nor: number[] = [], uv: number[] = [];
   const q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), n = new THREE.Vector3();
   for (let i = 0; i < cards; i++) {
@@ -236,7 +242,18 @@ export function canopy(rx: number, ry: number, rz: number, cards: number, mat: T
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true;
+  // Cards never go into the shadow map (thousands of alpha-tested quads); `shadowProxy` casts the crown's shadow.
+  const m = new THREE.Mesh(g, mat); m.castShadow = false; m.receiveShadow = true;
+  return m;
+}
+/** An invisible low-poly blob that only casts the crown's shadow (cheap in the shadow pass, nothing drawn in color). */
+const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+proxyMat.userData.keep = true;
+const proxyGeo = new THREE.IcosahedronGeometry(1, 1);
+proxyGeo.userData.keep = true;
+export function shadowProxy(rx: number, ry: number, rz: number): THREE.Mesh {
+  const m = new THREE.Mesh(proxyGeo, proxyMat); m.scale.set(rx * 0.85, ry * 0.85, rz * 0.85); m.castShadow = true; m.receiveShadow = false;
+  m.userData.proxy = true;
   return m;
 }
 

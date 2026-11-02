@@ -9,6 +9,9 @@
  */
 import * as THREE from 'three';
 import { fbm } from './surfaces';
+import { profile } from './profile';
+/** Phones get fewer particles. */
+const K = (n: number) => Math.round(n * (profile.lite ? 0.45 : 1));
 
 export type WeatherKind = 'clear' | 'leaves' | 'rain' | 'storm' | 'snow' | 'dust' | 'petals' | 'mist';
 
@@ -99,22 +102,22 @@ export class Weather {
     this.box = { x0: -lotW / 2 - 10, x1: lotW / 2 + 10, z0: -12, z1: lotH + 10, y1: 16 };
     this.rippleBox = { x0: -lotW / 2 - 3, x1: lotW / 2 + 3, z0: -4, z1: lotH + 3 };
     if (kind === 'rain' || kind === 'storm') {
-      this.makeRain(kind === 'storm' ? 2600 : 2000);
-      this.makeRipples(kind === 'storm' ? 120 : 90);
+      this.makeRain(K(kind === 'storm' ? 2600 : 2000));
+      this.makeRipples(K(kind === 'storm' ? 120 : 90));
       this.makeBanks(0x9aa6b4, 0.32, 3);
     } else if (kind === 'snow') {
-      this.makeFlakes(1400, 0.1, 0.95, 0.75, 0.45, 0.6);
-      this.makeFlakes(500, 0.2, 0.9, 1.0, 0.6, 0.8);
+      this.makeFlakes(K(1400), 0.1, 0.95, 0.75, 0.45, 0.6);
+      this.makeFlakes(K(500), 0.2, 0.9, 1.0, 0.6, 0.8);
       this.makeFlakes(70, 0.42, 0.55, 1.3, 0.8, 1.0);
       this.makeBanks(0xe8eef4, 0.22, 2);
     } else if (kind === 'dust') {
-      this.makeFlakes(260, 0.07, 0.55, -0.05, 0.3, 1.4, 0xf3d6a0);
+      this.makeFlakes(K(260), 0.07, 0.55, -0.05, 0.3, 1.4, 0xf3d6a0);
       this.makeBanks(0xd9b27a, 0.28, 2);
     } else if (kind === 'mist') {
       this.makeBanks(0xa8a6d8, 0.5, 4);
       this.makeFireflies();
-    } else if (kind === 'leaves') this.makeLeaves(120, [0xc8741d, 0xa9521a, 0xd8a02b, 0x8a3d16], 0.16);
-    else if (kind === 'petals') this.makeLeaves(150, [0xffc6d9, 0xffffff, 0xf7a8c6], 0.1);
+    } else if (kind === 'leaves') this.makeLeaves(K(120), [0xc8741d, 0xa9521a, 0xd8a02b, 0x8a3d16], 0.16);
+    else if (kind === 'petals') this.makeLeaves(K(150), [0xffc6d9, 0xffffff, 0xf7a8c6], 0.1);
     else if (kind === 'clear') this.makeFlakes(50, 0.05, 0.6, -0.02, 0.4, 0.3, 0xfff4cc, true);
     this.update(0.0001); // lay everything out so the very first frame already shows the weather
   }
@@ -220,7 +223,7 @@ export class Weather {
   private makeBanks(color: number, opacity: number, layers: number) {
     const { x0, x1, z0, z1 } = this.box;
     // A faint veil over everything, thicker banks only beyond the street so the lot stays readable.
-    for (let l = 0; l < layers; l++) {
+    for (let l = profile.lite ? 1 : 0; l < (profile.lite ? Math.min(2, layers) : layers); l++) {
       const tex = fogBillows().clone(); tex.needsUpdate = true; tex.repeat.set(2.2 + l * 0.6, 2 + l * 0.5);
       const full = l === 0, w = x1 - x0 + 40, d = full ? z1 - z0 + 30 : 34;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2),

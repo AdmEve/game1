@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { Color } from '../game/rules';
 import { PAINT, bake } from './fleet';
+import { profile } from './profile';
 
 const SKIN = [0xf1c9a0, 0xe0b088, 0xd29b72, 0xc4895f, 0xf3d2b3];
 const HAIR = [0x231a14, 0x3b2a20, 0x111111, 0x5a3825, 0x8a8a8a];
@@ -47,7 +48,7 @@ export function person(color: Color, i: number): Person {
   const root = new THREE.Group(), body = new THREE.Group();
   root.add(body);
   const woman = i % 5 === 1 || i % 5 === 3;
-  const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; body.add(o); return o; };
+  const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = !profile.lite; body.add(o); return o; };
   const pants = mat(PANTS[i % PANTS.length]), top = shirt(color), skin = mat(SKIN[i % SKIN.length], { roughness: 0.6 });
   const tall = 0.96 + ((i * 37) % 9) * 0.012;
   for (const sx of [-1, 1]) {
@@ -102,7 +103,7 @@ function chadorMat(color: Color) {
 /** «حاج‌خانم با خرید»: a grandma in a floral chador with two full shopping bags (she takes two seats). */
 export function granny(color: Color, i: number): Person {
   const root = new THREE.Group(), body = new THREE.Group();
-  const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; body.add(o); return o; };
+  const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = !profile.lite; body.add(o); return o; };
   const ch = chadorMat(color);
   // The chador falls from the head to the ground; she leans forward a little.
   add(new THREE.CylinderGeometry(0.16, 0.3, 0.86, 16), ch, 0, 0.43);

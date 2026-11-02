@@ -165,3 +165,12 @@ used to hold the life simulator «زندگی ایرونی»; its final state is 
 - UI: premium theme (`theme.css`): dark glass, hairlines, amber accent, line icons (`ui/icons.ts`), cinematic wordmark.
 - City: instanced Tehran blocks out to the Alborz (world-space window facades, lit windows at night, sightline kept clear of high-rises in front of the landmark), urban ground, physical sky as the backdrop. Azadi and Milad towers rebuilt to their real shapes. Flower beds as blossom cards, reflective fountain water.
 - Settings: «کیفیت گرافیک» (auto / high / balanced / simple). Auto keeps the frame-rate probe that steps down; fixed tiers set pixel ratio, post on/off and shadow resolution.
+
+## Performance pass (phones)
+Measured per feature (headless, CPU-rasterised as a fill-rate proxy): the AAA build cost ~2.4× the pre-AAA build — leaf cards (18.5k alpha-tested quads, also redrawn into the shadow map) ~48%, cars ~33%, periodic shadow-map refresh ~30%.
+- `render/profile.ts`: render profile chosen at load (before materials exist). Phones default to **lite**: no film post pass (static CSS vignette), standard instead of clearcoat/sheen materials, no plate/rim/lamp-face textures (12 → ~7 draw calls per car), car mesh density 0.17, ground without normal maps and 256² textures, 45% weather particles, one fog bank, pixel ratio 1.1.
+- Foliage: far fewer, bigger leaf cards; cards no longer cast shadows — an invisible low-poly proxy per crown does.
+- Baked meshes re-indexed after merging (mergeVertices).
+- Lite: nothing that moves casts shadows, so the shadow map is drawn once per level / camera fit (no every-8-frames spike).
+- Scene renders at half rate behind menus; auto-quality probe reacts faster (1.5 s, < 52 fps).
+- Settings «بالا» opts a phone into the full look (app restarts to apply).

@@ -3,6 +3,7 @@
  * sidewalk with its queue, and the city behind. Also owns the coordinate helpers the game uses.
  */
 import * as THREE from 'three';
+import { shadowProxy } from './surfaces';
 import { asphalt, bark, bricks as brickSurface, canopy, cobbles, deck, foliageMat, grass as grassSurface, limb, paving as pavingSurface, plaza, surfaceMat, vnoise, wornPaint } from './surfaces';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CELL, bake } from './fleet';
@@ -183,6 +184,7 @@ function chenar(s: number, snow = false, autumn = false): THREE.Group {
     c.position.copy(end).add(new THREE.Vector3(0, 0.12, 0)); t.add(c);
   }
   const crown = canopy(1.05, 0.7, 1.05, snow ? 40 : 140, fm, rnd, 0.8); crown.position.set(fork.x, 2.35, fork.z); t.add(crown);
+  const sp = shadowProxy(1.35, 0.95, 1.35); sp.position.set(fork.x, 2.25, fork.z); t.add(sp);
   t.scale.setScalar(s);
   return t;
 }

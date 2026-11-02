@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { curve, loft } from './cars.js';
 import { fbm } from './surfaces';
+import { profile } from './profile';
 
 const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
 
@@ -14,7 +15,7 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
 }
 
 // ───── «چادر ماشین»: a silver car cover draped over the car's shape ─────
-let fabric: THREE.MeshPhysicalMaterial | null = null;
+let fabric: THREE.MeshStandardMaterial | null = null;
 function fabricMat() {
   if (fabric) return fabric;
   // Wrinkles: long soft folds running down the sides, from a stretched noise height field.
@@ -28,7 +29,9 @@ function fabricMat() {
   }
   g.putImageData(img, 0, 0);
   const nm = new THREE.CanvasTexture(c); nm.wrapS = nm.wrapT = THREE.RepeatWrapping; nm.colorSpace = THREE.NoColorSpace;
-  fabric = new THREE.MeshPhysicalMaterial({ color: 0xaab1b9, roughness: 0.48, metalness: 0.25, sheen: 0.7, sheenColor: new THREE.Color(0xe8eef5), sheenRoughness: 0.45, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9) });
+  fabric = profile.lite
+    ? new THREE.MeshStandardMaterial({ color: 0xb4bac1, roughness: 0.45, metalness: 0.25, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9) })
+    : new THREE.MeshPhysicalMaterial({ color: 0xaab1b9, roughness: 0.48, metalness: 0.25, sheen: 0.7, sheenColor: new THREE.Color(0xe8eef5), sheenRoughness: 0.45, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9) });
   fabric.userData.keep = true;
   return fabric;
 }

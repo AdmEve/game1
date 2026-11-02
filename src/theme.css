@@ -197,3 +197,6 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
 .seg button { padding: 5px 10px; border-radius: 8px; background: none; color: var(--muted); font: 600 13px Vazirmatn, sans-serif; }
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
+
+/* Lite profile (no post pass): a static vignette instead. */
+body.lite::after { display: block; content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse 90% 80% at 50% 55%, rgba(0, 0, 0, 0) 58%, rgba(5, 8, 14, .32) 100%); }

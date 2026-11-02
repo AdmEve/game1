@@ -11,6 +11,7 @@ import { unpackLevel } from './game/pack';
 import type { Color, Kind, Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { skyEnv } from './render/env.js';
+import { profile } from './render/profile';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { setSnow } from './render/cars.js';
@@ -55,16 +56,18 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 /** Phones (the APK or a mobile browser) get a lighter setup: fewer pixels, cheaper shadows, no live blur. */
 const mobile = Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : mobile ? 1.25 : 2));
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = profile.shadows;
 renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 // The world's shadows barely change, so phones redraw the shadow map only every few frames, and cars cast none.
-if (mobile) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(0.22); }
+if (mobile || profile.lite) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(profile.lite ? 0.17 : 0.22); }
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.append(renderer.domElement);
 // Film look: HDR scene, bloom, filmic tone mapping, color grade, lens vignette, grain (see render/post.ts).
 const post = new Post(renderer, { samples: mobile ? 2 : 4 });
+post.enabled = !profile.lite;
+document.body.classList.toggle('lite', profile.lite);
 
 // ───── Graphics quality: 2 = full (film post, soft shadows), 1 = balanced (fewer pixels), 0 = simple (no post, hard shadows) ─────
 let tier = 2;
@@ -72,8 +75,11 @@ function setTier(t: number) {
   tier = Math.max(0, Math.min(2, t));
   const dpr = window.devicePixelRatio;
   if (debug.has('shot')) return;
-  renderer.setPixelRatio(Math.min(dpr, tier === 2 ? (mobile ? 1.25 : 2) : tier === 1 ? (mobile ? 1.05 : 1.5) : 1));
-  post.enabled = tier > 0;
+  // Lite (phones): no film post pass, fewer pixels. Full: the post pass while the device keeps up.
+  const ratio = profile.lite ? [0.85, 1.0, 1.1][tier] : [1, mobile ? 1.05 : 1.5, mobile ? 1.25 : 2][tier];
+  renderer.setPixelRatio(Math.min(dpr, ratio));
+  post.enabled = !profile.lite && tier > 0;
+  document.body.classList.toggle('lite', !post.enabled);
   const size = tier === 0 ? 512 : mobile || tier === 1 ? 1024 : 2048;
   if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); sun.shadow.map?.dispose(); sun.shadow.map = null; }
   renderer.shadowMap.needsUpdate = true;
@@ -231,6 +237,7 @@ function fitCamera() {
   const ext = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.75 + 4;
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 1, far: 70 });
   sun.shadow.camera.updateProjectionMatrix();
+  renderer.shadowMap.needsUpdate = true;
 }
 
 // ───── Juice: floating texts and camera shake ─────
@@ -614,7 +621,14 @@ function showSettings() {
   const seg = h('div', 'seg');
   for (const [k, label] of [['auto', 'خودکار'], ['high', 'بالا'], ['balanced', 'متوسط'], ['low', 'ساده']] as const) {
     const b = h('button', save.settings.quality === k ? 'on' : '', label);
-    b.onclick = () => { save.settings.quality = k; persist(); applyQuality(k); seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); };
+    b.onclick = () => {
+      save.settings.quality = k; persist();
+      seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      // Materials and textures are chosen at load: a switch between the lite and full looks restarts the app.
+      const lite = k === 'high' ? false : k === 'auto' ? profile.mobile : true;
+      if (lite !== profile.lite || (k === 'low') !== !profile.shadows) { hud.toast('در حال اعمال تنظیمات…'); setTimeout(() => location.reload(), 400); return; }
+      applyQuality(k);
+    };
     seg.append(b);
   }
   qr.append(seg); c.append(qr);
@@ -776,7 +790,7 @@ async function boot() {
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
-  let last = performance.now(), shadowTick = 0;
+  let last = performance.now(), shadowTick = 0, renderSkip = false;
   applyQuality(save.settings.quality);
   // Adaptive quality ('auto'): watch the frame rate during play and step down if the phone struggles.
   let probeFrames = 0, probeTime = 0;
@@ -785,8 +799,8 @@ async function boot() {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     if (save.settings.quality === 'auto' && tier > 0 && !modalOpen && document.visibilityState === 'visible') {
       probeFrames++; probeTime += dt;
-      if (probeTime > 2.5) {
-        if (probeFrames / probeTime < 50) stepDown();
+      if (probeTime > 1.5) {
+        if (probeFrames / probeTime < 52) stepDown();
         probeFrames = 0; probeTime = 0;
       }
     }
@@ -801,8 +815,10 @@ async function boot() {
     }
     applyShake(dt);
     updateHand();
-    if (mobile && ++shadowTick % 4 === 0) renderer.shadowMap.needsUpdate = true;
-    post.render(scene, camera, dt);
+    // Lite: nothing that moves casts a shadow, so the shadow map is drawn once per level (no periodic spike).
+    if (mobile && !profile.lite && ++shadowTick % 8 === 0) renderer.shadowMap.needsUpdate = true;
+    // Behind a menu the scene only idles: draw it at half rate so the menu itself stays smooth.
+    if (!(modalOpen && (renderSkip = !renderSkip))) post.render(scene, camera, dt);
     requestAnimationFrame(loop);
   };
   if (debug.has('shot')) post.render(scene, camera);
