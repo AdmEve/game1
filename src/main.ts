@@ -335,14 +335,12 @@ function applyShake(dt: number) {
 
 // ───── Input ─────
 const ray = new THREE.Raycaster();
-const groundY = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.45);
 let down: { x: number; y: number; i: number } | null = null;
+/** The car under a tap: the car body the finger is on (as drawn), or the nearest one for a tap just beside it. */
 function pick(x: number, y: number): number {
   if (!session) return -1;
   ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
-  const p = new THREE.Vector3();
-  if (!ray.ray.intersectPlane(groundY, p)) return -1;
-  return session.vehicleAt(p);
+  return session.pickRay(ray);
 }
 /** Last touch anywhere (the frame rate goes back to full the moment a finger lands). */
 let lastTouch = 0;
@@ -972,7 +970,7 @@ async function boot() {
   }
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
-    session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats,
+    session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */

@@ -1,5 +1,6 @@
 // Plays levels in the real client with the solver's moves and checks they end on the win screen.
 //   node scripts/playthrough.cjs 1 7 11 16 21 30 y5 n3   (yN / nN = night or day N of the «شب یلدا» / «نوروز» events)
+//   REAL=1 node scripts/playthrough.cjs 1 34   (taps go through pointer events and the tap pick, as a finger's would)
 const { chromium } = require('playwright');
 (async () => {
   const levels = process.argv.slice(2);
@@ -11,7 +12,7 @@ const { chromium } = require('playwright');
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 240000 });
   let failed = 0;
   for (const n of levels) {
-    const res = await p.evaluate(async (n) => {
+    const res = await p.evaluate(async ([n, real]) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       r.save.seen = { cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, tunnel: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true, ch8: true }; for (let k = 0; k < 400; k++) r.save.seen['boss' + k] = true;
@@ -29,11 +30,17 @@ const { chromium } = require('playwright');
       const s = r.session();
       const { solve } = await import('/src/game/solver.ts');
       const sol = solve(s.level).solution;
-      for (const m of sol) { s.tap(m); await r.advance(0.7); }
+      // REAL=1: tap through the real input path (pointer events on the canvas at the car's screen position).
+      const tapAt = (m) => {
+        const q = s.anchor(m).project(r.camera), cv = r.renderer.domElement;
+        const o = { clientX: ((q.x + 1) / 2) * innerWidth, clientY: ((1 - q.y) / 2) * innerHeight, bubbles: true, pointerId: 1, isPrimary: true };
+        cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o));
+      };
+      for (const m of sol) { if (real) tapAt(m); else s.tap(m); await r.advance(0.7); }
       for (let k = 0; k < 120 && !document.querySelector('.result'); k++) await r.advance(0.5);
       const won = !!document.querySelector('.result.win');
       return { n, moves: sol.length, won, over: s.s.over, yalda: r.save.yalda.done, nowruz: r.save.nowruz.done };
-    }, n);
+    }, [n, !!process.env.REAL]);
     console.log(JSON.stringify(res));
     if (!res.won) failed++;
   }

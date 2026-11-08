@@ -142,3 +142,19 @@ export function toSlots(model: THREE.Object3D, o: { castShadow: boolean; tint?: 
   }
   return out;
 }
+
+const probe = new THREE.Mesh();
+/**
+ * Raycast a model whose leaves may be slots: each slot is tested as the mesh it stands for, so a tap is
+ * judged against the shape that is actually drawn. Nodes marked `userData.noPick` (and their children) are skipped.
+ */
+export function raycastModel(o: THREE.Object3D, rc: THREE.Raycaster, out: THREE.Intersection[]) {
+  if (!o.visible || o.userData.noPick) return;
+  if ((o as Slot).isSlot) {
+    const b = (o as Slot).batch;
+    probe.geometry = b.geometry; probe.material = b.material;
+    probe.matrixWorld.copy(o.matrixWorld);
+    probe.raycast(rc, out);
+  } else if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite) o.raycast(rc, out);
+  for (const c of o.children) raycastModel(c, rc, out);
+}

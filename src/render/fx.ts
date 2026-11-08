@@ -101,6 +101,38 @@ export function confetti(parent: THREE.Object3D, at: THREE.Vector3, n = 140) {
 }
 
 /**
+ * Tap ring: a soft outline on the ground around the car under the finger, the instant it lands (before the
+ * car has moved), so every tap is acknowledged. One mesh, reused; a new tap restarts it.
+ */
+const ringMat = (() => {
+  const W = 128, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d')!;
+  g.strokeStyle = '#fff'; g.lineWidth = 10; g.shadowColor = '#fff'; g.shadowBlur = 12;
+  g.beginPath(); g.roundRect(14, 14, W - 28, H - 28, 30); g.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, color: 0xffe7a8, opacity: 0 });
+  m.userData.keep = true; return m;
+})();
+const ringGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+ringGeo.userData.keep = true;
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.renderOrder = 1; ring.visible = false; ring.userData.noPick = true;
+let ringToken = 0;
+/** `w` and `l` are the car's footprint (width across, length along its heading `rotY`). */
+export function tapRing(parent: THREE.Object3D, at: THREE.Vector3, rotY: number, w: number, l: number) {
+  const token = ++ringToken;
+  ring.removeFromParent(); parent.add(ring);
+  ring.position.set(at.x, at.y + 0.03, at.z); ring.rotation.y = rotY; ring.visible = true;
+  // The outline sits just clear of the body and widens a little as it fades.
+  void tween(0.5, (k) => {
+    if (token !== ringToken) return;
+    const grow = 0.55 + 0.3 * ease.out(k);
+    ring.scale.set(w + grow * 2, 1, l + grow * 2);
+    ringMat.opacity = 0.95 * Math.min(1, k * 8) * (1 - k) ** 1.5;
+  }, ease.linear).then(() => { if (token === ringToken) { ring.visible = false; ring.removeFromParent(); } });
+}
+
+/**
  * One object per effect material, for compiling their shaders at load time with the real (kept) materials, so
  * the first puff, coin or confetti burst of a level never stalls a frame.
  */
@@ -108,5 +140,6 @@ export function fxWarmObjects(): THREE.Object3D[] {
   const coin = new THREE.Sprite(coinMat);
   const conf = new THREE.InstancedMesh(confettiGeo, confettiMat, 1);
   conf.setColorAt(0, new THREE.Color(1, 1, 1));
-  return [puffPool[0].s, coin, conf];
+  const r = new THREE.Mesh(ringGeo, ringMat);
+  return [puffPool[0].s, coin, conf, r];
 }

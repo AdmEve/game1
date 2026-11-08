@@ -10,11 +10,11 @@ import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as rule
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
-import { slot } from '../render/instancer';
+import { raycastModel, slot } from '../render/instancer';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
-import { confetti, coinBurst, puff } from '../render/fx';
+import { confetti, coinBurst, puff, tapRing } from '../render/fx';
 import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
@@ -31,6 +31,8 @@ function pigeonParts() {
 
 /** The hint worker (created on first use); falls back to a small search on the main thread if workers are unavailable. */
 let hintWorker: Worker | null | undefined;
+const PICK_INV = new THREE.Matrix4(), PICK_RAY = new THREE.Ray(), PICK_P = new THREE.Vector3(), PICK_BOX = new THREE.Box3();
+const PICK_PAD = new THREE.Vector3(0.1, 0.1, 0.1), PICK_CAND: [number, number][] = [], PICK_HITS: THREE.Intersection[] = [];
 let hintSeq = 0;
 const hintWaiting = new Map<number, (move: number) => void>();
 function askHint(level: Level, s: State, done: (move: number) => void) {
@@ -476,6 +478,50 @@ export class Session {
 
   // ───── Input ─────
   /** Which vehicle (if any) is under a ground point. */
+  /**
+   * The car a tap lands on: the car whose drawn shape (body, cover, arrow, badges) the tap's ray hits first.
+   * A tap just beside a car, within a third of a cell of its body, still counts.
+   */
+  pickRay(rc: THREE.Raycaster): number {
+    const ray = rc.ray;
+    // Cheap pass: cars whose bounds (with room above for arrows and badges) the ray crosses, nearest first.
+    PICK_CAND.length = 0;
+    for (let i = 0; i < this.cars.length; i++) {
+      if (!this.s.inLot[i]) continue;
+      const o = this.cars[i];
+      o.root.updateWorldMatrix(true, true);
+      PICK_INV.copy(o.body.matrixWorld).invert();
+      PICK_RAY.copy(ray).applyMatrix4(PICK_INV);
+      PICK_BOX.copy(o.box).expandByVector(PICK_PAD); PICK_BOX.max.y += 0.7;
+      if (!PICK_RAY.intersectBox(PICK_BOX, PICK_P)) continue;
+      PICK_CAND.push([i, PICK_P.applyMatrix4(o.body.matrixWorld).distanceTo(ray.origin)]);
+    }
+    PICK_CAND.sort((a, b) => a[1] - b[1]);
+    let best = -1, bd = Infinity;
+    for (const [i, d] of PICK_CAND) {
+      if (d > bd) break; // everything left starts behind the hit already found
+      PICK_HITS.length = 0;
+      raycastModel(this.cars[i].root, rc, PICK_HITS);
+      for (const h of PICK_HITS) if (h.distance < bd) { bd = h.distance; best = i; }
+    }
+    if (best >= 0) return best;
+    // A near miss: walk the ray down through the height of the cars and take the car it passes closest to.
+    if (ray.direction.y >= -1e-3) return -1;
+    let near = CELL / 3;
+    for (let i = 0; i < this.cars.length; i++) {
+      if (!this.s.inLot[i]) continue;
+      const o = this.cars[i];
+      PICK_INV.copy(o.body.matrixWorld).invert();
+      for (let k = 0; k <= 6; k++) {
+        const y = LOT_Y + (o.box.max.y * k) / 6;
+        ray.at((y - ray.origin.y) / ray.direction.y, PICK_P).applyMatrix4(PICK_INV);
+        const d = o.box.distanceToPoint(PICK_P);
+        if (d < near) { near = d; best = i; }
+      }
+    }
+    return best;
+  }
+
   vehicleAt(p: THREE.Vector3): number {
     const c = Math.floor((p.x - this.L.lotX0) / CELL), r = Math.floor((p.z - this.L.lotZ0) / CELL);
     let best = -1, bd = Infinity;
@@ -545,6 +591,7 @@ export class Session {
   press(i: number, down: boolean) {
     const o = this.cars[i];
     if (!o || !this.s.inLot[i]) return;
+    if (down) tapRing(this.group, o.root.position, o.root.rotation.y, o.box.max.z - o.box.min.z, o.length);
     const from = o.body.scale.y, to = down ? 0.9 : 1;
     void tween(down ? 0.08 : 0.25, (k) => { const y = from + (to - from) * k; o.body.scale.set(1 + (1 - y) * 0.5, y, 1 + (1 - y) * 0.5); }, down ? ease.out : ease.elastic);
   }

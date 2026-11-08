@@ -58,19 +58,21 @@ tap budgets and clocks. The difficulty curve is a sawtooth, with a «سخت» le
 ## D. Controls & input
 
 **Now (measured).** A tap is picked by projecting it onto the ground plane (y = 0.45) and taking the cell
-under it. Cars are ~1.4 high and the camera looks down at 48°, so a tap on a car's roof lands about one cell
-behind that car. `scripts/tapprobe.cjs` samples points on every visible car body at 360×740:
+under it. Cars are ~1.4 high and the camera looks down at 48°, so a tap high on a car's body can land on the
+cell behind it. `scripts/tapprobe.cjs` samples points over every visible car body at 360×740 (a point counts
+only where that car is the first thing the ray hits):
 
 | Level | Right car | Wrong car | Nothing |
 |---|---|---|---|
-| 6 | 64% | 21% | 15% |
-| 31 | 57% | 25% | 18% |
-| 61 | 59% | 26% | 16% |
-| 121 | 58% | 21% | 21% |
-| 201 | 57% | 34% | 10% |
-| 240 | 62% | 23% | 15% |
+| 6 | 97.1% | 1.9% | 1.0% |
+| 31 | 95.2% | 2.8% | 2.1% |
+| 61 | 97.6% | 1.9% | 0.5% |
+| 121 | 95.1% | 2.8% | 2.1% |
+| 201 | 90.0% | 6.8% | 3.1% |
+| 240 | 92.8% | 5.0% | 2.2% |
 
-On move-limited levels a wrong car costs a move, and on every level it can cost the game.
+The dense late levels are where it matters most. There, about one tap in 15–20 on a car moves a different
+car, and on move-limited levels that costs a move.
 **Bar.** You tap what you see, and a near miss still counts. That is the norm for top touch games.
 **Actions.**
 - D1. Pick the car whose shape the tap ray hits first (the ray against each car's oriented box, in its own
@@ -230,7 +232,7 @@ the player sees value in them, not at first launch.
 
 ## Order of work (impact first)
 
-1. D1–D2 tap accuracy. Everyone feels it, and it is measurable.
+1. D1–D2 tap accuracy. Measurable, and it decides games on the dense late levels.
 2. H1, H2, N2, N3, N4: back navigation, pause, save safety, error log.
 3. J1–J3 onboarding.
 4. E1–E2 win finale, camera settle.
@@ -249,4 +251,7 @@ the player sees value in them, not at first launch.
 
 ## Status
 
-(Updated as items land.)
+| Item | Result |
+|---|---|
+| D1 tap pick | Picks the car whose drawn shape (body, cover, arrow, badges) the ray hits first, with slots tested as the meshes they stand for. A tap within a third of a cell of a car's body still counts. tapprobe, measured against real-mesh raycasts: **100% right on all six levels** (old pick 93.7–99.3% right, up to 5.5% wrong car). The instanced build gives the same answers in ~1 ms per tap. `REAL=1 scripts/playthrough.cjs` wins levels 1, 7, 34, 120 and 201 through pointer events. |
+| D2 tap ring | A warm outline around the pressed car on `pointerdown` (one reused mesh, shader warmed at load). |

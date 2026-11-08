@@ -325,6 +325,7 @@ function blobShadow(w: number, d: number): THREE.Object3D {
   const m = INSTANCED ? slot(blobGeo, blobMat, { renderOrder: 1 }) : new THREE.Mesh(blobGeo, blobMat);
   m.renderOrder = 1;
   m.scale.set(w, 1, d); m.position.y = 0.014;
+  m.userData.noPick = true; // a tap on the shadow is a tap on the ground
   return m;
 }
 
