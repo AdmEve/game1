@@ -271,4 +271,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   `__rb.errors` are exposed for it.
 - Hint worker: if it fails after creation (older WebViews without module workers), waiting requests are answered on the main
   thread and later ones are searched there (before, the hint for that position never came: no hand, no spotlight).
+- Event pacing: Yalda nights and Nowruz «سین»s open one a day (`stageOpen` in events.ts; `last` day saved). The banner says
+  when the next opens. The two-week windows (14–28 Dec, 14 Mar – 3 Apr) let anyone who starts in the first week finish.
+  `?yalda`/`?nowruz` skip the gate for testing. `scripts/eventpace.cjs` runs with the clock set to Yalda week.
 

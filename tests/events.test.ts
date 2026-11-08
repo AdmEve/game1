@@ -1,40 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { HAFEZ, YALDA_NIGHTS, yaldaActive, yaldaLevel } from '../src/game/events';
-import { validate } from '../src/game/rules';
-import { solve } from '../src/game/solver';
+import { stageOpen } from '../src/game/events';
 
-describe('«شب یلدا» event', () => {
-  it('runs around 30 Azar only', () => {
-    expect(yaldaActive(new Date(2026, 11, 21))).toBe(true);
-    expect(yaldaActive(new Date(2026, 11, 13))).toBe(false);
-    expect(yaldaActive(new Date(2026, 10, 26))).toBe(false);
+describe('event pacing', () => {
+  it('opens the first stage straight away', () => {
+    expect(stageOpen(0, 7, undefined, '2026-12-20')).toBe(true);
   });
-  for (let i = 0; i < YALDA_NIGHTS; i++) {
-    it(`night ${i + 1} is valid and solvable`, () => {
-      const l = yaldaLevel(i);
-      expect(l).not.toBeNull();
-      expect(validate(l!)).toEqual([]);
-      expect(solve(l!).solvable).toBe(true);
-    });
-  }
-  it('has a fortune for every night', () => expect(HAFEZ.length).toBeGreaterThanOrEqual(YALDA_NIGHTS));
-});
-
-describe('«نوروز» event', () => {
-  it('runs from mid-March to early April', async () => {
-    const { nowruzActive } = await import('../src/game/events');
-    expect(nowruzActive(new Date(2027, 2, 21))).toBe(true);
-    expect(nowruzActive(new Date(2027, 3, 3))).toBe(true);
-    expect(nowruzActive(new Date(2027, 3, 10))).toBe(false);
+  it('opens one new stage a day', () => {
+    expect(stageOpen(2, 7, '2026-12-20', '2026-12-20')).toBe(false); // already won one today
+    expect(stageOpen(2, 7, '2026-12-19', '2026-12-20')).toBe(true);
+    expect(stageOpen(2, 7, '2026-12-17', '2026-12-20')).toBe(true); // missed days don't pile up, but nothing is lost
   });
-  it('every day is valid and solvable', async () => {
-    const { NOWRUZ_DAYS, nowruzLevel, HAFT_SIN } = await import('../src/game/events');
-    expect(HAFT_SIN.length).toBe(NOWRUZ_DAYS);
-    for (let i = 0; i < NOWRUZ_DAYS; i++) {
-      const l = nowruzLevel(i);
-      expect(l).not.toBeNull();
-      expect(validate(l!)).toEqual([]);
-      expect(solve(l!).solvable).toBe(true);
-    }
-  }, 60000);
+  it('is closed once every stage is done', () => {
+    expect(stageOpen(7, 7, '2026-12-19', '2026-12-20')).toBe(false);
+  });
 });

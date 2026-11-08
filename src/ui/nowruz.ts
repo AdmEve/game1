@@ -1,11 +1,12 @@
 /** «نوروز» screens: the home banner with the Haft-Sin table, and the win card with the day's «سین» and its «عیدی». */
 import { coin } from '../audio';
-import { HAFT_SIN, NOWRUZ_DAYS, nowruzActive } from '../game/events';
+import { HAFT_SIN, NOWRUZ_DAYS, nowruzActive, stageOpen } from '../game/events';
+import { today } from '../game/daily';
 import { haptic } from '../haptics';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { addKeys } from './garage';
-import { button, fa, faNum, h, modal, asBack } from './hud';
+import { button, fa, faNum, h, modal, asBack, note } from './hud';
 
 /** This year's progress (a new Nowruz starts a fresh table). */
 export function nowruzDone(): number {
@@ -18,8 +19,13 @@ export function nowruzDone(): number {
 export function nowruzBanner(play: (day: number) => void): HTMLElement | null {
   if (!nowruzActive()) return null;
   const done = nowruzDone(), all = done >= NOWRUZ_DAYS;
+  const open = stageOpen(done, NOWRUZ_DAYS, save.nowruz.last, today()) || location.search.includes('nowruz');
   const table = HAFT_SIN.map((s, i) => `<span class="sin ${i < done ? 'got' : ''}">${emo(s.icon, 'emo sm')}</span>`).join('');
-  return button(`<span class="yt">${emo('🐟', 'emo sm')} سفره‌ی هفت‌سین <small>${all ? 'سفره‌ت کامل شد! سال نو مبارک' : `روز ${fa(done + 1)}: ${HAFT_SIN[done].name}`}</small></span><span class="sins">${table}</span>`, `nowruz-btn ${all ? 'done' : ''}`, () => { if (!all) play(done); });
+  const sub = all ? 'سفره‌ت کامل شد! سال نو مبارک' : open ? `روز ${fa(done + 1)}: ${HAFT_SIN[done].name}` : `«${HAFT_SIN[done].name}» فردا`;
+  return button(`<span class="yt">${emo('🐟', 'emo sm')} سفره‌ی هفت‌سین <small>${sub}</small></span><span class="sins">${table}</span>`, `nowruz-btn ${all ? 'done' : open ? '' : 'wait'}`, () => {
+    if (all) return;
+    if (open) play(done); else note(`هر روز یه سین! «${HAFT_SIN[done].name}» فردا منتظرته.`);
+  });
 }
 
 /** «عیدی» for day `day`: coins every day, keys with the last «سین». */
@@ -28,7 +34,7 @@ const eidi = (day: number) => ({ coins: 150 + day * 50, keys: day === NOWRUZ_DAY
 export function showNowruzWin(day: number, onClose: () => void) {
   const first = day >= nowruzDone();
   const { coins, keys } = first ? eidi(day) : { coins: 20, keys: 0 };
-  if (first) save.nowruz.done = day + 1;
+  if (first) { save.nowruz.done = day + 1; save.nowruz.last = today(); }
   save.coins += coins; if (keys) addKeys(keys); persist();
   const sin = HAFT_SIN[day];
   const c = h('div', 'result win nowruz');

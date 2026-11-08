@@ -8,6 +8,15 @@ import type { Level } from './rules';
 
 export const YALDA_NIGHTS = 7;
 
+/**
+ * Event pacing: one new stage a day (a «night» of Yalda, a «سین» of Nowruz), so the event is a daily visit rather
+ * than one sitting. `last` is the day the latest stage was first won. The events run for two weeks, so anyone who
+ * starts in the first week can still finish.
+ */
+export function stageOpen(done: number, total: number, last: string | undefined, day: string): boolean {
+  return done < total && (done === 0 || last !== day);
+}
+
 /** The event runs from 14 to 28 December (local time); `?yalda` turns it on for testing. */
 export function yaldaActive(now = new Date()): boolean {
   if (typeof location !== 'undefined' && location.search.includes('yalda')) return true;

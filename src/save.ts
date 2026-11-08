@@ -39,9 +39,9 @@ export interface Save {
   /** «ساعت شلوغی»: the last day it was beaten and the streak of days in a row. */
   rush: { day: string; streak: number };
   /** «شب یلدا» event: the year it was played and how many of its nights are done. */
-  yalda: { year: number; done: number };
+  yalda: { year: number; done: number; last?: string };
   /** «نوروز» event: the year it was played and how many «سین»s are collected. */
-  nowruz: { year: number; done: number };
+  nowruz: { year: number; done: number; last?: string };
   /** «آژانس آقاجون»: unspent stars and the renovations done. `init` marks the one-off grant for levels won before stars existed. */
   agency: { stars: number; done: string[]; init?: boolean };
   /** Lives «جون»: how many, and when the next one grows back (ms timestamp, 0 when full). */

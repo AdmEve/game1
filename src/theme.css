@@ -370,3 +370,6 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 /* The home streak line sits on the card's bottom row, right-aligned, clear of the lives pill pinned bottom-left. */
 .chapter .streak-chip { justify-content: flex-start; text-align: right; padding-left: 104px; margin-top: 8px; min-height: 30px; }
 .chapter .streak-chip small { flex-basis: 100%; text-align: right; }
+/* An event stage that opens tomorrow: still tappable (it says when), but quieter. */
+.yalda-btn.wait, .nowruz-btn.wait { opacity: .78; }
+.yalda-btn.wait small, .nowruz-btn.wait small { color: var(--muted); }
