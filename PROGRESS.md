@@ -208,3 +208,12 @@ Tools: `scripts/perf.cjs` (startup timings, long tasks, frame stats per scenario
 - Hints are searched in a worker (`src/workers/hint.worker.ts`); the tutorial hand waits for the answer.
 - Garage and agency share one persistent small WebGL view (`ui/stage.ts`) with cached models.
 - Pigeons and car covers are instanced; parity/officer signs sit under the time/taps counter.
+- Idle board renders at 30 fps (`pacer.frame(t, calm)`; back to full rate on any touch, tween or drive), so a phone
+  stays cool and doesn't throttle itself into stutter. The governor can also raise resolution (up to 1.5×) when
+  there's headroom. The perf HUD's fps reads 30 on an idle board by design.
+- Startup builds only the first level's car kinds; the rest are built behind the veil or during the win card.
+- Launch: `scripts/make-icons.mjs --splash` draws the Android splash from `index.html`'s own splash markup (navy,
+  hero taxi, logo); WebView/native/Android 12 splash colors are the same navy; the logo font is preloaded.
+- Home screen fits every phone height (it overflowed on 360×640 / 360×740: the play button was off-screen).
+- Checks used this pass: `npm test`, `scripts/stress.cjs` against `vite preview` (URL=… env), an end-to-end
+  play-to-win-and-next run, screenshots at 360×640 / 360×740 / 412×915.
