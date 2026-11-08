@@ -992,7 +992,7 @@ export class Session {
       const boarded = (st?.sprite.userData.boarded ?? 0) + (this.s.granny[idx] ? 2 : 1);
       if (st) st.sprite.userData.boarded = boarded;
       this.drawSeat(bay, boarded, cap, this.level.vehicles[v].color);
-      sfx.pop(boarded / cap); haptic('light');
+      sfx.pop(boarded / cap); // no buzz per passenger: the full car gets one (haptics stay meaningful)
       void tween(0.18, (e) => { car.body.position.y = -Math.sin(e * Math.PI) * 0.04; }, ease.linear);
     });
   }
@@ -1001,7 +1001,7 @@ export class Session {
     const o = this.cars[v], kind = this.level.vehicles[v].kind;
     this.dropSeat(bay);
     sfx.horn(kind === 'bus' ? 'bus' : kind === 'peykan' || kind === 'zamyad' ? 'old' : 'new', 2);
-    haptic('success');
+    haptic('medium'); // a car filled (the success pattern is kept for the win)
     coinBurst(this.group, o.root.position.clone().setY(1.2));
     sfx.coin(0.1);
     const now = performance.now() / 1000;

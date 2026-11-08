@@ -373,3 +373,33 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 /* An event stage that opens tomorrow: still tappable (it says when), but quieter. */
 .yalda-btn.wait, .nowruz-btn.wait { opacity: .78; }
 .yalda-btn.wait small, .nowruz-btn.wait small { color: var(--muted); }
+
+/* Win card: progress to the next reward chest. */
+.chest-note { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px auto 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.chest-note b { color: var(--text); }
+.chest-note .pips { display: inline-flex; gap: 3px; }
+.chest-note .pips i { width: 9px; height: 9px; border-radius: 3px; background: rgba(255, 255, 255, .14); }
+.chest-note .pips i.on { background: var(--accent); }
+.chest-note.ready span { color: var(--accent); font-weight: 800; }
+
+/* Win card actions: next level full width, then doubling and home side by side. */
+.win-row { display: flex; gap: 8px; margin-top: 8px; }
+.win-row .btn { flex: 1 1 0; margin: 0; min-width: 0; font-size: 15px; padding-left: 6px; padding-right: 6px; }
+
+/* A card taller than the screen scrolls with its backdrop (auto margins centre it without cutting off its top). */
+.modal-back { display: flex; overflow-y: auto; overscroll-behavior: contain; }
+.modal-back > .card { margin: auto; flex-shrink: 0; }
+
+/* Short phones: result cards drop the flavour line and use a smaller emblem. */
+@media (max-height: 700px) {
+  .result.jw > p { display: none; } /* only the journey win's flavour line: the lose card's reason always shows */
+  .result .burst { margin-top: -52px; }
+  .result .burst .emo.huge, .result .burst .ico { width: 70px; height: 70px; }
+  .result h2 { font-size: 22px; margin: 2px 0 6px; }
+  .result .rewards, .result .reward { margin-top: 4px; margin-bottom: 4px; }
+}
+/* Rewards share one row (coins, stars, keys), each box shrinking to fit a narrow phone. */
+.result .rewards { flex-wrap: nowrap; gap: 6px; }
+.result .rewards .reward { flex: 1 1 0; min-width: 0; justify-content: center; padding: 6px 6px; font-size: 22px; gap: 4px; flex-wrap: wrap; }
+.result .rewards .reward small { flex-basis: 100%; text-align: center; font-size: 11px; line-height: 1.1; }
+.result .rewards .reward .ico, .result .rewards .reward .emo { width: 22px; height: 22px; }

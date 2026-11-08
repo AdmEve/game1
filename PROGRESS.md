@@ -274,4 +274,12 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Event pacing: Yalda nights and Nowruz «سین»s open one a day (`stageOpen` in events.ts; `last` day saved). The banner says
   when the next opens. The two-week windows (14–28 Dec, 14 Mar – 3 Apr) let anyone who starts in the first week finish.
   `?yalda`/`?nowruz` skip the gate for testing. `scripts/eventpace.cjs` runs with the clock set to Yalda week.
+- GDD first-session and haptics rules: levels 1–3 can't be lost (a would-be loss opens another bay with a note from Mash
+  Rahim, while a bay is left to open); a full car leaving buzzes medium, the success pattern is kept for the win, and
+  passengers no longer buzz one by one. The win card shows progress to the next chest (one every five levels).
+  `scripts/firstsession.cjs`.
+- Win card fits a 360×640 phone even in the worst case (boss win with keys, stars, streak, chest, piggy, Ajool and a new
+  medal): rewards share a row, Double and Home share a row under Next, short screens drop the flavour line (journey
+  wins only), and card backdrops scroll as a safety net. Before, Next and Home were below the screen there. The lose card's
+  streak line no longer promises a continue when none is offered.
 

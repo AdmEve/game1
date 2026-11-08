@@ -806,12 +806,16 @@ function showWin() {
   liveUntil = performance.now() + 2800;
   // While the card is up (after the confetti), build the next level's world.
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 2900);
-  const c = h('div', 'result win');
+  const c = h('div', 'result win jw');
   // Rewards in one row, then the notes (pass, money box), then Mr. Ajool and any new medal.
   const rewards = `<div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`
     + (stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره</small></div>` : '')
     + (keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ</small></div>` : '');
-  const notes = (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
+  // The next chest (one every five new levels): a reason for one more level.
+  const toChest = 5 - ((n + 1) % 5 || 5), pips = Array.from({ length: 5 }, (_, k) => `<i class="${k < 5 - toChest ? 'on' : ''}"></i>`).join('');
+  const chestLine = replay ? '' : toChest ? `<div class="chest-note">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه: <b>${fa(toChest)}</b> مرحله‌ی دیگه</span></div>`
+    : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`;
+  const notes = chestLine + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
     + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
   const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small></div>` : '';
   const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
@@ -827,6 +831,8 @@ function showWin() {
     await maybeInterstitial(n);
     if (home) goHome(); else await goLevel();
   };
+  // Next level is the big button; doubling and home share a row under it (the card must fit a 640-tall phone).
+  const row = h('div', 'win-row');
   if (rewardedAvailable()) {
     const dbl = button(`${emo('🎬', 'emo sm')} دو برابرش کن!`, 'gold', async () => {
       dbl.setAttribute('disabled', '');
@@ -836,11 +842,12 @@ function showWin() {
         dbl.remove();
       } else dbl.removeAttribute('disabled');
     });
-    c.append(dbl);
+    row.append(dbl);
   }
   c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   // Home: spend the stars and keys (agency, garage) before going on.
-  c.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
+  row.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
+  c.append(row);
 }
 
 /** Ask happy players (right after a win) to rate the game on Bazaar; unhappy ones are not sent there. */
@@ -867,6 +874,12 @@ function askReminders(): Promise<void> {
 }
 
 function showLose(limit?: 'time' | 'moves') {
+  // The first three levels can't be lost (first session): Mash Rahim opens another bay and play goes on.
+  if (!limit && !rush && !event && current < 3 && session?.extraBay()) {
+    helped = true; hud.refresh();
+    hud.toast('مش‌رحیم یه جای پارک دیگه برات باز کرد!', 2800); haptic('medium');
+    return;
+  }
   duckMusic(1.6);
   save.stats.losses++;
   if (!rush && !event) count(save.lvStats, current, 'loss');
@@ -881,10 +894,11 @@ function showLose(limit?: 'time' | 'moves') {
   const culprit = bride >= 0 ? bride : session ? session.culprit() : -1;
   if (culprit >= 0) session!.highlight(culprit);
   const why = limit === 'time' ? 'وقت تموم شد و هنوز ماشین‌ها تو پارکینگ موندن! سریع‌تر تصمیم بگیر.' : limit === 'moves' ? 'ضربه‌هات تموم شد! ضربه روی ماشین گیر کرده هم حساب می‌شه، پس قبل از زدن خوب نگاه کن.' : bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
-  const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>ادامه بدی، می‌مونه؛ از اول، می‌سوزه.</small></div>` : '';
+  const canBay = !!session && (!!limit || session.s.bays.length < 6 || bride >= 0);
+  // Only mention continuing when the card offers it.
+  const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${canBay ? 'ادامه بدی، می‌مونه؛ از اول، می‌سوزه.' : 'از اول شروع کنی، از صفر می‌شمره.'}</small></div>` : '';
   c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${risk}`;
   const close = modal(c, 'pop');
-  const canBay = !!session && (!!limit || session.s.bays.length < 6 || bride >= 0);
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
   if (canBay) {
     c.append(button(`${emo(limit === 'time' ? '⏱️' : limit === 'moves' ? '👆' : bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${limit === 'time' ? '۱۵ ثانیه وقت بیشتر' : limit === 'moves' ? '۴ ضربه‌ی بیشتر' : bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
