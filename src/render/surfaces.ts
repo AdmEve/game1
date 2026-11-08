@@ -78,7 +78,8 @@ const cache = new Map<string, Surface>();
 function once(key: string, make: () => Surface): Surface { if (!cache.has(key)) cache.set(key, make()); return cache.get(key)!; }
 /** A material for a surface, with its own repeat (the images are shared). */
 export function surfaceMat(s: Surface, repeat: [number, number], o: THREE.MeshStandardMaterialParameters = {}) {
-  const cl = (t: THREE.Texture) => { const k = t.clone(); k.repeat.set(...repeat); k.anisotropy = profile.lite ? 2 : 8; k.needsUpdate = true; k.userData.keep = false; return k; };
+  // Anisotropic filtering keeps asphalt and paving crisp at the camera's slant.
+  const cl = (t: THREE.Texture) => { const k = t.clone(); k.repeat.set(...repeat); k.anisotropy = profile.lite ? 4 : 8; k.needsUpdate = true; k.userData.keep = false; return k; };
   // Phones skip the normal map (a full-screen texture fetch plus per-pixel tangent maths).
   if (profile.lite) { const { normalScale: _n, ...rest } = o; void _n; return new THREE.MeshStandardMaterial({ map: cl(s.map), roughnessMap: cl(s.roughnessMap), roughness: 1, ...rest }); }
   return new THREE.MeshStandardMaterial({ map: cl(s.map), normalMap: cl(s.normalMap), roughnessMap: cl(s.roughnessMap), roughness: 1, normalScale: new THREE.Vector2(0.8, 0.8), ...o });

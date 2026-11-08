@@ -50,7 +50,7 @@ import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './musi
 import { warmPeople } from './render/people';
 import { fxWarmObjects } from './render/fx';
 import { haptic } from './haptics';
-import { createPacer } from './render/pacing';
+import { createPacer, type PaceMemory } from './render/pacing';
 import { perfFrame, togglePerfHud } from './ui/perfhud';
 
 const levels: Level[] = (PACKED as string[]).map(unpackLevel);
@@ -80,13 +80,23 @@ document.body.classList.toggle('lite', profile.lite);
 // ───── Graphics quality: 2 = full (film post, soft shadows), 1 = balanced (fewer pixels), 0 = simple (no post, hard shadows) ─────
 let tier = 2;
 /** Frame pacing and, in 'auto' quality, a resolution governor (render/pacing.ts). */
-const pacer = createPacer({ adaptive: () => save.settings.quality === 'auto' && !debug.has('shot'), onScale: () => setTier(tier) });
+const PACE_KEY = 'rahbandoon.pace.v1';
+let paceMemory: PaceMemory | null = null;
+try { paceMemory = save.settings.quality === 'auto' ? JSON.parse(localStorage.getItem(PACE_KEY) ?? 'null') : null; } catch { /* no storage */ }
+const pacer = createPacer({
+  adaptive: () => save.settings.quality === 'auto' && !debug.has('shot'),
+  onScale: () => setTier(tier),
+  memory: paceMemory,
+  remember: (m) => { try { localStorage.setItem(PACE_KEY, JSON.stringify(m)); } catch { /* no storage */ } },
+});
 function setTier(t: number) {
   tier = Math.max(0, Math.min(2, t));
   const dpr = window.devicePixelRatio;
   if (debug.has('shot')) return;
   // Lite (phones): no film post pass, fewer pixels. Full: the post pass while the device keeps up.
-  const ratio = profile.lite ? [0.85, 1.0, 1.1][tier] : [1, mobile ? 1.05 : 1.5, mobile ? 1.25 : 2][tier];
+  // Sharp by default (phone screens have 2.5–3 pixels per point; drawing 1.1 of them looked soft), and the governor
+  // in 'auto' steps the resolution down only if a phone can't hold its frame rate.
+  const ratio = profile.lite ? [1.0, 1.4, 1.8][tier] : [1, 1.5, 2][tier];
   renderer.setPixelRatio(Math.max(0.5, Math.min(dpr, ratio * pacer.state.scale)));
   post.enabled = !profile.lite && tier > 0;
   document.body.classList.toggle('lite', !post.enabled);

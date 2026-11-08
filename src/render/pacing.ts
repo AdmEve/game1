@@ -22,7 +22,10 @@ export interface Pacing {
 const SCALES = [1.5, 1.25, 1, 0.85, 0.72, 0.6];
 const START = 2;
 
-export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) => void }) {
+/** What the governor learned on this phone, kept between launches (so it starts where it settled last time). */
+export interface PaceMemory { level: number; ceiling: number }
+
+export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) => void; memory?: PaceMemory | null; remember?: (m: PaceMemory) => void }) {
   const p: Pacing = { div: 1, scale: 1, vsync: 1000 / 60 };
   let frame = 0, lastRaf = 0, lastRender = 0;
   // Refresh estimate: the low end of rAF intervals over the first couple of seconds.
@@ -31,10 +34,15 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
   // Governor state.
   let level = START, windowStart = 0, n = 0, late = 0, calm = 0, lastChange = 0, lockedUp = false, lastStep: 'up' | 'down' | null = null;
   let baseDiv = 1, eff = 1;
+  // The sharpest step this phone has shown it can hold (a step up beyond it proved too much once).
+  let ceiling = 0;
+  const m = o.memory;
+  if (m && Number.isInteger(m.level) && m.level >= 0 && m.level < SCALES.length) { level = m.level; ceiling = Math.max(0, Math.min(SCALES.length - 1, m.ceiling | 0)); p.scale = SCALES[level]; }
 
   function setLevel(l: number) {
     level = Math.max(0, Math.min(SCALES.length - 1, l));
     if (p.scale !== SCALES[level]) { p.scale = SCALES[level]; o.onScale(p.scale); }
+    o.remember?.({ level, ceiling });
   }
 
   return {
@@ -47,10 +55,14 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
     frame(t: number, calm = false): number | null {
       if (!measured && lastRaf) {
         const d = t - lastRaf;
-        if (d > 4 && d < 40) raf.push(d);
+        // Every interval counts (a struggling phone gives only slow ones; the estimate is snapped below anyway).
+        if (d > 4 && d < 250) raf.push(d);
         if (raf.length >= 90) {
           raf.sort((a, b) => a - b);
-          p.vsync = raf[Math.floor(raf.length * 0.2)];
+          // Snap to a real refresh rate. A phone that can't keep up slows rAF down with it (every frame ~33 ms),
+          // which must not read as a "30 Hz screen": phone screens run at 60 Hz or more.
+          const d = raf[Math.floor(raf.length * 0.2)];
+          p.vsync = d < 9.5 ? 1000 / 120 : d < 12.5 ? 1000 / 90 : 1000 / 60;
           // 90 Hz and up: aim for 60/45 fps on an even rhythm.
           baseDiv = p.vsync < 9.5 ? 2 : 1;
           p.div = Math.max(p.div, baseDiv);
@@ -79,8 +91,10 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
       if (t - lastChange < 2500) return;
       if (ratio > 0.12) {
         calm = 0;
-        if (lastStep === 'up' && t - lastChange < 6000) lockedUp = true; // the step up was too much
-        if (level < SCALES.length - 1) setLevel(level + 1);
+        // The step up was too much: don't try that resolution again (this session or later ones).
+        if (lastStep === 'up' && t - lastChange < 6000) { lockedUp = true; ceiling = Math.min(SCALES.length - 1, level + 1); }
+        // Far behind (most frames late): drop two steps at once, so a phone settles within a few seconds.
+        if (level < SCALES.length - 1) setLevel(level + (ratio > 0.4 ? 2 : 1));
         else if (p.vsync * (p.div + 1) <= 34) p.div++;
         else return;
         lastStep = 'down'; lastChange = t;
@@ -88,7 +102,7 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
         if (++calm < 3) return;
         calm = 0;
         if (p.div > baseDiv) p.div--;
-        else if (level > 0) setLevel(level - 1);
+        else if (level > ceiling) setLevel(level - 1);
         else return;
         lastStep = 'up'; lastChange = t;
       } else calm = 0;
