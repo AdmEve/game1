@@ -6,6 +6,7 @@ import { buy, iapAvailable, priceLabel, rewardedAvailable, showRewarded } from '
 import { persist, save } from '../save';
 import { RAHIM } from './characters';
 import { emo } from './emoji';
+import { icon } from './icons';
 import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId } from './hud';
 import { PIGGY_FROM, PIGGY_MAX, PIGGY_MIN, piggyArt, showPiggy } from './piggy';
 
@@ -28,7 +29,7 @@ export function showShop(onClose: () => void, onChange: () => void) {
   c.append(h('h3', '', 'کمک‌ها'));
   const row = h('div', 'shop-row');
   for (const b of BOOSTERS) {
-    const card = h('button', 'shop-card bst-' + b.id, `<span class="ic">${emo(b.icon)}</span><b>${b.name}</b><small>${b.hint}</small><span class="price">${emo('🪙', 'emo xs')} ${fa(b.price)}</span><span class="have">داری: ${fa(save.boosters[b.id])}</span>`);
+    const card = h('button', 'shop-card bst-' + b.id, `<span class="ic">${icon(b.icon)}</span><b>${b.name}</b><small>${b.hint}</small><span class="price">${emo('🪙', 'emo xs')} ${fa(b.price)}</span><span class="have">داری: ${fa(save.boosters[b.id])}</span>`);
     card.onclick = () => {
       if (save.coins < b.price) { card.classList.add('nope'); setTimeout(() => card.classList.remove('nope'), 400); haptic('warn'); return; }
       save.coins -= b.price; save.boosters[b.id as BoosterId]++; persist(); coin(); haptic('light');
@@ -103,7 +104,7 @@ export function showChest(onChange: () => void): Promise<void> {
   return new Promise((done) => {
     const c = h('div', 'chest');
     c.innerHTML = `<h2>صندوق جایزه!</h2><div class="box">${emo('🎁', 'emo huge')}</div><div class="loot">
-      <span>${emo('🪙')}<b>${fa(coins)}</b></span><span>${emo(BOOSTERS.find((b) => b.id === gift)!.icon)}<b>${fa(1)}</b></span><span>${emo('🔑')}<b>${fa(1)}</b></span></div>`;
+      <span>${emo('🪙')}<b>${fa(coins)}</b></span><span>${icon(BOOSTERS.find((b) => b.id === gift)!.icon)}<b>${fa(1)}</b></span><span>${emo('🔑')}<b>${fa(1)}</b></span></div>`;
     const close = modal(c, 'pop');
     const open = button('باز کن!', 'gold big', () => {
       c.classList.add('opened');

@@ -178,7 +178,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .kiosk-head { background: linear-gradient(180deg, #1e2a24, #141a17); border-bottom: 1px solid var(--line); }
 .wallet, .garage .keys, .agency .stars { background: rgba(242, 177, 36, .12); color: var(--accent-hi); border: 1px solid rgba(242, 177, 36, .3); }
 .story { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); }
-.story.dim { color: var(--muted); }
+.story.dim { color: var(--muted); background: rgba(255, 255, 255, .03); }
 .ginfo b { color: #fff; } .ginfo small { color: var(--muted); }
 .garage .stage { background: radial-gradient(ellipse at 50% 30%, #2a3039, #12151a); }
 .rw.free { background: rgba(255, 255, 255, .06); color: var(--text); }
@@ -240,3 +240,6 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 .hud:has(.limit:not(.hidden)) .camsign { top: calc(158px + var(--sat)); }
 .hud:has(.camsign:not(.hidden)) .toast { top: calc(160px + 40px + var(--sat)); }
 .hud:has(.limit:not(.hidden)):has(.camsign:not(.hidden)) .toast { top: calc(200px + 40px + var(--sat)); }
+/* Shop boosters: the same line icons as the booster bar, on dark tiles. */
+.shop-card .ic, .shop-card.bst-bay .ic, .shop-card.bst-whistle .ic, .shop-card.bst-crane .ic { background: rgba(255, 255, 255, .06); border: 1px solid var(--line); color: var(--accent); box-shadow: none; }
+.shop-card .ic .ico { width: 28px; height: 28px; }

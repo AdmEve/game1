@@ -7,50 +7,61 @@ import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { button, fa, h, modal } from './hud';
+import { stageRenderer } from './stage';
 
 /** The next renovation to buy, or null when the agency is finished. */
 export const nextRenovation = () => RENOVATIONS.find((r) => !save.agency.done.includes(r.id)) ?? null;
 
 export function addStars(n: number) { save.agency.stars += n; persist(); }
 
+let agency: THREE.Group | null = null;
+let yardKit: { scene: THREE.Scene; cam: THREE.PerspectiveCamera } | null = null;
+function yard(renderer: THREE.WebGLRenderer, Wd: number, Ht: number) {
+  if (!yardKit) {
+    const scene = new THREE.Scene();
+    const sky = document.createElement('canvas'); sky.width = 2; sky.height = 256;
+    const sg = sky.getContext('2d')!, gr = sg.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#4b93dd'); gr.addColorStop(0.6, '#a9d4f5'); gr.addColorStop(1, '#f6e7cf'); sg.fillStyle = gr; sg.fillRect(0, 0, 2, 256);
+    const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace; scene.background = skyTex;
+    scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.7;
+    scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.8));
+    const sun = new THREE.DirectionalLight(0xfff0d8, 2.6); sun.position.set(-8, 14, 12); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); sun.shadow.bias = -0.0005;
+    scene.add(sun);
+    yardKit = { scene, cam: new THREE.PerspectiveCamera(32, Wd / Ht, 0.5, 120) };
+  }
+  yardKit.cam.aspect = Wd / Ht; yardKit.cam.updateProjectionMatrix();
+  return yardKit;
+}
+
 export function showAgency(onClose: () => void) {
   const shot = location.search.includes('shot');
   const c = h('div', 'agency');
   c.innerHTML = `<h2>${emo('🏠')} آژانس آقاجون</h2><div class="stars">${emo('⭐')} <b></b> ستاره</div>`;
   const stage = h('div', 'stage');
-  const canvas = document.createElement('canvas');
-  stage.append(canvas);
   const bar = h('div', 'abar2');
   const action = h('div', 'gaction');
   c.append(stage, bar, action);
   const close = modal(c, 'pop agency-card');
   let stop = false;
-  c.append(button('بستن', 'ghost', () => { stop = true; renderer.dispose(); close(); onClose(); }));
+  c.append(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); }));
 
+  // The shared small 3D view (kept between visits) and the agency's sky, lights and camera (built once).
   const Wd = Math.min(360, window.innerWidth - 40), Ht = 250;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: shot });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(Wd, Ht);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  const scene = new THREE.Scene();
-  const sky = document.createElement('canvas'); sky.width = 2; sky.height = 256;
-  const sg = sky.getContext('2d')!, gr = sg.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, '#4b93dd'); gr.addColorStop(0.6, '#a9d4f5'); gr.addColorStop(1, '#f6e7cf'); sg.fillStyle = gr; sg.fillRect(0, 0, 2, 256);
-  const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace; scene.background = skyTex;
-  scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.7;
-  scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.8));
-  const sun = new THREE.DirectionalLight(0xfff0d8, 2.6); sun.position.set(-8, 14, 12); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); sun.shadow.bias = -0.0005;
-  scene.add(sun);
-  const cam = new THREE.PerspectiveCamera(32, Wd / Ht, 0.5, 120);
-  let agency: THREE.Group | null = null;
+  const renderer = stageRenderer(Wd, Ht);
+  stage.append(renderer.domElement);
+  const { scene, cam } = yard(renderer, Wd, Ht);
   let pop: { g: THREE.Object3D; t: number } | null = null;
 
   const rebuild = (fresh?: string) => {
-    if (agency) scene.remove(agency);
-    agency = buildAgency(new Set(save.agency.done));
-    scene.add(agency);
+    // Rebuilt only when a renovation changed it; otherwise the last one is reused.
+    const key = save.agency.done.join();
+    if (!agency || agency.userData.key !== key) {
+      if (agency) scene.remove(agency);
+      agency = buildAgency(new Set(save.agency.done));
+      agency.userData.key = key;
+      scene.add(agency);
+    }
     const g = fresh ? agency.getObjectByName(fresh) : undefined;
     if (g && g.children.length) { pop = { g, t: 0 }; g.scale.setScalar(0.01); }
   };

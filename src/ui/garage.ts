@@ -7,6 +7,7 @@ import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { button, fa, h, modal } from './hud';
+import { stageRenderer } from './stage';
 
 export const CLASSICS = [
   { id: 'javanan', name: 'پیکان جوانان', year: '۱۳۵۴', cost: 3, color: 0xc62828,
@@ -26,10 +27,27 @@ export const CLASSICS = [
 ] as const;
 
 function buildClassic(id: string, color: number | THREE.Material) {
-  if (id === 'vanet') return buildVanet(color as number, { q: 0.8 });
-  if (id === 'jeep') return buildJeep(color, { q: 0.8 });
-  if (id === 'benz') { const b = buildBenzBus(color as number, { q: 0.6 }); b.scale.setScalar(0.62); return b; }
-  return buildCar(CARS[id], color, { q: 0.8 });
+  if (id === 'vanet') return buildVanet(color as number, { q: 0.55 });
+  if (id === 'jeep') return buildJeep(color, { q: 0.55 });
+  if (id === 'benz') { const b = buildBenzBus(color as number, { q: 0.5 }); b.scale.setScalar(0.62); return b; }
+  return buildCar(CARS[id], color, { q: 0.55 });
+}
+
+const built = new Map<string, THREE.Object3D>();
+let table: { scene: THREE.Scene; cam: THREE.PerspectiveCamera } | null = null;
+function turntable(renderer: THREE.WebGLRenderer, W: number, H: number) {
+  if (!table) {
+    const scene = new THREE.Scene();
+    scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.85;
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 0.8));
+    const sun = new THREE.DirectionalLight(0xfff2dc, 2.2); sun.position.set(4, 8, 6); scene.add(sun);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.3, 0.12, 48), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.3 }));
+    disc.position.y = -0.06; scene.add(disc);
+    const cam = new THREE.PerspectiveCamera(28, W / H, 0.1, 50); cam.position.set(0, 2.2, 7.6); cam.lookAt(0, 0.6, 0);
+    table = { scene, cam };
+  }
+  table.cam.aspect = W / H; table.cam.updateProjectionMatrix();
+  return table;
 }
 
 const rust = new THREE.MeshStandardMaterial({ color: 0x7a5236, roughness: 0.95, metalness: 0.15, flatShading: true });
@@ -42,8 +60,6 @@ export function showGarage(onClose: () => void) {
   const c = h('div', 'garage');
   c.innerHTML = `<h2>${emo('🔧')} گاراژ من</h2><div class="keys">${emo('🔑')} <b></b> سوئیچ</div>`;
   const stage = h('div', 'stage');
-  const canvas = document.createElement('canvas');
-  stage.append(canvas);
   const info = h('div', 'ginfo');
   const nav = h('div', 'gnav');
   const prev = button('›', 'ghost round', () => { i = (i + CLASSICS.length - 1) % CLASSICS.length; show(); });
@@ -52,21 +68,13 @@ export function showGarage(onClose: () => void) {
   nav.append(prev, info, next);
   c.append(stage, nav, action);
   const close = modal(c, 'pop garage-card');
-  c.append(button('بستن', 'ghost', () => { stop = true; renderer.dispose(); close(); onClose(); }));
+  c.append(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); }));
 
-  // A small turntable renderer just for this screen.
+  // The shared turntable view (kept between visits), and the turntable scene (built once).
   const W = Math.min(340, window.innerWidth - 60), H = 200;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: location.search.includes('shot') });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(W, H);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const scene = new THREE.Scene();
-  scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.85;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 0.8));
-  const sun = new THREE.DirectionalLight(0xfff2dc, 2.2); sun.position.set(4, 8, 6); scene.add(sun);
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.3, 0.12, 48), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.3 }));
-  disc.position.y = -0.06; scene.add(disc);
-  const cam = new THREE.PerspectiveCamera(28, W / H, 0.1, 50); cam.position.set(0, 2.2, 7.6); cam.lookAt(0, 0.6, 0);
+  const renderer = stageRenderer(W, H);
+  stage.append(renderer.domElement);
+  const { scene, cam } = turntable(renderer, W, H);
   let car: THREE.Object3D | null = null;
   let stop = false;
 
@@ -74,7 +82,9 @@ export function showGarage(onClose: () => void) {
     const k = CLASSICS[i], owned = save.garage.restored.includes(k.id);
     (c.querySelector('.keys b') as HTMLElement).textContent = fa(save.garage.keys);
     if (car) scene.remove(car);
-    car = buildClassic(k.id, owned ? k.color : rust);
+    // Each classic is built once (rusty or restored) and kept for the next visit.
+    const key = k.id + (owned ? '' : ':rust');
+    car = built.get(key) ?? built.set(key, buildClassic(k.id, owned ? k.color : rust)).get(key)!;
     scene.add(car);
     renderer.render(scene, cam);
     info.innerHTML = `<b>${k.name}</b><small>مدل ${k.year}</small>`;
