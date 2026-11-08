@@ -174,3 +174,28 @@ Measured per feature (headless, CPU-rasterised as a fill-rate proxy): the AAA bu
 - Lite: nothing that moves casts shadows, so the shadow map is drawn once per level / camera fit (no every-8-frames spike).
 - Scene renders at half rate behind menus; auto-quality probe reacts faster (1.5 s, < 52 fps).
 - Settings «بالا» opts a phone into the full look (app restarts to apply).
+
+## AAA fluidity pass (Nov 2026)
+Plan: `rahbandoon/AAA_PLAN.md` (every aspect of the game, measured, prioritised; fluidity first).
+Tools: `scripts/perf.cjs` (startup timings, long tasks, frame stats per scenario on a throttled CPU),
+`scripts/cpuprof.cjs` (self time per function), `scripts/gpucost.cjs` (render cost per scene part),
+`scripts/fpsprobe.cjs` (real-loop frame rate under variations).
+- **Instanced drawing** (`render/instancer.ts`): placed models keep their node tree but their leaves are `Slot`s;
+  before every render (scene.onBeforeRender) the slots under the level's group are gathered into one
+  InstancedMesh per (geometry, material). Cars are built once per *kind* (paint is a marker material; each car
+  tints a shared white paint with its instance color), arrows and shadow blobs are slots too, passengers are 8
+  prebuilt looks with the coat color per instance. Level 60: draw calls 384 → ~169, car draws no longer grow
+  with the number of cars. `?noinst` draws cars on their own for comparison.
+- **Atlas in bake()**: parts with their own canvas texture but otherwise equal materials (building facades,
+  plates) are packed into one texture and merged: world draw calls 85 → 38.
+- **No hitches in play**: no passenger is built during play (looks prebuilt; grandmas cached per color), smoke
+  puffs come from a fixed pool with persistent materials, effect shaders compiled at load with the real
+  materials, arrow materials kept across levels, shader-log checks off outside `?debug`.
+- **Startup**: a loading screen with a progress bar (`index.html`, compositor-only animation); the boot builds
+  every model, every passenger look and the first world (sliced: `buildWorldSteps` is a generator), compiles
+  all shaders and draws the first frame under it. Nothing heavy runs behind the menus afterwards.
+- **Menus**: the 3D view draws a few frames after a card opens and then holds still (the win keeps its confetti
+  live ~3 s); cards animate transform/opacity only (rise-and-fade in 280 ms, out 160 ms), the backdrop fades
+  via a pseudo-element, buttons squash on press, glow keyframes are transform-only.
+- **Level changes**: `goLevel()` dips to a veil, builds a new chapter's world in slices (loading dots), compiles,
+  draws one frame underneath and lifts the veil.

@@ -24,16 +24,36 @@ const coinMat = new THREE.SpriteMaterial({ map: coinTex, transparent: true, dept
 // Shared between levels: the level cleanup must not free them.
 smokeMat.userData.keep = true; coinMat.userData.keep = true;
 
+/**
+ * Tire smoke: a fixed pool of sprites, each with its own (never disposed) material, so a puff never creates or
+ * frees anything during play (a freed material can take its compiled shader with it, and the next puff would
+ * stall a frame recompiling it).
+ */
+const PUFFS = 40;
+const puffPool: { s: THREE.Sprite; busy: boolean; t: number }[] = [];
+for (let i = 0; i < PUFFS; i++) {
+  const m = smokeMat.clone(); m.userData.keep = true;
+  const s = new THREE.Sprite(m); s.visible = false;
+  puffPool.push({ s, busy: false, t: 0 });
+}
+let puffClock = 0;
 export function puff(parent: THREE.Object3D, at: THREE.Vector3, size = 0.6) {
-  const s = new THREE.Sprite(smokeMat.clone());
-  s.position.copy(at).add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.15, (Math.random() - 0.5) * 0.4));
+  // A free sprite, or the oldest one when every sprite is in the air.
+  let slot = puffPool.find((p) => !p.busy);
+  if (!slot) slot = puffPool.reduce((a, b) => (a.t < b.t ? a : b));
+  const p = slot, s = p.s, token = ++puffClock;
+  p.busy = true; p.t = token;
+  s.removeFromParent();
+  s.visible = true;
+  s.position.set(at.x + (Math.random() - 0.5) * 0.4, at.y + 0.15, at.z + (Math.random() - 0.5) * 0.4);
   parent.add(s);
   const y0 = s.position.y;
   void tween(0.7, (k) => {
+    if (p.t !== token) return; // taken over by a newer puff
     s.scale.setScalar(size * (0.4 + k));
     s.position.y = y0 + k * 0.5;
     s.material.opacity = 0.8 * (1 - k);
-  }, ease.out).then(() => { parent.remove(s); s.material.dispose(); });
+  }, ease.out).then(() => { if (p.t !== token) return; s.visible = false; s.removeFromParent(); p.busy = false; });
 }
 
 export function coinBurst(parent: THREE.Object3D, at: THREE.Vector3, n = 6) {
@@ -78,4 +98,15 @@ export function confetti(parent: THREE.Object3D, at: THREE.Vector3, n = 140) {
     });
     mesh.instanceMatrix.needsUpdate = true;
   }, ease.linear).then(() => { parent.remove(mesh); mesh.dispose(); });
+}
+
+/**
+ * One object per effect material, for compiling their shaders at load time with the real (kept) materials, so
+ * the first puff, coin or confetti burst of a level never stalls a frame.
+ */
+export function fxWarmObjects(): THREE.Object3D[] {
+  const coin = new THREE.Sprite(coinMat);
+  const conf = new THREE.InstancedMesh(confettiGeo, confettiMat, 1);
+  conf.setColorAt(0, new THREE.Color(1, 1, 1));
+  return [puffPool[0].s, coin, conf];
 }

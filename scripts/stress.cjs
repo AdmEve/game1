@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto('http://127.0.0.1:5173/?shot&play');
+  await p.goto((process.env.URL || 'http://127.0.0.1:5173/') + '?shot&play');
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 240000 });
   let bad = 0;
   for (const n of levels) {

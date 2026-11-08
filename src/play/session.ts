@@ -12,7 +12,7 @@ import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
-import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, obstacleProp, type Layout, type WorldOpts } from '../render/world';
+import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
 import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
@@ -24,13 +24,22 @@ export const MAX_BAYS = 6;
  * again) reuses it instead of rebuilding hundreds of meshes.
  */
 let cached: { key: string; world: ReturnType<typeof buildWorld> } | null = null;
+const worldKey = (w: number, h: number, seed: number, o: WorldOpts) => [w, h, seed, o.night, o.snow, o.landmark, o.autumn, o.boulevard, o.yalda, o.nowruz, o.stop].join('|');
 function worldFor(w: number, h: number, seed: number, o: WorldOpts) {
-  const key = [w, h, seed, o.night, o.snow, o.landmark, o.autumn, o.boulevard, o.yalda, o.nowruz, o.stop].join('|');
-  if (cached?.key === key) return cached.world;
-  if (cached) disposeTree(cached.world.group);
-  cached = { key, world: buildWorld(w, h, MAX_BAYS, seed, o) };
-  return cached.world;
+  const it = worldSteps(w, h, seed, o);
+  for (;;) { const r = it.next(); if (r.done) return r.value; }
 }
+/** The level's world, built in steps (a loading screen yields between them) unless it is already cached. */
+export function* worldSteps(w: number, h: number, seed: number, o: WorldOpts): Generator<void, ReturnType<typeof buildWorld>> {
+  const key = worldKey(w, h, seed, o);
+  if (cached?.key === key) return cached.world;
+  if (cached) { disposeTree(cached.world.group); cached = null; }
+  const world: ReturnType<typeof buildWorld> = yield* buildWorldSteps(w, h, MAX_BAYS, seed, o);
+  cached = { key, world };
+  return world;
+}
+/** Whether a level with these settings needs a new world (a chapter change), i.e. a longer load. */
+export const worldCached = (w: number, h: number, seed: number, o: WorldOpts) => cached?.key === worldKey(w, h, seed, o);
 
 export interface SessionHooks {
   queueLeft(n: number, total: number): void;
@@ -142,8 +151,7 @@ export class Session {
       }
       if (v.wedding) {
         // Fit the flowers to this model's real hood: measure the body in its own frame.
-        o.root.updateMatrixWorld(true);
-        const bb = new THREE.Box3().setFromObject(o.body).applyMatrix4(o.body.matrixWorld.clone().invert());
+        const bb = o.box;
         // The body's model space faces +x; the decor is built facing −z.
         const decor = weddingDecor(-bb.max.x, bb.max.y * 0.6, bb.max.y * 0.93); decor.rotation.y = -Math.PI / 2;
         o.body.add(decor);

@@ -35,6 +35,20 @@ function ac(): AudioContext | null {
   return audioOut()?.c ?? null;
 }
 
+/**
+ * Voice limits: when a burst of cars leaves at once, a few engines/horns/chirps are plenty. More would only pile
+ * up audio nodes (work for the audio thread on a phone) and turn into noise.
+ */
+const recent = new Map<string, number[]>();
+function allow(kind: string, t: number, max: number, window: number): boolean {
+  let a = recent.get(kind);
+  if (!a) recent.set(kind, (a = []));
+  while (a.length && a[0] < t - window) a.shift();
+  if (a.filter((x) => Math.abs(x - t) < window).length >= max) return false;
+  a.push(t); a.sort((x, y) => x - y);
+  return true;
+}
+
 function env(c: AudioContext, t: number, a: number, peak: number, d: number) {
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, t);
@@ -52,6 +66,7 @@ function noise(c: AudioContext, t: number, dur: number) {
 /** Car horn. Old cars (Peykan) honk lower and rougher than new ones. */
 export function horn(kind: 'old' | 'new' | 'bus' = 'new', times = 1, delay = 0) {
   const c = ac(); if (!c) return;
+  if (!allow('horn', c.currentTime + delay, 3, 0.5)) return;
   const [f1, f2] = kind === 'old' ? [370, 440] : kind === 'bus' ? [220, 277] : [440, 554];
   for (let k = 0; k < times; k++) {
     const t = c.currentTime + delay + k * 0.2, dur = times > 1 ? 0.12 : 0.28;
@@ -78,6 +93,7 @@ export function weddingHorns(delay = 0) {
 /** Engine pull-away: a rising growl. */
 export function engine(delay = 0, heavy = false) {
   const c = ac(); if (!c) return;
+  if (!allow('engine', c.currentTime + delay, 3, 0.4)) return;
   const t = c.currentTime + delay, dur = 0.7;
   const o = osc(c, 'sawtooth', heavy ? 45 : 70, t, dur);
   o.frequency.exponentialRampToValueAtTime(heavy ? 95 : 160, t + 0.45);
@@ -90,6 +106,7 @@ export function engine(delay = 0, heavy = false) {
 /** Tire chirp when a car launches or turns hard. */
 export function chirp(delay = 0, vol = 0.07) {
   const c = ac(); if (!c) return;
+  if (!allow('chirp', c.currentTime + delay, 3, 0.3)) return;
   const t = c.currentTime + delay;
   const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 6;
   noise(c, t, 0.18).connect(bp).connect(env(c, t, 0.01, vol, 0.16)).connect(master);
@@ -105,6 +122,7 @@ export function bump() {
 /** A passenger hops in. Pitch climbs as the car fills. */
 export function pop(fill = 0) {
   const c = ac(); if (!c) return;
+  if (!allow('pop', c.currentTime, 5, 0.2)) return;
   const t = c.currentTime, f = 520 * 2 ** (fill * 0.75);
   const o = osc(c, 'sine', f, t, 0.1); o.frequency.exponentialRampToValueAtTime(f * 1.6, t + 0.07);
   o.connect(env(c, t, 0.005, 0.14, 0.09)).connect(master);
@@ -112,6 +130,7 @@ export function pop(fill = 0) {
 
 export function coin(delay = 0) {
   const c = ac(); if (!c) return;
+  if (!allow('coin', c.currentTime + delay, 6, 0.3)) return;
   const t = c.currentTime + delay;
   osc(c, 'triangle', 1318, t, 0.08).connect(env(c, t, 0.004, 0.12, 0.08)).connect(master);
   osc(c, 'triangle', 1760, t + 0.07, 0.25).connect(env(c, t + 0.07, 0.004, 0.12, 0.25)).connect(master);

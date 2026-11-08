@@ -801,6 +801,11 @@ function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number
 }
 
 export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
+  const it = buildWorldSteps(w, h, bays, seed, opts);
+  for (;;) { const r = it.next(); if (r.done) return r.value; }
+}
+/** The world built in steps: each `yield` is a point where a loading screen can let a frame through. */
+export function* buildWorldSteps(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): Generator<void, World> {
   const night = !!opts.night, snow = !!opts.snow;
   let s = seed;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
@@ -864,6 +869,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     const band = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.115, 0.1, 14), bolBand); band.position.set(bx3, LOT_Y + 0.3, bz3); add(band);
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), std(0xff5a3c, { emissive: 0xff3b1a, emissiveIntensity: 0.35 })); cap.position.set(bx3, LOT_Y + 0.52, bz3); add(cap);
   }
+  yield;
   // Pickup bays: a darker strip with white separators and numbered pavement.
   const stripW = L.bayX.length * BAY_W * 1.06 + 0.6;
   add(plane(stripW, BAY_D + 0.2, surfaceMat(asphalt(0.8, 9), [stripW / 5, 0.5]), 0, 0.006, L.bayZ));
@@ -875,6 +881,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   // «جوی آب»: the open gutter between sidewalk and street, a Tehran signature.
   add(plane(80, 0.18, std(0x6b8fa8, { roughness: 0.15, metalness: 0.3 }), 0, 0.005, L.walkZ + walkD / 2 + 0.12));
 
+  yield;
   // Bus shelter at the queue head.
   const shelter = new THREE.Group();
   const steel = std(0x5d6b7e, { metalness: 0.6, roughness: 0.35 });
@@ -896,6 +903,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   kiosk.position.set(L.bayX[L.bayX.length - 1] - 2.4, 0.18, L.walkZ - 0.25); kiosk.traverse((m) => { m.castShadow = true; });
   add(kiosk);
 
+  yield;
   // Plane trees along the sidewalk, apartments behind, landmarks on the horizon.
   for (let x = -16; x <= 16; x += 2.6 + rnd()) {
     if (Math.abs(x - shelter.position.x) < 1.8 || Math.abs(x - kiosk.position.x) < 1.3) continue;
@@ -925,6 +933,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     add(b);
     x += bw + 0.15;
   }
+  yield;
   // Second row and the skyline.
   for (let x = -24, i = 0; x < 24 && !darband; i++) {
     const bw = 2.6 + rnd() * 2, floors = 4 + Math.floor(rnd() * 4);
@@ -933,6 +942,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     b.position.set(x + bw / 2, 0, L.walkZ - (tabiat ? 21 : 9) - rnd() * 2); add(b);
     x += bw + 0.4;
   }
+  yield;
   // A small park behind the sidewalk: hedge, paths, a fountain, flower beds, benches and trees.
   if (opts.landmark !== 'bazaar' && !darband && !tabiat) {
     const z0 = L.walkZ - 1.9;
@@ -1049,6 +1059,7 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
   }
   // The Alborz behind the city (added after baking: it keeps its own vertex colors and aerial haze).
   const alborz = ridge(380, 70, 40, (seed % 97) + 3, snow ? 0.2 : 0.45); alborz.position.set(4, -1, L.walkZ - 160);
+  yield;
   // Street lamps along the sidewalk, bikes by the kiosk, a traffic light at the crossing.
   for (let x = -15; x <= 15; x += 4.2) {
     if (Math.abs(x - shelter.position.x) < 1.6) continue;
@@ -1092,15 +1103,18 @@ export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: W
     for (const [x, z, r] of [[0, L.lotH / 2, Math.max(L.lotW, L.lotH) * 0.75], [0, L.bayZ, 5.5]] as const) { const p = lightPool(r, 0xffe6b8, 0.5); p.position.set(x, 0.13, z); g.add(p); }
   }
 
+  yield;
   // Trees on the grass around the lot.
   for (let i = 0; i < 18; i++) {
     const side = i % 2 ? 1 : -1, z = rnd() * (L.lotH + 6) - 1;
     const x = side * (L.lotW / 2 + CURB + ROAD + 1.2 + rnd() * 3.5);
     const t = chenar(0.8 + rnd() * 0.4, snow); t.position.set(x, 0, z); add(t);
   }
+  yield;
   // Everything here is static: merge it into one mesh per material to keep draw calls low.
   const baked = bake(g);
   baked.traverse((m) => { (m as THREE.Mesh).receiveShadow = true; });
+  yield;
   // Urban ground and the city out to the mountains (instanced: kept out of the bake).
   if (!darband) {
     const avoid: [number, number, number][] = [[milad.position.x, milad.position.z, 5], [azadi.position.x, azadi.position.z, lm === 'azadi' ? 11 : 5]];

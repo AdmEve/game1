@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import type { Color } from '../game/rules';
 import { PAINT, bake } from './fleet';
 import { profile } from './profile';
+import { toSlots } from './instancer';
 
 const SKIN = [0xf1c9a0, 0xe0b088, 0xd29b72, 0xc4895f, 0xf3d2b3];
 const HAIR = [0x231a14, 0x3b2a20, 0x111111, 0x5a3825, 0x8a8a8a];
@@ -34,23 +35,31 @@ const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
   if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o }); m.userData.keep = true; mats.set(k, m); }
   return mats.get(k)!;
 };
-/** Clothes in the ride color: matte fabric, a touch less saturated than car paint. */
-const shirt = (c: Color) => {
-  const k = -PAINT[c] - 1;
-  if (!mats.has(k)) { const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(PAINT[c]).offsetHSL(0, -0.04, 0.05), roughness: 0.88, side: THREE.DoubleSide }); m.userData.keep = true; mats.set(k, m); }
-  return mats.get(k)!;
-};
+/**
+ * Clothes in the ride color: matte fabric, a touch less saturated than car paint. Passengers are built once per
+ * look with a stand-in material for the clothes; every passenger drawn is an instance tinted with its color.
+ */
+const CLOTH_MARK = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, side: THREE.DoubleSide, name: 'cloth-mark' });
+CLOTH_MARK.userData.paint = true; CLOTH_MARK.userData.keep = true;
+const cloth = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, side: THREE.DoubleSide, name: 'cloth' });
+cloth.userData.keep = true;
+const clothTint = new Map<Color, THREE.Color>();
+const tintOf = (c: Color) => { if (!clothTint.has(c)) clothTint.set(c, new THREE.Color(PAINT[c]).offsetHSL(0, -0.04, 0.05)); return clothTint.get(c)!; };
 
 export interface Person { root: THREE.Group; body: THREE.Group; color: Color; userData?: { vip: boolean; gran: boolean } }
 
-/** i varies look (man in a jacket / woman in a manteau and rusari, skin, hair, a bag). */
-export function person(color: Color, i: number): Person {
-  const root = new THREE.Group(), body = new THREE.Group();
-  root.add(body);
-  const woman = i % 5 === 1 || i % 5 === 3;
+/** How many distinct passenger looks there are (men in jackets, women in manteau and rusari, with or without a bag). */
+export const LOOKS = 8;
+const looks = new Map<number, THREE.Group>();
+
+/** Build look `i` once: legs, coat, arms, head and hair or scarf, merged into a couple of meshes. */
+function look(i: number): THREE.Group {
+  const hit = looks.get(i);
+  if (hit) return hit;
+  const body = new THREE.Group();
+  const woman = i % 2 === 1;
   const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = !profile.lite; body.add(o); return o; };
-  const pants = mat(PANTS[i % PANTS.length]), top = shirt(color), skin = mat(SKIN[i % SKIN.length], { roughness: 0.6 });
-  const tall = 0.96 + ((i * 37) % 9) * 0.012;
+  const pants = mat(PANTS[i % PANTS.length]), top = CLOTH_MARK, skin = mat(SKIN[i % SKIN.length], { roughness: 0.6 });
   for (const sx of [-1, 1]) {
     add(geo.leg, pants, sx * 0.045, 0.47, (i % 2 ? 0.01 : -0.01) * sx);
     add(geo.shoe, mat(0x1b1b1d, { roughness: 0.5 }), sx * 0.045, 0.018, 0.02);
@@ -70,11 +79,19 @@ export function person(color: Color, i: number): Person {
     add(geo.drape, mat(SCARF[i % SCARF.length], { roughness: 0.9 }), 0, 0.87, -0.015);
   } else add(geo.hair, mat(HAIR[i % HAIR.length], { roughness: 0.9 }), 0, 0.985, -0.006).rotation.x = -0.25;
   if (i % 3 === 2) { const b = add(geo.bag, mat(0x5e3b22, { roughness: 0.55 }), 0.17, 0.55); b.rotation.y = 0.3; }
-  // One or two draw calls per person instead of a dozen.
   const baked = bake(body);
-  root.remove(body);
-  const merged = new THREE.Group();
-  merged.add(...baked.children);
+  looks.set(i, baked);
+  return baked;
+}
+
+/** Build every look ahead of time (at load), so no passenger is ever built during play. */
+export function warmPeople() { for (let k = 0; k < LOOKS; k++) look(k); }
+
+/** Passenger number i (its look and height vary with i), dressed in the ride color. */
+export function person(color: Color, i: number): Person {
+  const root = new THREE.Group();
+  const tall = 0.96 + ((i * 37) % 9) * 0.012;
+  const merged = toSlots(look(i % LOOKS), { castShadow: !profile.lite, tint: tintOf(color), paint: (m) => (m === CLOTH_MARK ? cloth : null) }) as THREE.Group;
   root.add(merged);
   root.scale.setScalar(1.18 * tall);
   return { root, body: merged, color };
@@ -102,7 +119,18 @@ function chadorMat(color: Color) {
 
 /** «حاج‌خانم با خرید»: a grandma in a floral chador with two full shopping bags (she takes two seats). */
 export function granny(color: Color, i: number): Person {
-  const root = new THREE.Group(), body = new THREE.Group();
+  const key = color + (i % 5);
+  let baked = grannies.get(key);
+  if (!baked) { baked = buildGranny(color, i); grannies.set(key, baked); }
+  const root = new THREE.Group();
+  const merged = baked.clone();
+  root.add(merged);
+  root.scale.setScalar(1.12);
+  return { root, body: merged, color };
+}
+const grannies = new Map<string, THREE.Group>();
+function buildGranny(color: Color, i: number): THREE.Group {
+  const body = new THREE.Group();
   const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = !profile.lite; body.add(o); return o; };
   const ch = chadorMat(color);
   // The chador falls from the head to the ground; she leans forward a little.
@@ -120,14 +148,8 @@ export function granny(color: Color, i: number): Person {
   add(new THREE.CylinderGeometry(0.1, 0.085, 0.2, 10), bag2, 0.3, 0.3);
   for (let k = 0; k < 3; k++) add(new THREE.SphereGeometry(0.05, 8, 6), mat(0xf59e0b, { roughness: 0.5 }), 0.27 + (k % 2) * 0.06, 0.43 + (k === 2 ? 0.05 : 0), (k - 1) * 0.04);
   for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.07, 0.01, 4, 10, Math.PI), mat(0x3f3f46), s * 0.3, 0.42).rotation.y = Math.PI / 2;
-  body.rotation.x = 0.06;
-  root.add(body);
   const baked = bake(body);
-  root.remove(body);
-  const merged = new THREE.Group();
-  merged.rotation.x = 0.06;
-  merged.add(...baked.children);
-  root.add(merged);
-  root.scale.setScalar(1.12);
-  return { root, body: merged, color };
+  baked.rotation.x = 0.06;
+  baked.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry.userData.keep = true; (m.material as THREE.Material).userData.keep = true; } });
+  return baked;
 }

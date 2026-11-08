@@ -8,15 +8,17 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { App as CapApp } from '@capacitor/app';
 import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
-import type { Color, Kind, Level } from './game/rules';
-import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
+import type { Kind, Level } from './game/rules';
+import { ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { skyEnv } from './render/env.js';
 import { profile } from './render/profile';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
+import { addInstanceRoot, attachInstancer, instanceStats, removeInstanceRoot, syncInstances } from './render/instancer';
 import { setSnow } from './render/cars.js';
 import { sky } from './render/world';
-import { Session } from './play/session';
+import { Session, worldCached, worldSteps } from './play/session';
+import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
@@ -43,9 +45,13 @@ import { persist, save } from './save';
 import * as sfx from './audio';
 import { disposeTree } from './render/dispose';
 import { click, coin } from './audio';
-import { MOODS as WEATHER_MOODS, Weather, type WeatherKind } from './render/weather';
+import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
 import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './music';
+import { warmPeople } from './render/people';
+import { fxWarmObjects } from './render/fx';
 import { haptic } from './haptics';
+import { createPacer } from './render/pacing';
+import { perfFrame, togglePerfHud } from './ui/perfhud';
 
 const levels: Level[] = (PACKED as string[]).map(unpackLevel);
 const debug = new URLSearchParams(location.search);
@@ -60,6 +66,8 @@ renderer.shadowMap.enabled = profile.shadows;
 renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 // The world's shadows barely change, so phones redraw the shadow map only every few frames, and cars cast none.
 if (mobile || profile.lite) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(profile.lite ? 0.17 : 0.22); }
+// Checking shader logs forces the main thread to wait for every compile; only do it when debugging.
+renderer.debug.checkShaderErrors = debug.has('debug');
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -71,13 +79,15 @@ document.body.classList.toggle('lite', profile.lite);
 
 // ───── Graphics quality: 2 = full (film post, soft shadows), 1 = balanced (fewer pixels), 0 = simple (no post, hard shadows) ─────
 let tier = 2;
+/** Frame pacing and, in 'auto' quality, a resolution governor (render/pacing.ts). */
+const pacer = createPacer({ adaptive: () => save.settings.quality === 'auto' && !debug.has('shot'), onScale: () => setTier(tier) });
 function setTier(t: number) {
   tier = Math.max(0, Math.min(2, t));
   const dpr = window.devicePixelRatio;
   if (debug.has('shot')) return;
   // Lite (phones): no film post pass, fewer pixels. Full: the post pass while the device keeps up.
   const ratio = profile.lite ? [0.85, 1.0, 1.1][tier] : [1, mobile ? 1.05 : 1.5, mobile ? 1.25 : 2][tier];
-  renderer.setPixelRatio(Math.min(dpr, ratio));
+  renderer.setPixelRatio(Math.max(0.5, Math.min(dpr, ratio) * pacer.state.scale));
   post.enabled = !profile.lite && tier > 0;
   document.body.classList.toggle('lite', !post.enabled);
   const size = tier === 0 ? 512 : mobile || tier === 1 ? 1024 : 2048;
@@ -88,6 +98,8 @@ function setTier(t: number) {
 function applyQuality(q: typeof save.settings.quality) { setTier(q === 'balanced' ? 1 : q === 'low' ? 0 : 2); }
 
 const scene = new THREE.Scene();
+// Cars, arrows and passengers are drawn instanced: one draw call per model and material (render/instancer.ts).
+attachInstancer(scene);
 scene.background = sky();
 scene.fog = new THREE.Fog(0xdfe9f2, 40, 95);
 scene.environment = skyEnv(renderer);
@@ -242,6 +254,8 @@ function fitCamera() {
 
 // ───── Juice: floating texts and camera shake ─────
 let shakeAmp = 0;
+/** Until this time (ms) the 3D view keeps drawing behind an open menu (the win confetti). */
+let liveUntil = 0;
 const camBase = new THREE.Vector3(), camTarget = new THREE.Vector3();
 
 /** Level opening: the camera swoops down from the skyline onto the lot. */
@@ -343,6 +357,7 @@ function catchUp() {
 function disposeSession() {
   if (!session) return;
   resetTraffic();
+  removeInstanceRoot(session.group);
   scene.remove(session.group);
   // The world is kept for the next level of the same chapter; everything else of the session is freed.
   session.group.remove(session.worldGroup);
@@ -360,17 +375,75 @@ let helped = false;
 type EventRun = { kind: 'yalda' | 'nowruz'; i: number };
 let event: EventRun | null = null;
 
-function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null) {
-  disposeSession();
-  rush = custom ?? null;
-  event = ev;
-  current = Math.min(pick ?? save.level, levels.length - 1);
-  const n = current;
+/** Which level, chapter look and world a start of (pick, custom, ev) means. */
+function levelPlan(pick?: number, custom?: Level, ev: EventRun | null = null) {
+  const n = Math.min(pick ?? save.level, levels.length - 1);
   const level = custom ?? levels[n];
   // Yalda nights are played at home in Tajrish, after dark. The rush hour rotates day by day through
   // the places the player has already unlocked (never spoiling a chapter they haven't reached).
   const unlocked = CHAPTERS.filter((c) => c.from <= save.level);
   const ch = ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const, weather: ev.kind === 'yalda' ? 'snow' as const : 'petals' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
+  const world: WorldOpts = { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, worldSeed: ev ? 9000 + ev.i : custom ? 8000 + ch.n : 100 + ch.n, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind };
+  return { n, level, ch, world, seed: world.worldSeed ?? n + 1 };
+}
+
+/** Run a step generator, letting a frame through whenever a slice has taken longer than `budget` ms. */
+async function runSteps<T>(it: Generator<void, T>, budget = 14): Promise<T> {
+  let t = performance.now();
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+    if (performance.now() - t > budget) { await nextFrame(); t = performance.now(); }
+  }
+}
+const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
+/** The full-screen veil that covers level changes (a quick dip) and world builds (with a loading line). */
+const veil = h('div', 'veil', '<div class="ld"><i></i><i></i><i></i></div>');
+document.body.append(veil);
+let veilBusy: Promise<void> = Promise.resolve();
+function veilTo(on: boolean, loading = false): Promise<void> {
+  veil.classList.toggle('loading', loading);
+  veil.classList.toggle('on', on);
+  return new Promise((r) => setTimeout(r, on ? 190 : 320));
+}
+
+/**
+ * Change level smoothly: dip to the veil, build (a new chapter's world is built in slices with a loading line
+ * showing), compile what's new, draw one frame underneath, then lift the veil. `under` runs just before the
+ * veil lifts (e.g. to open the home screen over the new level).
+ */
+function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null, under?: () => void): Promise<void> {
+  const run = async () => {
+    const p = levelPlan(pick, custom, ev);
+    const heavy = !worldCached(p.level.w, p.level.h, p.seed, p.world);
+    modalOpen = true;
+    await veilTo(true, heavy);
+    if (heavy) await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world));
+    startLevel(pick, custom, false, ev);
+    if (heavy) {
+      syncInstances();
+      await renderer.compileAsync(scene, camera).catch(() => {});
+      // The new chapter's music loop starts rendering now (off the main thread), not in the middle of play.
+      void prepareMusic();
+    }
+    post.render(scene, camera);
+    under?.();
+    if (swoop && !under) introSwoop();
+    await veilTo(false);
+  };
+  veilBusy = veilBusy.then(run, run);
+  return veilBusy;
+}
+
+function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null) {
+  disposeSession();
+  rush = custom ?? null;
+  event = ev;
+  const plan = levelPlan(pick, custom, ev);
+  current = plan.n;
+  const n = current;
+  const { level, ch } = plan;
   applyLight(ch.light);
   applyWeatherMood(ch.weather);
   setMood(ch.light);
@@ -389,8 +462,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     officer: (a) => hud.setOfficer(a),
     flash: cameraFlash,
     shake: (a) => { shakeAmp = Math.max(shakeAmp, a); },
-  }, n + 1, { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, worldSeed: ev ? 9000 + ev.i : custom ? 8000 + ch.n : 100 + ch.n, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind });
+  }, n + 1, plan.world);
   scene.add(session.group);
+  addInstanceRoot(session.group);
   renderer.shadowMap.needsUpdate = true;
   if (session.weather) session.weather.onThunder = () => sfx.thunder();
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
@@ -483,7 +557,7 @@ function showRushWin() {
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
   const close = modal(c, 'pop');
-  c.append(button('برگرد به خونه', 'primary big', () => { close(); modalOpen = false; startLevel(); showHome(); }));
+  c.append(button('برگرد به خونه', 'primary big', () => { close(); void goLevel(undefined, undefined, false, null, showHome); }));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
 }
 
@@ -491,7 +565,7 @@ function showWin() {
   if (event) {
     recordWin(false);
     modalOpen = true; hud.show(false); hud.refresh();
-    const back = () => { hud.refresh(); modalOpen = false; startLevel(); showHome(); };
+    const back = () => { hud.refresh(); void goLevel(undefined, undefined, false, null, showHome); };
     if (event.kind === 'yalda') showYaldaWin(event.i, back); else showNowruzWin(event.i, back);
     return;
   }
@@ -514,6 +588,7 @@ function showWin() {
   modalOpen = true;
   hud.show(false);
   hud.refresh();
+  liveUntil = performance.now() + 2800;
   const c = h('div', 'result win');
   // Rewards in one row, then the notes (pass, money box), then Mr. Ajool and any new medal.
   const rewards = `<div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`
@@ -530,7 +605,7 @@ function showWin() {
     if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
     if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
     await maybeInterstitial(n);
-    modalOpen = false; startLevel();
+    await goLevel();
   };
   if (rewardedAvailable()) {
     const dbl = button(`${emo('🎬', 'emo sm')} دو برابرش کن!`, 'gold', async () => {
@@ -595,9 +670,9 @@ function showLose(limit?: 'time' | 'moves') {
     // Giving up on a Journey level costs a life (the daily challenge and events are free).
     if (!rush && current >= FREE_LEVELS) {
       loseLife();
-      if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { startLevel(current, undefined, false); showHome(); return; }
+      if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
     }
-    modalOpen = false; startLevel(current, rush ?? undefined, true, event);
+    void goLevel(current, rush ?? undefined, true, event);
   }));
 }
 
@@ -635,12 +710,12 @@ function showSettings() {
   let needsRestart = false;
   const close = modal(c, 'pop');
   c.append(button(`${emo('🗺️', 'emo sm')} انتخاب مرحله`, 'ghost', () => { close(); showLevels(); }));
-  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); modalOpen = false; startLevel(current); }));
-  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) startLevel(current); }));
-  // Version label; seven taps unlock every level (for testers).
+  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); void goLevel(current); }));
+  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
+  // Version label: three taps show the performance overlay, seven unlock every level (for testers).
   const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)} · ساخت ${__BUILD__}`);
   let taps = 0;
-  ver.onclick = () => { if (++taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); } };
+  ver.onclick = () => { ++taps; if (taps === 3) togglePerfHud(); if (taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); } };
   c.append(ver);
 }
 
@@ -660,7 +735,7 @@ function showLevels() {
       const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
       if (open) b.onclick = async () => {
         if (i >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
-        close(); modalOpen = false; startLevel(i); hud.show(true);
+        close(); void goLevel(i);
       };
       grid.append(b);
     }
@@ -684,14 +759,14 @@ function showHome() {
     const lvl = yaldaLevel(night);
     if (!lvl) { hud.toast('مرحله‌ی امشب آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
-    startLevel(undefined, lvl, true, { kind: 'yalda', i: night }); hud.show(true);
+    void goLevel(undefined, lvl, true, { kind: 'yalda', i: night });
   });
   if (yb) c.querySelector('.chapter')!.before(yb);
   const nb = nowruzBanner((day) => {
     const lvl = nowruzLevel(day);
     if (!lvl) { hud.toast('مرحله‌ی امروز آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
-    startLevel(undefined, lvl, true, { kind: 'nowruz', i: day }); hud.show(true);
+    void goLevel(undefined, lvl, true, { kind: 'nowruz', i: day });
   });
   if (nb) c.querySelector('.chapter')!.before(nb);
   const close = modal(c, 'home-card');
@@ -713,7 +788,7 @@ function showHome() {
     const lvl = dailyLevel();
     if (!lvl) { hud.toast('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
-    startLevel(undefined, lvl); hud.show(true);
+    void goLevel(undefined, lvl);
   });
   rowEl.append(rushBtn);
   const tickets = passReady();
@@ -747,63 +822,69 @@ async function boot() {
   hud.onCoins = () => { modalOpen = true; showShop(() => { modalOpen = false; }, () => hud.refresh()); };
   performance.mark('b0');
   performance.measure('before-boot', { start: 0, end: 'b0' });
+  // ── Loading: everything heavy happens here, behind the loading screen, a slice at a time so it keeps moving.
+  // Nothing heavy is left for later: once the menu shows, it has the phone to itself.
+  const bar = document.querySelector('#splash .bar i') as HTMLElement | null;
+  let done = 0;
+  const STEPS = 16;
+  const progress = async (n = 1) => { done += n; if (bar) bar.style.transform = `scaleX(${Math.min(1, done / STEPS)})`; await nextFrame(); };
   await document.fonts.load('900 40px Vazirmatn').catch(() => {});
   performance.measure('fonts', 'b0');
+  await progress();
+  // Every vehicle model (one per kind, shared by all colors), the garage classics the player owns, and every passenger look.
   performance.mark('b1');
-  warmFleet([]);
+  for (const k of ['pride', 'peykan', 'p405', 'samand', 'zamyad', 'bus', 'bike'] as Kind[]) { warmFleet([k]); await progress(); }
+  warmFleet([], save.garage.restored);
+  warmPeople();
   performance.measure('fleet', 'b1');
+  await progress();
+  // The first level's world, built in slices.
   performance.mark('b2');
-  // Let the splash paint before the heavy synchronous work of building the first world.
-  await new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  const first = levelPlan();
+  await runSteps(worldSteps(first.level.w, first.level.h, first.seed, first.world));
+  performance.measure('world-steps', 'b2');
+  await progress(2);
   startLevel(undefined, undefined, debug.has('play'));
   performance.measure('level', 'b2');
-  // Compile the shaders without blocking the main thread (the splash keeps animating), instead of stalling the first frame.
+  await progress();
+  // Compile every shader now (the level's, the instanced models' and the effects'), so no frame stalls later.
   performance.mark('b2c');
+  syncInstances();
+  const fxWarm = new THREE.Group(); fxWarm.add(...fxWarmObjects());
+  scene.add(fxWarm);
   await renderer.compileAsync(scene, camera).catch(() => {});
+  scene.remove(fxWarm);
   performance.measure('compile', 'b2c');
+  await progress();
+  // The music loop for this chapter (rendered off the main thread, a bar at a time).
+  performance.mark('b2m');
+  // Rendered off the main thread a bar at a time; it finishes on its own while the menu shows.
+  void prepareMusic();
+  performance.measure('music', 'b2m');
+  await progress();
+  applyQuality(save.settings.quality);
+  // Draw the first frame under the loading screen (uploads every texture now, not on the first visible frame).
+  performance.mark('b3');
+  post.render(scene, camera);
+  performance.measure('first-frame', 'b3');
+  await progress(STEPS);
   if (!debug.has('play')) showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);
-  // Build every vehicle template in the background so later levels load instantly. Each build takes a
-  // noticeable slice of a frame on a phone, so it only happens behind a menu, never during play.
-  const pending: [Kind, Color][] = [];
-  for (const k of ['pride', 'peykan', 'p405', 'samand', 'zamyad', 'bus'] as Kind[]) for (const c of ['red', 'yellow', 'blue', 'green', 'purple', 'orange'] as Color[]) pending.push([k, c]);
-  pending.push(['bike', 'white']);
-  const warm = () => {
-    if (!pending.length) return;
-    if (modalOpen && !busy() && document.visibilityState === 'visible') warmFleet([pending.shift()!]);
-    setTimeout(warm, 120);
-  };
-  setTimeout(warm, 2500);
-  // The music loop is built behind the menu, a slice at a time, so it is ready by the first tap.
-  setTimeout(prepareMusic, 1800);
-  // Compile the effect shaders (weather, puffs, confetti) once, off the main thread, so the first rain or win
-  // doesn't stall a frame.
-  setTimeout(() => {
-    const g = new THREE.Group();
-    for (const k of ['rain', 'snow', 'mist'] as WeatherKind[]) g.add(new Weather(k, 8, 8).object);
-    g.add(new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.Texture(), transparent: true, depthTest: false })));
-    const conf = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), 2);
-    conf.setColorAt(0, new THREE.Color(1, 1, 1)); g.add(conf);
-    renderer.compileAsync(g, camera, scene).catch(() => {}).finally(() => disposeTree(g));
-  }, 1200);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
-  let last = performance.now(), shadowTick = 0, renderSkip = false;
-  applyQuality(save.settings.quality);
-  // Adaptive quality ('auto'): watch the frame rate during play and step down if the phone struggles.
-  let probeFrames = 0, probeTime = 0;
-  const stepDown = () => setTier(tier - 1);
+  let shadowTick = 0, frozen = 0, lastFrame = 0;
+  // Every open (or closing) menu card; a live list, so checking it each frame costs nothing.
+  const modalBacks = document.getElementsByClassName('modal-back');
+  if (debug.has('perf')) togglePerfHud(true);
   const loop = (t: number) => {
-    const dt = Math.min(0.05, (t - last) / 1000); last = t;
-    if (save.settings.quality === 'auto' && tier > 0 && !modalOpen && document.visibilityState === 'visible') {
-      probeFrames++; probeTime += dt;
-      if (probeTime > 1.5) {
-        if (probeFrames / probeTime < 52) stepDown();
-        probeFrames = 0; probeTime = 0;
-      }
-    }
+    requestAnimationFrame(loop);
+    // Frame pacing: on 90/120 Hz screens (or when the governor halves the rate) only some refreshes render,
+    // on an even rhythm; the animations advance by the time since the last rendered frame.
+    const dt = pacer.frame(t);
+    if (dt === null) return;
+    const interval = lastFrame ? t - lastFrame : 16.7; lastFrame = t;
     // When taps pile up faster than cars can park and load, play the backlog a little faster to catch up.
     catchUp();
     tick(dt);
@@ -817,9 +898,15 @@ async function boot() {
     updateHand();
     // Lite: nothing that moves casts a shadow, so the shadow map is drawn once per level (no periodic spike).
     if (mobile && !profile.lite && ++shadowTick % 8 === 0) renderer.shadowMap.needsUpdate = true;
-    // Behind a menu the scene only idles: draw it at half rate so the menu itself stays smooth.
-    if (!(modalOpen && (renderSkip = !renderSkip))) post.render(scene, camera, dt);
-    requestAnimationFrame(loop);
+    // Behind a menu the 3D view settles for a few frames and then holds still, so the phone's GPU is free for
+    // the menu itself (a win keeps its confetti live for a moment).
+    const covered = (modalBacks.length > 0 && t > liveUntil) || veil.classList.contains('on');
+    if (!covered) frozen = 0;
+    if (!covered || frozen < 3) { post.render(scene, camera, dt); if (covered) frozen++; }
+    // The governor only judges frames of play.
+    if (covered || modalOpen || document.visibilityState !== 'visible') pacer.reset();
+    else pacer.observe(t, interval / 1000);
+    perfFrame(t, interval, renderer, pacer.state);
   };
   if (debug.has('shot')) post.render(scene, camera);
   else requestAnimationFrame(loop);
@@ -830,15 +917,12 @@ async function boot() {
   }
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
-    session: () => session, save, startLevel, levels, camera, renderer, post, scene,
+    session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
     async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); post.render(scene, camera, 1 / 30); },
   };
-  performance.mark('b3');
-  post.render(scene, camera);
-  performance.measure('first-frame', 'b3');
   const splash = document.getElementById('splash');
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }
   document.title = 'ready';

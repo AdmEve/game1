@@ -26,12 +26,18 @@ export function loop(step: (dt: number) => boolean): Promise<void> {
   return new Promise((done) => { loops.add({ step, done }); });
 }
 
+const loopList: { step: (dt: number) => boolean; done: () => void }[] = [];
+const jobList: Job[] = [];
 /** Advance all animations; dt in seconds. */
 export function tick(dt: number) {
   dt *= speed;
   now += dt;
-  for (const l of [...loops]) if (l.step(dt)) { loops.delete(l); l.done(); }
-  for (const j of [...jobs]) {
+  // Iterate snapshots kept in reused arrays (jobs started during this tick wait for the next one), so a busy
+  // frame allocates nothing here.
+  loopList.length = 0; for (const l of loops) loopList.push(l);
+  for (const l of loopList) if (l.step(dt)) { loops.delete(l); l.done(); }
+  jobList.length = 0; for (const j of jobs) jobList.push(j);
+  for (const j of jobList) {
     const k = Math.min(1, (now - j.start) / j.dur);
     j.step(j.ease(k), dt);
     if (k >= 1) { jobs.delete(j); j.done(); }
@@ -115,7 +121,8 @@ export function resetTraffic() { traffic.clear(); }
 
 /** Is any car standing (parked or stopped) within `r` of a point? */
 export function standingNear(x: number, z: number, r: number): boolean {
-  return [...traffic].some((o) => o.parked && Math.hypot(o.root.position.x - x, o.root.position.z - z) < r);
+  for (const o of traffic) if (o.parked && Math.hypot(o.root.position.x - x, o.root.position.z - z) < r) return true;
+  return false;
 }
 
 /** A car standing on the road (e.g. waiting for its bay): others queue behind it. Returns the release. */
@@ -156,15 +163,26 @@ function carAhead(me: Driver, priority = false): Driver | null {
   return best;
 }
 
-/** Relative position of `o` to `me`'s lane point: distance along the heading and to the left. */
-function rel(me: Driver, o: Driver) {
-  const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
-  return { along: dx * me.heading.x + dz * me.heading.z, left: dx * me.heading.z - dz * me.heading.x };
-}
 /** Is a parked car still beside or just ahead of me in my lane? */
-const parkedAlongside = (me: Driver) => [...traffic].some((o) => o.passable && o !== me && (({ along, left }) => along > -2.4 && along < GAP + 0.3 && Math.abs(left) < 0.75)(rel(me, o)));
+function parkedAlongside(me: Driver) {
+  for (const o of traffic) {
+    if (!o.passable || o === me) continue;
+    const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
+    const along = dx * me.heading.x + dz * me.heading.z, left = dx * me.heading.z - dz * me.heading.x;
+    if (along > -2.4 && along < GAP + 0.3 && Math.abs(left) < 0.75) return true;
+  }
+  return false;
+}
 /** Traffic coming the other way (or in the other lane) close ahead: not safe to pull out. */
-const oncoming = (me: Driver) => [...traffic].some((o) => o !== me && !o.parked && (({ along, left }) => along > -1 && along < 7 && left > 0.3 && left < 1.6)(rel(me, o)));
+function oncoming(me: Driver) {
+  for (const o of traffic) {
+    if (o === me || o.parked) continue;
+    const dx = o.root.position.x - me.base.x, dz = o.root.position.z - me.base.z;
+    const along = dx * me.heading.x + dz * me.heading.z, left = dx * me.heading.z - dz * me.heading.x;
+    if (along > -1 && along < 7 && left > 0.3 && left < 1.6) return true;
+  }
+  return false;
+}
 
 /**
  * Drive an object along a path: accelerates, cruises, brakes; yaw follows the tangent; `body` pitches
@@ -178,10 +196,10 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
   traffic.add(me);
   let s = 0, v = 0, waited = 0, gaveUp = false, prevYaw = root.rotation.y, swerve = 0;
   const left = new THREE.Vector3();
-  const tan = new THREE.Vector3();
+  const tan = new THREE.Vector3(), at = new THREE.Vector3();
   const place = (dt: number) => {
     const u = Math.min(1, s / L);
-    const p = path.getPointAt(u);
+    const p = path.getPointAt(u, at);
     me.base.set(p.x, 0, p.z);
     // Overtaking a parked car: drift into the other lane (to the left of travel) and back.
     root.position.x = p.x + left.x * swerve; root.position.z = p.z + left.z * swerve;
@@ -203,7 +221,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     // Where this car will be shortly (a car's length or so further along its route).
     // Look further ahead the faster it goes, so it has room to brake.
     const reach = 0.5 + v * 0.14;
-    me.look.forEach((p, k) => p.copy(path.getPointAt(Math.min(1, (s + 1.3 + k * reach) / L))));
+    for (let k = 0; k < me.look.length; k++) path.getPointAt(Math.min(1, (s + 1.3 + k * reach) / L), me.look[k]);
     // Pull out past a car parked in the lane when the other lane is clear; pull back in once past it.
     if (me.overtaking) me.overtaking = parkedAlongside(me);
     else { const a = carAhead(me); if (a?.passable && !oncoming(me)) me.overtaking = true; }

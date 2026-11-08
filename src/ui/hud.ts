@@ -118,8 +118,15 @@ export function modal(content: HTMLElement, cls = ''): () => void {
   card.append(content);
   back.append(card);
   document.body.append(back);
-  requestAnimationFrame(() => back.classList.add('in'));
-  return () => { back.classList.remove('in'); setTimeout(() => back.remove(), 250); };
+  // Commit the start state, then animate in (transform and opacity only: the compositor runs it).
+  void back.offsetWidth;
+  back.classList.add('in');
+  let closed = false;
+  return () => {
+    if (closed) return; closed = true;
+    back.classList.remove('in'); back.classList.add('out');
+    setTimeout(() => back.remove(), 200);
+  };
 }
 
 export function button(label: string, cls: string, on: () => void) {

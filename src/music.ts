@@ -215,12 +215,14 @@ async function renderStem(which: 'base' | 'tension', yieldBetweenBars = false): 
   init({ c, out: comp });
   const g = { c, bus, padFilter, noiseBuf };
   for (let b = 0; b < BARS; b++) {
-    for (let i = b * 8; i < b * 8 + 8; i++) schedule(i, 0.05 + i * E);
-    // Build the graph a bar at a time, so no single frame of the game has to wait for it.
-    if (yieldBetweenBars) {
-      await new Promise((r) => setTimeout(r, 12));
-      if (currentMood !== mood) { c = null; return null; }
-      c = g.c; bus = g.bus; padFilter = g.padFilter; noiseBuf = g.noiseBuf; layer = which;
+    for (let i = b * 8; i < b * 8 + 8; i++) {
+      schedule(i, 0.05 + i * E);
+      // Build the graph a beat at a time, so no frame of the game (or the menu) has to wait for it.
+      if (yieldBetweenBars) {
+        await new Promise((r) => setTimeout(r, 4));
+        if (currentMood !== mood) { c = null; return null; }
+        c = g.c; bus = g.bus; padFilter = g.padFilter; noiseBuf = g.noiseBuf; layer = which;
+      }
     }
   }
   const buf = await off.startRendering();
@@ -277,7 +279,7 @@ async function ensureStems() {
 }
 
 /** Build the current chapter's loop ahead of time, in small slices, so the first tap doesn't pay for it. */
-export function prepareMusic() { if (save.settings.music) void ensureStems(); }
+export function prepareMusic(): Promise<void> { return save.settings.music ? ensureStems() : Promise.resolve(); }
 
 export function startMusic() {
   if (!save.settings.music || playing) return;

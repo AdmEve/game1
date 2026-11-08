@@ -182,10 +182,10 @@ function settleSnow(m) {
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uSnow = snowU;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec2 vSnowXZ;')
-      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvUp = normalize(mat3(modelMatrix) * objectNormal).y;\nvSnowXZ = (modelMatrix * vec4(position, 1.0)).xz;');
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n#ifdef USE_INSTANCING\nmat4 snowM = modelMatrix * instanceMatrix;\n#else\nmat4 snowM = modelMatrix;\n#endif\nvUp = normalize(mat3(snowM) * objectNormal).y;\nvSnowXZ = (snowM * vec4(position, 1.0)).xz;');
     // A patchy dusting on the flat tops only, so the paint color still reads at a glance.
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec2 vSnowXZ;\nuniform float uSnow;\nfloat snowN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5), c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }')
-      .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowK = uSnow * smoothstep(0.85, 0.97, vUp) * smoothstep(0.5, 0.8, snowN(vSnowXZ * 5.0) * 0.55 + snowN(vSnowXZ * 19.0) * 0.45) * 0.7;\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.97), snowK);')
+      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat snowK = uSnow * smoothstep(0.85, 0.97, vUp) * smoothstep(0.5, 0.8, snowN(vSnowXZ * 5.0) * 0.55 + snowN(vSnowXZ * 19.0) * 0.45) * 0.7;\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.97), snowK);')
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 0.0, snowK);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.85, snowK);')
       .replace('#include <lights_physical_fragment>', m.isMeshPhysicalMaterial ? '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - snowK;' : '#include <lights_physical_fragment>');
