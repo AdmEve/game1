@@ -1255,7 +1255,7 @@ async function boot() {
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
-    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); session?.idle(performance.now() / 1000); await new Promise((r) => setTimeout(r, 0)); } updateHand(); post.render(scene, camera, 1 / 30); },
+    async advance(sec: number, draw = true) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); session?.idle(performance.now() / 1000); await new Promise((r) => setTimeout(r, 0)); } updateHand(); if (draw) post.render(scene, camera, 1 / 30); },
   };
   const splash = document.getElementById('splash');
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }

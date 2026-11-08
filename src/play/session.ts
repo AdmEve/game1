@@ -908,7 +908,8 @@ export class Session {
       const pause = occupy(o.root);
       await turn.freed;
       pause();
-      await drive(o.root, o.body, roundedPath([stop, mouth, pts[n - 1]], 0.8), { vmax: 9.5, accel: 28 });
+      // From where the car actually stands (not where it was meant to stop), so nothing jumps.
+      await drive(o.root, o.body, roundedPath([o.root.position.clone().setY(0), mouth, pts[n - 1]], 0.8), { vmax: 9.5, accel: 28 });
     }
     this.seat(bay, i);
   }

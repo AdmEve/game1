@@ -253,3 +253,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Measured and left: draw calls 74–169 on the phone profile (`scripts/draws.cjs`; badges matter only on plate
   levels); weather update < 0.35 ms/frame at 4× CPU.
 - Test hooks: `__rb.pick`, `__rb.swooping`, `__rb.pointAt`, `__rb.advance` now also runs `session.idle`.
+- **Motion pops** (`scripts/popcheck.cjs`): corners are circular arcs (`roundedPath`, cubic Bézier), lane-offset double
+  kinks merge (`mergeKinks`), `drive()` limits speed in bends (`grip`, planned ahead) and heading turn rate
+  (`MAX_YAW_RATE`), and overtaking cars merge back before a stop. 0 pops on five levels.
+

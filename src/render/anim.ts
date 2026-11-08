@@ -62,26 +62,62 @@ export function keepRight(pts: THREE.Vector3[], off = 0.45, fixed = 1): THREE.Ve
   });
 }
 
+/**
+ * Two bends in the same direction joined by a short leg (lane offsets turn one corner into two kinks) become one
+ * corner where the incoming and outgoing lines cross, so it can be rounded with the full radius.
+ */
+export function mergeKinks(pts: THREE.Vector3[], shortLeg = 1.0): THREE.Vector3[] {
+  const out = pts.map((p) => p.clone());
+  for (let i = 1; i + 2 < out.length; i++) {
+    const a = out[i - 1], p = out[i], q = out[i + 1], b = out[i + 2];
+    if (p.distanceTo(q) >= shortLeg) continue;
+    const d1x = p.x - a.x, d1z = p.z - a.z, dmx = q.x - p.x, dmz = q.z - p.z, d2x = b.x - q.x, d2z = b.z - q.z;
+    const t1 = d1x * dmz - d1z * dmx, t2 = dmx * d2z - dmz * d2x, cr = d1x * d2z - d1z * d2x;
+    if (t1 * t2 <= 0 || Math.abs(cr) < 1e-6) continue; // turns the other way, or the lines never cross
+    // Where line a→p meets line q→b.
+    const t = ((q.x - a.x) * d2z - (q.z - a.z) * d2x) / cr;
+    if (t < 0.5) continue;
+    const x = new THREE.Vector3(a.x + d1x * t, p.y, a.z + d1z * t);
+    if (x.distanceTo(p) > shortLeg * 1.5) continue;
+    out.splice(i, 2, x);
+  }
+  return out;
+}
+
 /** Build a smooth path through waypoints (on the ground) with rounded corners. */
-export function roundedPath(pts: THREE.Vector3[], radius = 0.75): THREE.CurvePath<THREE.Vector3> {
+export function roundedPath(pts0: THREE.Vector3[], radius = 0.75): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
+  const pts = mergeKinks(pts0);
   let cur = pts[0].clone();
   for (let i = 1; i < pts.length; i++) {
     const p = pts[i];
     if (i === pts.length - 1) { if (cur.distanceTo(p) > 1e-4) path.add(new THREE.LineCurve3(cur, p.clone())); break; }
     const next = pts[i + 1];
     const din = p.clone().sub(cur), dout = next.clone().sub(p);
-    const r = Math.min(radius, din.length() / 2, dout.length() / 2);
-    const a = p.clone().sub(din.normalize().multiplyScalar(r)), b = p.clone().add(dout.normalize().multiplyScalar(r));
+    // The incoming leg's remainder is all ours (the bend before took its share already); the outgoing leg is shared.
+    const r = Math.min(radius, din.length(), dout.length() / 2);
+    din.normalize(); dout.normalize();
+    const a = p.clone().addScaledVector(din, -r), b = p.clone().addScaledVector(dout, r);
     if (cur.distanceTo(a) > 1e-4) path.add(new THREE.LineCurve3(cur, a));
-    path.add(new THREE.QuadraticBezierCurve3(a, p.clone(), b));
+    // A true circular arc (cubic Bézier), so the bend has one steady radius instead of a sharp kink at its apex.
+    const turn = Math.acos(THREE.MathUtils.clamp(din.dot(dout), -1, 1));
+    if (turn < 1e-3) path.add(new THREE.LineCurve3(a, b));
+    else {
+      const R = r / Math.tan(turn / 2), h = (4 / 3) * Math.tan(turn / 4) * R;
+      path.add(new THREE.CubicBezierCurve3(a, a.clone().addScaledVector(din, h), b.clone().addScaledVector(dout, -h), b));
+    }
     cur = b;
   }
   return path;
 }
 
+/** The fastest a car's heading may turn (rad/s): bends need up to ~10. */
+const MAX_YAW_RATE = 12;
+
 export interface DriveOpts {
   vmax?: number; accel?: number; reverse?: boolean; onProgress?: (k: number) => void; brake?: boolean;
+  /** Sideways grip (units/s²): how fast a bend may be taken (speed ≤ √(grip × radius)). */
+  grip?: number;
   /** Has right of way (e.g. backing out of a bay): never waits for a stopped car, only for moving ones. */
   priority?: boolean;
 }
@@ -192,6 +228,31 @@ function oncoming(me: Driver) {
 export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.CurvePath<THREE.Vector3>, o: DriveOpts = {}): Promise<void> {
   const L = path.getLength();
   const vmax = o.vmax ?? 12, acc = o.accel ?? 26, brake = o.brake ?? true;
+  // Bends: the speed allowed at points every STEP along the route, from the curvature there, so a car eases off
+  // before a corner and takes it on one steady arc instead of pivoting in a frame or two.
+  const grip = o.grip ?? 70, STEP = 0.25, n = Math.max(2, Math.ceil(L / STEP) + 1);
+  const bend = new Float32Array(n);
+  {
+    const t0 = new THREE.Vector3(), t1 = new THREE.Vector3();
+    path.getTangentAt(0, t0);
+    for (let k = 0; k < n; k++) {
+      path.getTangentAt(Math.min(1, ((k + 1) * STEP) / L), t1);
+      const dth = Math.acos(THREE.MathUtils.clamp((t0.x * t1.x + t0.z * t1.z) / (Math.hypot(t0.x, t0.z) * Math.hypot(t1.x, t1.z) || 1), -1, 1));
+      bend[k] = dth > 1e-3 ? Math.sqrt(grip * (STEP / dth)) : Infinity;
+      t0.copy(t1);
+    }
+  }
+  /** The fastest speed from which the car can still slow down for every bend ahead in time. */
+  const bendLimit = (s: number, v: number) => {
+    let lim = Infinity;
+    const reachK = Math.min(n - 1, Math.ceil((s + (v * v) / (2 * acc * 1.6) + STEP) / STEP));
+    for (let k = Math.max(0, Math.floor(s / STEP)); k <= reachK; k++) {
+      if (bend[k] === Infinity) continue;
+      const d = Math.max(0, k * STEP - s);
+      lim = Math.min(lim, Math.sqrt(bend[k] * bend[k] + 2 * acc * 1.6 * d));
+    }
+    return lim;
+  };
   const me: Driver = { root, heading: new THREE.Vector3(0, 0, -1), id: nextId++, waitingFor: null, base: root.position.clone(), look: [0, 1, 2, 3].map(() => new THREE.Vector3()) };
   traffic.add(me);
   let s = 0, v = 0, waited = 0, gaveUp = false, prevYaw = root.rotation.y, swerve = 0;
@@ -211,6 +272,9 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     // Our vehicles face −z at yaw 0.
     const yaw = Math.atan2(-tan.x, -tan.z);
     let dy = yaw - prevYaw; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
+    // A car turns at most MAX_YAW_RATE: setting off at an angle to the route, it swings round over a few frames.
+    const cap = MAX_YAW_RATE * Math.max(dt, 1 / 120);
+    dy = THREE.MathUtils.clamp(dy, -cap, cap);
     root.rotation.y = prevYaw + dy;
     const yawRate = dt > 0 ? dy / dt : 0;
     prevYaw = root.rotation.y;
@@ -227,7 +291,9 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     else { const a = carAhead(me); if (a?.passable && !oncoming(me)) me.overtaking = true; }
     const blocked = carAhead(me, o.priority), ahead = gaveUp ? null : blocked;
     // A car that gave up waiting steers round whatever is still in its way instead of through it.
-    swerve += THREE.MathUtils.clamp((me.overtaking || (gaveUp && blocked) ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
+    // Back in lane before the end of the leg (a car must not stop half in the other lane and jump back later).
+    const wantOut = (me.overtaking || (gaveUp && blocked)) && L - s > 1.2 + v * 0.45;
+    swerve += THREE.MathUtils.clamp((wantOut ? 0.9 : 0) - swerve, -2.5 * dt, 2.5 * dt);
     // Give up waiting after a while (for the rest of this drive) rather than ever locking up.
     if (ahead) { waited += dt; trafficStats.held += dt; if (waited > 2.5) { gaveUp = true; trafficStats.gaveUp++; } } else waited = 0;
     const hold = !!ahead && !gaveUp;
@@ -235,6 +301,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     const left = L - s;
     let target = hold ? 0 : vmax;
     if (brake) target = Math.min(target, Math.sqrt(2 * acc * Math.max(0, left)) + 0.4);
+    target = Math.min(target, bendLimit(s, v));
     const v0 = v;
     v = target > v ? Math.min(target, v + acc * dt) : Math.max(target, v - acc * 1.6 * dt);
     s = Math.min(L, s + v * dt);
