@@ -10,13 +10,21 @@ let noiseBuf: AudioBuffer;
 
 let out: AudioNode;
 
+/** Loudness from a 0–100 slider (squared: the slider's middle sounds like the middle). */
+export const volCurve = (v: number) => Math.max(0, Math.min(1, v / 100)) ** 2;
+let sfxLevel = 0.55 * volCurve(save.settings.sfxVol);
+export function setSfxVolume(v: number) {
+  sfxLevel = 0.55 * volCurve(v);
+  if (ctx && master) master.gain.setTargetAtTime(sfxLevel, ctx.currentTime, 0.05);
+}
+
 /** The shared audio context and output (also used by the music), created on first use. */
 export function audioOut(): { c: AudioContext; out: AudioNode } | null {
   if (!ctx) {
     try {
       ctx = new AudioContext();
       master = ctx.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = sfxLevel;
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       master.connect(comp).connect(ctx.destination);

@@ -266,4 +266,9 @@ the player sees value in them, not at first launch.
 | Fixes found | The cover intro taught an old rule ("the cover blows off when the neighbour leaves"). Covers now come off only when the car drives out, and the card says so. A level-start camera swoop still running when the level changed kept steering the camera (two swoops fighting); level start now cancels it. |
 | E1 win finale | During the existing 1.1 s win beat (confetti, jingle), the camera drifts back 8% along its view. On the card, the coin reward counts up from zero and 4–10 coins arc into a wallet pill shown over the card, which ticks up as each lands (by landings, so the order doesn't matter) and ends on the saved total. The doubled reward flies in too. Also on the daily rush card. Transform and opacity only (Web Animations API). |
 | E2 camera settle | Already in place: the level-start swoop ends on an ease-in-out (zero velocity) and the shake decays exponentially. No change needed. |
+| I1 volumes | Music and SFX sliders (0–100, squared curve; zero is off). Old saves migrate (off → 0); unit-tested. |
+| I2 ducking | Music dips ~8 dB under the win beat (2.2 s) and the lose card (1.6 s), then comes back. |
+| I3 audio resume | Already in place: every sound and the music restart resume a suspended context. Checked headlessly: suspended → hide/show → next sound → `running`. |
+| M1 reduced motion | «حرکت کمتر» follows the phone's own setting until changed. On: no camera shake, no level-start swoop, no camera drift on win, no home-screen drift, no coin flight or count-up (shown at once), no looping decorations, cards fade without scaling, and the photo-radar flash is soft (photosensitivity). |
+| M2 large text | «متن بزرگ‌تر» scales card, settings, toast and HUD label text by 1.15. At 360×640 nothing goes off-screen (`scripts/access.cjs`); cards scroll if they must. |
 

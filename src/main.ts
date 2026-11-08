@@ -49,7 +49,7 @@ import * as sfx from './audio';
 import { disposeTree } from './render/dispose';
 import { click, coin } from './audio';
 import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
-import { prepareMusic, setMood, setTension, startMusic, stopMusic } from './music';
+import { duckMusic, prepareMusic, setMood, setMusicVolume, setTension, startMusic, stopMusic } from './music';
 import { warmPeople } from './render/people';
 import { fxWarmObjects } from './render/fx';
 import { haptic } from './haptics';
@@ -350,7 +350,7 @@ function introSwoop() {
   const full = place !== lastPlace;
   lastPlace = place;
   const { startPos, startLook } = full ? landmarkShot() : { startPos: endPos.clone().add(new THREE.Vector3(0, 6, 10)), startLook: new THREE.Vector3(0, 3, session.L.walkZ - 14) };
-  if (debug.has('shot')) return;
+  if (debug.has('shot') || reduceMotion()) return;
   // Hold on the landmark for a beat, then sweep down.
   const hold = full ? 0.7 : 0;
   // A newer swoop (or a level change) takes the camera over; this one then stops steering it.
@@ -386,6 +386,7 @@ function cameraFlash() {
 let shakeT = 0;
 const shakeV = new THREE.Vector3();
 function applyShake(dt: number) {
+  if (shakeAmp > 0 && reduceMotion()) shakeAmp = 0.0001; // no camera shake: settle at once
   if (shakeAmp <= 0.001) { if (shakeAmp > 0) { camera.position.copy(camBase); shakeAmp = 0; } return; }
   shakeT += dt;
   const n = (a: number, b: number, c: number, d: number) => (Math.sin(shakeT * a + b) * 0.6 + Math.sin(shakeT * c + d) * 0.4) * 0.5 * shakeAmp;
@@ -661,6 +662,7 @@ function recordWin(boss: boolean) {
 
 /** The win beat: the camera drifts back a little along its view while the confetti falls. */
 function breathe() {
+  duckMusic(2.2);
   if (reduceMotion()) return;
   const from = camBase.clone(), back = camBase.clone().sub(camTarget).multiplyScalar(0.08);
   void tween(1.6, (k) => { camBase.copy(from).addScaledVector(back, k); }, ease.out);
@@ -784,6 +786,7 @@ function askRating(): Promise<void> {
 }
 
 function showLose(limit?: 'time' | 'moves') {
+  duckMusic(1.6);
   save.stats.losses++;
   persist();
   modalOpen = true;
@@ -827,6 +830,13 @@ function showLose(limit?: 'time' | 'moves') {
 
 /** Reduced motion (a setting; it follows the phone's own preference until changed). */
 function reduceMotion(): boolean { return document.documentElement.classList.contains('reduce-motion'); }
+/** Apply the accessibility settings to the page: reduced motion and larger text. */
+function applyAccess() {
+  const os = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  document.documentElement.classList.toggle('reduce-motion', save.settings.reduceMotion ?? os);
+  document.documentElement.classList.toggle('big-text', save.settings.bigText);
+}
+applyAccess();
 
 /** Leave whatever is being played for the home screen (the Journey's next level waits behind it). */
 function goHome() { void goLevel(undefined, undefined, false, null, showHome); }
@@ -850,17 +860,38 @@ function showSettings() {
   nav.append(row2);
   c.append(nav);
   c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
-  const row = (label: string, key: 'sound' | 'music' | 'haptics' | 'colorblind') => {
+  // Volumes: a slider each (zero is off).
+  const slider = (label: string, key: 'musicVol' | 'sfxVol') => {
+    const r = h('label', 'row slider', `<span>${label}</span>`);
+    const t = h('input') as HTMLInputElement; t.type = 'range'; t.min = '0'; t.max = '100'; t.step = '5'; t.value = String(save.settings[key]);
+    t.setAttribute('aria-label', label);
+    t.oninput = () => {
+      const v = Number(t.value);
+      save.settings[key] = v;
+      if (key === 'musicVol') { save.settings.music = v > 0; setMusicVolume(v); if (v > 0) startMusic(); else stopMusic(0.3); }
+      else { save.settings.sound = v > 0; sfx.setSfxVolume(v); }
+    };
+    t.onchange = () => { persist(); if (key === 'sfxVol') click(); };
+    r.append(t); c.append(r);
+  };
+  const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText', apply?: () => void) => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
     t.onchange = () => {
       save.settings[key] = t.checked; persist();
-      if (key === 'music') { if (t.checked) startMusic(); else stopMusic(); }
       if (key === 'colorblind') needsRestart = true;
+      apply?.();
     };
     r.append(t); c.append(r);
   };
-  row('صدا', 'sound'); row('موسیقی', 'music'); row('لرزش', 'haptics'); row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
+  slider('موسیقی', 'musicVol'); slider('صداها', 'sfxVol'); row('لرزش', 'haptics');
+  // Reduced motion: follows the phone until switched here.
+  const mr = h('label', 'row', '<span>حرکت کمتر<small>بدون لرزش دوربین و جلوه‌های پرتحرک</small></span>');
+  const mt = h('input') as HTMLInputElement; mt.type = 'checkbox'; mt.className = 'switch'; mt.checked = reduceMotion();
+  mt.onchange = () => { save.settings.reduceMotion = mt.checked; persist(); applyAccess(); };
+  mr.append(mt); c.append(mr);
+  row('متن بزرگ‌تر', 'bigText', applyAccess);
+  row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
   // Graphics quality: automatic (steps down if the phone struggles), or fixed.
   const qr = h('div', 'row quality', '<span>کیفیت گرافیک</span>');
   const seg = h('div', 'seg');

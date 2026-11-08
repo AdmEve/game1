@@ -5,7 +5,7 @@
  * a round bass, and quiet drums. As the parking bays fill up, a tension layer (more hi-hat, a brighter
  * pad, a driving off-beat) fades in. Everything runs through a gentle low-pass so nothing is ever shrill.
  */
-import { audioOut } from './audio';
+import { audioOut, volCurve } from './audio';
 import { save } from './save';
 
 // Per-chapter feel: tempo in quarter notes per minute, tonic and mode (in semitones above the tonic).
@@ -246,6 +246,20 @@ let currentMood: Mood = 'day';
 let building: Mood | null = null;
 let playing = false;
 let tensionTarget = 0;
+/** The music's level from its slider, and a temporary dip under the win/lose jingles. */
+let level = 0.9 * volCurve(save.settings.musicVol), ducked = false;
+export function setMusicVolume(v: number) {
+  level = 0.9 * volCurve(v);
+  if (out && ctx && !ducked) out.gain.gain.setTargetAtTime(level, ctx.currentTime, 0.1);
+}
+/** Dip the music by ~8 dB for `sec` seconds (a jingle plays on top), then bring it back. */
+export function duckMusic(sec: number) {
+  if (!out || !ctx) return;
+  const g = out.gain.gain, t = ctx.currentTime;
+  ducked = true;
+  g.cancelScheduledValues(t); g.setTargetAtTime(level * 0.4, t, 0.05); g.setTargetAtTime(level, t + sec, 0.45);
+  setTimeout(() => { ducked = false; }, sec * 1000 + 200);
+}
 
 function stopSources(fade = 0.8) {
   const old = srcs, o = out; srcs = []; out = null;
@@ -262,7 +276,7 @@ function begin() {
   const mk = (b: AudioBuffer, dest: AudioNode) => { const s = ctx!.createBufferSource(); s.buffer = b; s.loop = true; s.connect(dest); s.start(); return s; };
   srcs = [mk(stems.base, gain), mk(stems.tension, tension)];
   out = { gain, tension };
-  gain.gain.setTargetAtTime(0.9, ctx.currentTime, 1.2);
+  gain.gain.setTargetAtTime(level, ctx.currentTime, 1.2);
   tension.gain.setTargetAtTime(tensionTarget, ctx.currentTime, 0.4);
 }
 

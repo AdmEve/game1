@@ -8,7 +8,14 @@ export interface Save {
   level: number;
   coins: number;
   boosters: { crane: number; whistle: number; bay: number };
-  settings: { sound: boolean; music: boolean; haptics: boolean; colorblind: boolean; quality: 'auto' | 'high' | 'balanced' | 'low' };
+  /**
+   * `sound`/`music` are on whenever their volume (0–100) is above zero. `reduceMotion` null follows the phone's
+   * own setting. `bigText` scales card and toast text.
+   */
+  settings: {
+    sound: boolean; music: boolean; haptics: boolean; colorblind: boolean; quality: 'auto' | 'high' | 'balanced' | 'low';
+    sfxVol: number; musicVol: number; reduceMotion: boolean | null; bigText: boolean;
+  };
   stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
   /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
   ach: Record<string, number>;
@@ -47,7 +54,7 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto' },
+  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false },
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
   ach: {},
   achSeen: {},
@@ -83,9 +90,14 @@ function load(): Save {
     const s = read(KEY) ?? read(BAK);
     if (s) {
       const f = fresh();
+      // Saves from before the volume sliders: a switched-off sound or music starts at zero.
+      const st = { ...f.settings, ...s.settings };
+      if (s.settings && s.settings.sfxVol === undefined && s.settings.sound === false) st.sfxVol = 0;
+      if (s.settings && s.settings.musicVol === undefined && s.settings.music === false) st.musicVol = 0;
+      st.sound = st.sfxVol > 0; st.music = st.musicVol > 0;
       return {
         ...f, ...s, v: SAVE_VERSION,
-        boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
+        boosters: { ...f.boosters, ...s.boosters }, settings: st, stats: { ...f.stats, ...s.stats },
         owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
       };
     }

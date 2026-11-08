@@ -333,3 +333,25 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 @keyframes walletbump { 40% { transform: scale(1.12); } }
 .flycoin { position: fixed; left: 0; top: 0; z-index: 26; pointer-events: none; will-change: transform, opacity; }
 .flycoin .emo { display: block; width: 28px; height: 28px; margin: -14px 0 0 -14px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }
+
+/* Volume sliders (zero is off). */
+.settings .row.slider input[type=range] { width: 52%; accent-color: var(--accent); height: 28px; }
+.settings .row > span small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+
+/* Reduced motion: no camera moves (in script), no looping decorations, cards fade instead of scaling, a soft flash. */
+.reduce-motion body:has(.home-card) #app canvas { transform: none !important; transition: none !important; }
+.reduce-motion .hand .emo, .reduce-motion .hand .ico, .reduce-motion .hand::before, .reduce-motion .mark i, .reduce-motion .mark span,
+.reduce-motion .burst, .reduce-motion .chest .box, .reduce-motion .day.now, .reduce-motion .btn.claim, .reduce-motion .piggy-row.ready,
+.reduce-motion .rw.can, .reduce-motion .sin.new, .reduce-motion .agency-btn .sb.ready, .reduce-motion .bst.on .ic, .reduce-motion .limit.low,
+.reduce-motion .radio .live, .reduce-motion .camsign.point, .reduce-motion .card.nudge, .reduce-motion .hand.nudge .emo { animation: none !important; }
+.reduce-motion .modal-back > .card, .reduce-motion .modal-back.out > .card { transform: none !important; }
+.reduce-motion .flash { animation-name: flashsoft; }
+@keyframes flashsoft { from { opacity: .3; } to { opacity: 0; } }
+
+/* Larger text: card and toast text one step up (the layout reflows; cards scroll when they must). */
+.big-text .card p, .big-text .card .speech, .big-text .card small, .big-text .settings .row > span, .big-text .toast, .big-text .note,
+.big-text .card .btn, .big-text .card h3, .big-text .people, .big-text .limit, .big-text .camsign, .big-text .bst .nm { zoom: 1.15; }
+.big-text .card { max-height: calc(100vh - 32px); overflow-y: auto; }
+.settings .row > span { text-align: start; flex: 1 1 auto; }
+.settings .row .switch { flex: 0 0 auto; }
+.settings .row.slider input[type=range] { flex: 0 0 52%; }

@@ -47,6 +47,20 @@ describe('save safety', () => {
     expect(JSON.parse(st.m.get(KEY)!).v).toBe(SAVE_VERSION);
   });
 
+  it('migrates switched-off sound and music to zero volume', async () => {
+    vi.stubGlobal('localStorage', storage({ [KEY]: JSON.stringify({ level: 2, coins: 10, settings: { sound: false, music: false, haptics: true } }) }));
+    const { save } = await import('../src/save');
+    expect(save.settings).toMatchObject({ sfxVol: 0, musicVol: 0, sound: false, music: false, haptics: true, reduceMotion: null, bigText: false });
+  });
+
+  it('keeps sound and music on for old saves that had them on', async () => {
+    vi.stubGlobal('localStorage', storage({ [KEY]: JSON.stringify({ level: 2, coins: 10, settings: { sound: true, music: true } }) }));
+    const { save } = await import('../src/save');
+    expect(save.settings.sfxVol).toBeGreaterThan(0);
+    expect(save.settings.musicVol).toBeGreaterThan(0);
+    expect(save.settings.sound && save.settings.music).toBe(true);
+  });
+
   it('keeps the backup when writing the main copy fails', async () => {
     const st = storage({ [BAK]: JSON.stringify({ level: 3, coins: 1 }) });
     vi.stubGlobal('localStorage', { ...st, setItem: (k: string, v: string) => { if (k === KEY) throw new Error('quota'); st.setItem(k, v); } });
