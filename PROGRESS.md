@@ -224,3 +224,32 @@ Tools: `scripts/perf.cjs` (startup timings, long tasks, frame stats per scenario
   Two governor flaws found by `tests/pacing.test.ts` are fixed: a struggling phone's slow rAF read as a "30 Hz
   screen" (refresh is now snapped to 60/90/120), and intervals over 40 ms were ignored (a ~20 fps phone never
   measured anything).
+
+## Best-in-market pass, aspect by aspect (Nov 2026)
+Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now / bar / gaps / actions with checks).
+- **Taps** pick the car drawn under the finger (`Session.pickRay`: the ray against each car's real shape,
+  instanced parts tested as the meshes they stand for, `raycastModel` in instancer.ts). `scripts/tapprobe.cjs`:
+  100% right against real-mesh raycasts (old ground-cell pick 93.7–99.3%). Tap ring on press (fx.ts `tapRing`).
+- **Back button**: `asBack(button)` marks a card's back target; `backPress()` presses the top card's. Play → crane
+  off → pause card. Home → press twice to exit. Pause card: continue, restart, levels, home, then settings; also
+  opens on returning from another app mid-level. Home on the win card. `scripts/backnav.cjs` (Escape = back).
+- **Save**: main + `.bak` copy, versioned (`v`), loads the first whole copy. Error log (`errlog.ts`), shareable
+  from Settings.
+- **Onboarding**: level 1 spotlight for two taps (`seen.spot`); after a mechanic's card, a ring and its name mark
+  it (`Session.mechanicSpot`, `pointAt`). Cover intro text fixed (covers come off only when the car drives out).
+  Level start cancels a running swoop (`swoopId`). `scripts/onboarding.cjs`.
+- **Win**: camera drifts back during the beat (`cheer` hook); reward counts up, coins fly into a wallet over
+  the card (`ui/juice.ts`). `scripts/winpayout.cjs`.
+- **Accessibility/audio**: music and SFX sliders (`sfxVol`/`musicVol`, `sound`/`music` kept in sync), ducking
+  under jingles (`duckMusic`), reduced motion (follows the OS; `.reduce-motion`), larger text (`.big-text`).
+  `scripts/access.cjs`.
+- **Win streak** (`streak.ts`): free bay → + crane → + whistle on the next new level (`hud.free`, never in the
+  inventory); asks before giving a played level up. **Last bay** glows red (`bayWarning`). **Level stats**
+  (`levelstats.ts`) for testers. `scripts/streak.cjs`.
+- **Reminders** (`notify.ts`, @capacitor/local-notifications): lives full / next-day rush hour, only while away,
+  never 22:00–09:00; asked after level 10. Icon `res/drawable/ic_stat_rb.xml`.
+- **Colours**: purple → violet, orange → amber, per-chapter paint lift (`setPaintLift`); minimum ΔE per chapter
+  24–39 (was 17–32), `scripts/colorsep.cjs`.
+- Measured and left: draw calls 74–169 on the phone profile (`scripts/draws.cjs`; badges matter only on plate
+  levels); weather update < 0.35 ms/frame at 4× CPU.
+- Test hooks: `__rb.pick`, `__rb.swooping`, `__rb.pointAt`, `__rb.advance` now also runs `session.idle`.
