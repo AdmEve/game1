@@ -15,7 +15,7 @@ import { profile } from './render/profile';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { addInstanceRoot, attachInstancer, instanceStats, removeInstanceRoot, syncInstances } from './render/instancer';
-import { setSnow } from './render/cars.js';
+import { setPaintLift, setSnow } from './render/cars.js';
 import { sky } from './render/world';
 import { Session, worldCached, worldSteps, worldTextures } from './play/session';
 import type { WorldOpts } from './render/world';
@@ -151,8 +151,11 @@ const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [numbe
 let sunOffset = new THREE.Vector3(-9, 22, 11);
 let envFor: (over?: Partial<SkyOpts>) => void = () => {};
 let grade: Grade = DEFAULT_GRADE;
+/** How much car paint lifts its own colour in each chapter's light (measured: scripts/colorsep.cjs). */
+const PAINT_LIFT: Record<Light, number> = { day: 0, spring: 0, bazaar: 0.02, sunset: 0.06, night: 0.05, snow: 0.04, dusk: 0.08, autumn: 0.16 };
 function applyLight(light: Light) {
   const L = LIGHTS[light];
+  setPaintLift(PAINT_LIFT[light]);
   (scene.fog as THREE.Fog).color.setHex(L.fog);
   hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
   sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sunOffset = new THREE.Vector3(...L.sun[2]);

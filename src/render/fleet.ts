@@ -12,7 +12,7 @@ import { slot, toSlots } from './instancer';
 
 /** Real automotive paints (still far apart in hue so every color reads at a glance). */
 export const PAINT: Record<Color, number> = {
-  red: 0xa3121a, yellow: 0xe2a400, blue: 0x1c58b8, green: 0x1a6e3f, purple: 0x5b2c86, orange: 0xd2561a, white: 0xe8e8e4, pink: 0xc44a7e, silver: 0x9aa3ad, black: 0x16181c,
+  red: 0xa3121a, yellow: 0xe2a400, blue: 0x1c58b8, green: 0x1a6e3f, purple: 0x76288c, orange: 0xe0661a, white: 0xe8e8e4, pink: 0xc44a7e, silver: 0x9aa3ad, black: 0x16181c,
 };
 export const CELL = 1.25;
 
