@@ -29,7 +29,7 @@ const LEVELS = process.argv.slice(2).map(Number);
           const id = 'car' + i; seen.add(id);
           let t = tracks.get(id); if (!t) tracks.set(id, (t = { kind: 'car ' + s.level.vehicles[i].kind, pts: [] }));
           c.root.getWorldPosition(w);
-          t.pts.push({ step, x: w.x, y: w.y, z: w.z, yaw: c.root.rotation.y, tilt: Math.abs(c.body.rotation.x) + Math.abs(c.body.rotation.z), sc: c.root.scale.x });
+          t.pts.push({ step, x: w.x, y: w.y, z: w.z, yaw: c.root.rotation.y, tilt: Math.abs(c.body.rotation.x) + Math.abs(c.body.rotation.z), sc: c.root.scale.x, bk: s.backlog ?? 0 });
         });
         (s.queue || []).forEach((q) => {
           const id = 'p' + q.root.id; seen.add(id);
@@ -55,17 +55,19 @@ const LEVELS = process.argv.slice(2).map(Number);
           const jump = dist(b, c), before = dist(a, b), after = dist(c, d);
           if (jump > 0.45 && jump > 4 * Math.max(before, after, 0.02)) pops.push({ id, kind: t.kind, step: c.step, what: 'position', jump: +jump.toFixed(2), before: +before.toFixed(2), after: +after.toFixed(2), ...(window.__popctx ? { ctx: P.slice(Math.max(0, k - 3), k + 3).map((q) => [q.step, +q.x.toFixed(2), +q.y.toFixed(2), +q.z.toFixed(2), +q.yaw.toFixed(2)]) } : {}) });
           const dy = Math.abs(wrap(c.yaw - b.yaw)), dyb = Math.abs(wrap(b.yaw - a.yaw)), dya = Math.abs(wrap(d.yaw - c.yaw));
-          if (t.kind !== 'passenger' && dy > 0.5 && dy > 4 * Math.max(dyb, dya, 0.02)) pops.push({ id, kind: t.kind, step: c.step, what: 'heading', jump: +dy.toFixed(2), before: +dyb.toFixed(2), after: +dya.toFixed(2), ...(window.__popctx ? { ctx: P.slice(Math.max(0, k - 3), k + 3).map((q) => [q.step, +q.x.toFixed(2), +q.z.toFixed(2), +q.yaw.toFixed(2)]) } : {}) });
+          if (t.kind !== 'passenger' && dy > 0.5 && dy > 4 * Math.max(dyb, dya, 0.02)) pops.push({ id, kind: t.kind, step: c.step, what: 'heading', jump: +dy.toFixed(2), before: +dyb.toFixed(2), after: +dya.toFixed(2), backlog: c.bk, ...(window.__popctx ? { ctx: P.slice(Math.max(0, k - 3), k + 3).map((q) => [q.step, +q.x.toFixed(2), +q.z.toFixed(2), +q.yaw.toFixed(2)]) } : {}) });
           const dt = Math.abs(c.tilt - b.tilt);
           if (dt > 0.12 && dt > 4 * Math.max(Math.abs(b.tilt - a.tilt), Math.abs(d.tilt - c.tilt), 0.01)) pops.push({ id, kind: t.kind, step: c.step, what: 'tilt', jump: +dt.toFixed(2) });
           const ds = Math.abs(c.sc - b.sc);
           if (ds > 0.35 && ds > 4 * Math.max(Math.abs(b.sc - a.sc), Math.abs(d.sc - c.sc), 0.02)) pops.push({ id, kind: t.kind, step: c.step, what: 'scale', jump: +ds.toFixed(2) });
         }
       }
-      return { L, steps: step, tracks: tracks.size, won: !!document.querySelector('.result.win'), pops };
+      // While taps are piling up the game plays faster on purpose (catch-up, up to 2.3×): jumps then are time-lapse.
+      const lapse = pops.filter((x) => (x.backlog ?? 0) > 2);
+      return { L, steps: step, tracks: tracks.size, won: !!document.querySelector('.result.win'), pops: pops.filter((x) => !((x.backlog ?? 0) > 2)), lapse: lapse.length };
     }, L);
     total += r.pops.length;
-    console.log(`L${r.L}: ${r.steps} steps, ${r.tracks} tracks, won=${r.won}, pops=${r.pops.length}`);
+    console.log(`L${r.L}: ${r.steps} steps, ${r.tracks} tracks, won=${r.won}, pops=${r.pops.length}${r.lapse ? ` (+${r.lapse} during catch-up fast-forward)` : ''}`);
     for (const x of r.pops.slice(0, 12)) console.log('   ', JSON.stringify(x));
   }
   if (errors.length) console.log('page errors:', errors.slice(0, 5));
