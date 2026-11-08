@@ -7,7 +7,7 @@ import { persist, save } from '../save';
 import { RAHIM } from './characters';
 import { emo } from './emoji';
 import { icon } from './icons';
-import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId } from './hud';
+import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId, asBack } from './hud';
 import { PIGGY_FROM, PIGGY_MAX, PIGGY_MIN, piggyArt, showPiggy } from './piggy';
 
 /** The shop, styled as a Tehran newspaper kiosk. */
@@ -63,7 +63,7 @@ export function showShop(onClose: () => void, onChange: () => void) {
     c.append(grid);
   }
   const close = modal(c, 'pop shop-card-wrap');
-  c.append(button('بستن', 'ghost', () => { close(); onClose(); }));
+  c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }
 
 const DAILY = [50, 80, 120, 160, 200, 250, 400];
@@ -84,7 +84,7 @@ export function maybeDaily(onChange: () => void): Promise<void> {
     });
     c.append(days);
     const close = modal(c, 'pop');
-    c.append(button(`بگیر! ${emo('🪙', 'emo sm')} ${fa(DAILY[streak - 1])}`, 'primary big', () => {
+    c.append(asBack(button(`بگیر! ${emo('🪙', 'emo sm')} ${fa(DAILY[streak - 1])}`, 'primary big', () => {
       save.coins += DAILY[streak - 1];
       if (streak === 7) { for (const k of ['crane', 'whistle', 'bay'] as const) save.boosters[k]++; save.garage.keys++; }
       save.daily = { day: today(), streak };
@@ -92,7 +92,7 @@ export function maybeDaily(onChange: () => void): Promise<void> {
       for (let i = 0; i < 5; i++) coin(i * 0.08);
       haptic('success');
       close(); done();
-    }));
+    })));
   });
 }
 
@@ -106,13 +106,13 @@ export function showChest(onChange: () => void): Promise<void> {
     c.innerHTML = `<h2>صندوق جایزه!</h2><div class="box">${emo('🎁', 'emo huge')}</div><div class="loot">
       <span>${emo('🪙')}<b>${fa(coins)}</b></span><span>${icon(BOOSTERS.find((b) => b.id === gift)!.icon)}<b>${fa(1)}</b></span><span>${emo('🔑')}<b>${fa(1)}</b></span></div>`;
     const close = modal(c, 'pop');
-    const open = button('باز کن!', 'gold big', () => {
+    const open = asBack(button('باز کن!', 'gold big', () => {
       c.classList.add('opened');
       open.remove();
       save.coins += coins; save.boosters[gift]++; save.garage.keys++; persist(); onChange();
       coin(); coin(0.15); haptic('success');
-      c.append(button('عالیه!', 'primary', () => { close(); done(); }));
-    });
+      c.append(asBack(button('عالیه!', 'primary', () => { close(); done(); })));
+    }));
     c.append(open);
   });
 }
@@ -138,6 +138,6 @@ export function showIntro(kind: keyof typeof INTROS): Promise<void> {
     c.innerHTML = `<div class="new">جدید!</div><div class="burst">${emo(it.icon, 'emo huge')}</div><h2>${it.title}</h2>
       <div class="speech">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${it.text}</div></div>`;
     const close = modal(c, 'pop');
-    c.append(button('فهمیدم!', 'primary big', () => { close(); done(); }));
+    c.append(asBack(button('فهمیدم!', 'primary big', () => { close(); done(); })));
   });
 }

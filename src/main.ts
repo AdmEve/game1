@@ -21,13 +21,15 @@ import { Session, worldCached, worldSteps, worldTextures } from './play/session'
 import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
-import { BOOSTERS, Hud, button, fa, faNum, h, modal, type BoosterId } from './ui/hud';
+import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
 import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, lives, loseLife } from './lives';
 import { UNLOCK_ALL_LEVELS } from './config';
+import { errorReport, errors, installErrorLog } from './errlog';
+import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
 import { starsFor } from './render/agency';
@@ -52,6 +54,9 @@ import { fxWarmObjects } from './render/fx';
 import { haptic } from './haptics';
 import { createPacer, type PaceMemory } from './render/pacing';
 import { perfFrame, togglePerfHud } from './ui/perfhud';
+
+// Script errors are kept on the phone (Settings can share them).
+installErrorLog();
 
 const levels: Level[] = (PACKED as string[]).map(unpackLevel);
 const debug = new URLSearchParams(location.search);
@@ -546,7 +551,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     const blurb = { night: 'شب‌های میدان آزادی، چراغ‌ها روشن و ترافیک سنگین!', sunset: 'غروب ولیعصر، زیر چنارهای قدیمی. ترافیک داره سنگین‌تر می‌شه!', snow: 'برف اومده! همه دارن می‌رن توچال اسکی. پلیس راهور هم سر چهارراه وایستاده.', bazaar: 'بازار بزرگ تهران! گاری‌های میوه همه‌جا هستن و جای پارک پیدا نمی‌شه.', dusk: 'غروب، برج میلاد چراغاش روشن شده و همه از تونل نیایش می‌رن خونه. حواست باشه کدوم تونل به کجا می‌ره!', spring: 'بهار اومده! پل طبیعت پر از شکوفه‌ست و حاج‌خانم‌ها با کیسه‌های خرید عید منتظر ماشینن.', autumn: 'پاییز دربند! برگ‌های نارنجی، چای و قلیون کنار رودخونه… و ماشین‌های عروس که عجله دارن.', day: '' }[ch.light];
     c.innerHTML = `<div class="burst">${emo({ night: '🌙', sunset: '🌇', snow: '❄️', bazaar: '🕌', autumn: '🍁', spring: '🌸', dusk: '🗼', day: '🌄' }[ch.light], 'emo huge')}</div><small>فصل جدید باز شد!</small><h2>فصل ${fa(ch.n)}: ${ch.name}</h2><p>${blurb}</p>`;
     const close = modal(c, 'pop');
-    c.append(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; }));
+    c.append(asBack(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; })));
   } else if (level.intro && !save.seen[level.intro]) {
     modalOpen = true;
     showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; });
@@ -557,7 +562,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     const line = BOSS_LINES[(ch.n - 1) % BOSS_LINES.length];
     c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad">${line.taunt}</div>`;
     const close = modal(c, 'pop boss');
-    c.append(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; }));
+    c.append(asBack(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; })));
   }
 }
 
@@ -606,7 +611,7 @@ function showRushWin() {
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
   const close = modal(c, 'pop');
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
-  c.append(button('برگرد به خونه', 'primary big', () => { close(); void goLevel(undefined, undefined, false, null, showHome); }));
+  c.append(asBack(button('برگرد به خونه', 'primary big', () => { close(); void goLevel(undefined, undefined, false, null, showHome); })));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
 }
 
@@ -652,12 +657,12 @@ function showWin() {
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
     <div class="rewards">${rewards}</div>${notes}${beaten}${ach}`;
   const close = modal(c, 'pop');
-  const next = async () => {
+  const next = async (home = false) => {
     close(); modalOpen = true;
     if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
     if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
     await maybeInterstitial(n);
-    await goLevel();
+    if (home) goHome(); else await goLevel();
   };
   if (rewardedAvailable()) {
     const dbl = button(`${emo('🎬', 'emo sm')} دو برابرش کن!`, 'gold', async () => {
@@ -672,6 +677,8 @@ function showWin() {
     c.append(dbl);
   }
   c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
+  // Home: spend the stars and keys (agency, garage) before going on.
+  c.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
   for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
 }
 
@@ -682,7 +689,7 @@ function askRating(): Promise<void> {
     c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div><h2>از راه‌بندون خوشت میاد؟</h2><p>با پنج ستاره تو بازار کمکمون کن تا مرحله‌های بیشتری بسازیم!</p>`;
     const close = modal(c, 'pop');
     c.append(button(`${emo('⭐', 'emo sm')} آره، پنج ستاره!`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
-    c.append(button('بعداً', 'ghost', () => { close(); done(); }));
+    c.append(asBack(button('بعداً', 'ghost', () => { close(); done(); })));
   });
 }
 
@@ -728,10 +735,28 @@ function showLose(limit?: 'time' | 'moves') {
   }));
 }
 
+/** Leave whatever is being played for the home screen (the Journey's next level waits behind it). */
+function goHome() { void goLevel(undefined, undefined, false, null, showHome); }
+
+/**
+ * The pause card: resume, restart, levels and home, then the settings. Opened by the gear, Android's back
+ * button during play, and on coming back to a level in progress from another app.
+ */
 function showSettings() {
   modalOpen = true;
+  craneMode = false; hud.active(null);
   const c = h('div', 'settings');
-  c.innerHTML = `<h2>${emo('⚙️')} تنظیمات</h2>`;
+  c.innerHTML = `<h2>${icon('pause')} مکث</h2>`;
+  const nav = h('div', 'pause-nav');
+  const resume = asBack(button(`${icon('play')} ادامه`, 'primary big', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
+  nav.append(resume);
+  const row2 = h('div', 'pause-row');
+  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', () => { close(); void goLevel(current, rush ?? undefined, true, event); }));
+  row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
+  row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', () => { close(); goHome(); }));
+  nav.append(row2);
+  c.append(nav);
+  c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
   const row = (label: string, key: 'sound' | 'music' | 'haptics' | 'colorblind') => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
@@ -760,10 +785,16 @@ function showSettings() {
   }
   qr.append(seg); c.append(qr);
   let needsRestart = false;
-  const close = modal(c, 'pop');
-  c.append(button(`${emo('🗺️', 'emo sm')} انتخاب مرحله`, 'ghost', () => { close(); showLevels(); }));
-  c.append(button('شروع دوباره‌ی مرحله', 'ghost', () => { close(); void goLevel(current); }));
-  c.append(button('ادامه', 'primary', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
+  const close = modal(c, 'pop pause-card');
+  // Script errors seen on this phone, for testers to send.
+  const errs = errors();
+  if (errs.length) {
+    c.append(button(`${icon('doc')} گزارش خطا (${fa(errs.reduce((a, e) => a + e.n, 0))})`, 'ghost errs', async () => {
+      const text = `Rahbandoon ${__APP_VERSION__} (${__BUILD__})\n${navigator.userAgent}\n\n${errorReport()}`;
+      if (Capacitor.isNativePlatform()) { await Share.share({ title: 'Rahbandoon errors', text }).catch(() => {}); return; }
+      try { await navigator.clipboard.writeText(text); note('گزارش کپی شد'); } catch { note('کپی نشد'); }
+    }));
+  }
   // Version label: three taps show the performance overlay, seven unlock every level (for testers).
   const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)} · ساخت ${__BUILD__}`);
   let taps = 0;
@@ -794,7 +825,7 @@ function showLevels() {
     c.append(grid);
   }
   close = modal(c, 'pop levels-card');
-  c.append(button('بستن', 'ghost', () => { close(); modalOpen = false; }));
+  c.append(asBack(button('بستن', 'ghost', () => { close(); modalOpen = false; })));
 }
 
 function showHome() {
@@ -859,6 +890,25 @@ function showHome() {
     modalOpen = false; hud.show(true);
     introSwoop();
   }));
+}
+
+/**
+ * Android's back button (Escape in a browser): close the top card the way its own back button would, cancel
+ * the crane, or pause the level. On the home screen a second press within two seconds leaves the game.
+ */
+let backAt = 0;
+function onBack() {
+  if (veil.classList.contains('on')) return;
+  const top = topCard();
+  if (top?.querySelector('.home')) {
+    if (performance.now() - backAt < 2000) { void CapApp.exitApp().catch(() => {}); return; }
+    backAt = performance.now();
+    note('برای خروج، یه بار دیگه دکمه‌ی برگشت رو بزن');
+    return;
+  }
+  if (backPress()) return;
+  if (craneMode) { craneMode = false; hud.active(null); return; }
+  if (session && !session.s.over && !modalOpen) showSettings();
 }
 
 // ───── Boot ─────
@@ -926,7 +976,13 @@ async function boot() {
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopMusic(0.2); return; }
+    startMusic();
+    // Back from another app in the middle of a level: wait on the pause card instead of dropping straight in.
+    if (session && !session.s.over && session.taps > 0 && !modalOpen && !veil.classList.contains('on')) showSettings();
+  });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') onBack(); });
   let shadowTick = 0, frozen = 0, lastFrame = 0;
   if (debug.has('perf')) togglePerfHud(true);
   const loop = (t: number) => {
@@ -966,7 +1022,7 @@ async function boot() {
   if (Capacitor.isNativePlatform()) {
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     SplashScreen.hide().catch(() => {});
-    CapApp.addListener('backButton', () => { if (!modalOpen) showSettings(); });
+    CapApp.addListener('backButton', onBack);
   }
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {

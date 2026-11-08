@@ -5,7 +5,7 @@ import { haptic } from '../haptics';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { addKeys } from './garage';
-import { button, fa, faNum, h, modal } from './hud';
+import { button, fa, faNum, h, modal, asBack } from './hud';
 
 /** This year's progress (a new Nowruz starts a fresh table). */
 export function nowruzDone(): number {
@@ -37,7 +37,7 @@ export function showNowruzWin(day: number, onClose: () => void) {
     <p class="wish">${sin.wish}</p><div class="sins">${table}</div>
     <div class="rewards"><div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b><small>عیدی</small></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>عیدی</small></div>` : ''}</div>`;
   const close = modal(c, 'pop');
-  c.append(button(save.nowruz.done >= NOWRUZ_DAYS ? 'نوروزت پیروز! 🎉' : 'برگرد به خونه', 'primary big', () => { close(); onClose(); }));
+  c.append(asBack(button(save.nowruz.done >= NOWRUZ_DAYS ? 'نوروزت پیروز! 🎉' : 'برگرد به خونه', 'primary big', () => { close(); onClose(); })));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
   haptic('success');
 }

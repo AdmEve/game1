@@ -255,3 +255,9 @@ the player sees value in them, not at first launch.
 |---|---|
 | D1 tap pick | Picks the car whose drawn shape (body, cover, arrow, badges) the ray hits first, with slots tested as the meshes they stand for. A tap within a third of a cell of a car's body still counts. tapprobe, measured against real-mesh raycasts: **100% right on all six levels** (old pick 93.7–99.3% right, up to 5.5% wrong car). The instanced build gives the same answers in ~1 ms per tap. `REAL=1 scripts/playthrough.cjs` wins levels 1, 7, 34, 120 and 201 through pointer events. |
 | D2 tap ring | A warm outline around the pressed car on `pointerdown` (one reused mesh, shader warmed at load). |
+| H1 back | Back (and Escape in a browser) presses the top card's marked back button (close, later, got it, continue…). A card that needs a choice (lose) shakes instead. In play, back cancels the crane, then pauses. On the home screen, back twice within 2 s exits, with a note after the first press. `scripts/backnav.cjs`: 11/11 checks. |
+| H2 pause + Home | The gear and back open a pause card: Continue, Restart, Levels, **Home**, then the settings. It scrolls on short screens. The win card has Home too, so the garage, the agency, the pass and achievements are reachable mid-journey (before, only at launch). |
+| N2 | Coming back from another app in the middle of a level opens the pause card. |
+| N3 save | Each save is written to the main key and a backup key, with a format version. Loading takes the first copy that parses and looks like a save. Unit tests corrupt the main copy, return non-saves, and fail the main write. |
+| N4 errors | Script errors and rejections go to a 20-entry log on the phone, repeats counted. Settings shows «گزارش خطا (n)» to share it (Android share sheet, or the clipboard in a browser). |
+

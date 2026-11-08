@@ -6,7 +6,7 @@ import { PHASE1, RENOVATIONS, buildAgency } from '../render/agency';
 import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
-import { button, fa, h, modal } from './hud';
+import { button, fa, h, modal, asBack } from './hud';
 import { stageRenderer } from './stage';
 
 /** The next renovation to buy, or null when the agency is finished. */
@@ -44,7 +44,7 @@ export function showAgency(onClose: () => void) {
   c.append(stage, bar, action);
   const close = modal(c, 'pop agency-card');
   let stop = false;
-  c.append(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); }));
+  c.append(asBack(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); })));
 
   // The shared small 3D view (kept between visits) and the agency's sky, lights and camera (built once).
   const Wd = Math.min(360, window.innerWidth - 40), Ht = 250;

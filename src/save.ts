@@ -1,5 +1,10 @@
-/** Player progress, kept in localStorage. */
+/**
+ * Player progress, kept in localStorage under two keys: the save and a backup written with it, so a write cut
+ * short (the app killed mid-save, a full disk) can only ever spoil one of them.
+ */
 export interface Save {
+  /** Save format version (for migrations). */
+  v: number;
   level: number;
   coins: number;
   boosters: { crane: number; whistle: number; bay: number };
@@ -35,8 +40,10 @@ export interface Save {
   pass: { month: string; punches: number; free: number[]; prem: number[]; premium: boolean };
 }
 
-const KEY = 'rahbandoon.save.v1';
+const KEY = 'rahbandoon.save.v1', BAK = KEY + '.bak';
+export const SAVE_VERSION = 1;
 const fresh = (): Save => ({
+  v: SAVE_VERSION,
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
@@ -60,14 +67,24 @@ const fresh = (): Save => ({
   pass: { month: '', punches: 0, free: [], prem: [], premium: false },
 });
 
+/** A stored save, if it parses and looks like one. */
+function read(key: string): Partial<Save> | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Partial<Save> | null;
+    return s && typeof s === 'object' && typeof s.level === 'number' && typeof s.coins === 'number' ? s : null;
+  } catch { return null; }
+}
+
 function load(): Save {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const s = JSON.parse(raw) as Partial<Save>;
+    // The main copy, or the backup when the main one is missing or spoiled.
+    const s = read(KEY) ?? read(BAK);
+    if (s) {
       const f = fresh();
       return {
-        ...f, ...s,
+        ...f, ...s, v: SAVE_VERSION,
         boosters: { ...f.boosters, ...s.boosters }, settings: { ...f.settings, ...s.settings }, stats: { ...f.stats, ...s.stats },
         owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
       };
@@ -78,5 +95,9 @@ function load(): Save {
 
 export const save: Save = load();
 export function persist() {
-  try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* storage unavailable */ }
+  let json: string;
+  try { json = JSON.stringify(save); } catch { return; }
+  // One write each; if either fails or is cut short, the other still holds a whole save.
+  try { localStorage.setItem(KEY, json); } catch { /* storage unavailable or full */ }
+  try { localStorage.setItem(BAK, json); } catch { /* storage unavailable or full */ }
 }

@@ -5,7 +5,7 @@ import { haptic } from '../haptics';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { addKeys } from './garage';
-import { button, fa, faNum, h, modal } from './hud';
+import { button, fa, faNum, h, modal, asBack } from './hud';
 
 /** A pomegranate (there is no emoji for it). */
 export const POM = (cls = '') => `<svg class="pom ${cls}" viewBox="0 0 40 40" aria-hidden="true"><path d="M15 6h10l-2 5h-6z" fill="#7a1020"/><path d="M16 4l2 3M24 4l-2 3M20 3v4" stroke="#7a1020" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="23" r="14" fill="#b3142f"/><circle cx="20" cy="23" r="14" fill="url(#pg)"/><defs><radialGradient id="pg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ff6b7d" stop-opacity=".9"/><stop offset=".5" stop-color="#d11a3a" stop-opacity=".3"/><stop offset="1" stop-color="#5c0a18" stop-opacity=".6"/></radialGradient></defs></svg>`;
@@ -40,7 +40,7 @@ export function showYaldaWin(night: number, onClose: () => void) {
     <div class="hafez"><small>${emo('📖', 'emo xs')} فال حافظ</small><p>${a}</p><p>${b}</p></div>
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>${keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>جایزه‌ی آخرین شب</small></div>` : ''}`;
   const close = modal(c, 'pop');
-  c.append(button(save.yalda.done >= YALDA_NIGHTS ? 'یلدات مبارک! 🎉' : 'برگرد به خونه', 'primary big', () => { close(); onClose(); }));
+  c.append(asBack(button(save.yalda.done >= YALDA_NIGHTS ? 'یلدات مبارک! 🎉' : 'برگرد به خونه', 'primary big', () => { close(); onClose(); })));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
   haptic('success');
 }

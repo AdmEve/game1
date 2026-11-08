@@ -5,7 +5,7 @@ import { haptic } from '../haptics';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { addKeys, CLASSICS } from './garage';
-import { button, fa, faNum, h, modal } from './hud';
+import { button, fa, faNum, h, modal, asBack } from './hud';
 
 interface Ach { id: string; icon: string; name: string; what: (n: string) => string; tiers: [number, number, number]; value: () => number }
 
@@ -81,5 +81,5 @@ export function showAchievements(onClose: () => void, onCoins: () => void) {
   };
   draw();
   const close = modal(c, 'pop ach-card');
-  c.append(button('بستن', 'ghost', () => { close(); onClose(); }));
+  c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }

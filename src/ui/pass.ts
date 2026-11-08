@@ -11,7 +11,7 @@ import { buy, iapAvailable, priceLabel } from '../monetize';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { addKeys } from './garage';
-import { button, fa, faNum, h, modal } from './hud';
+import { button, fa, faNum, h, modal, asBack } from './hud';
 
 export const STATIONS = ['تجریش', 'قیطریه', 'شهید صدر', 'قلهک', 'دکتر شریعتی', 'میرداماد', 'شهید حقانی', 'شهید همت', 'مصلی', 'شهید بهشتی',
   'شهید مفتح', 'هفت تیر', 'طالقانی', 'دروازه دولت', 'سعدی', 'امام خمینی', 'پانزده خرداد', 'خیام', 'میدان محمدیه', 'شوش'];
@@ -96,7 +96,7 @@ export function showPass(onChange: () => void, onClose: () => void) {
         if (await buy('pass')) { p.premium = true; persist(); haptic('success'); draw(); }
       }));
     }
-    c.append(button('بستن', 'ghost', () => { close(); onClose(); }));
+    c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
     // Scroll to the next station.
     requestAnimationFrame(() => (line.querySelector('.next') as HTMLElement | null)?.scrollIntoView({ block: 'center' }));
   };

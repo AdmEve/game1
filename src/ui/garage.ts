@@ -6,7 +6,7 @@ import { CARS, buildBenzBus, buildCar, buildJeep, buildVanet } from '../render/c
 import { outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
-import { button, fa, h, modal } from './hud';
+import { button, fa, h, modal, asBack } from './hud';
 import { stageRenderer } from './stage';
 
 export const CLASSICS = [
@@ -68,7 +68,7 @@ export function showGarage(onClose: () => void) {
   nav.append(prev, info, next);
   c.append(stage, nav, action);
   const close = modal(c, 'pop garage-card');
-  c.append(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); }));
+  c.append(asBack(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); })));
 
   // The shared turntable view (kept between visits), and the turntable scene (built once).
   const W = Math.min(340, window.innerWidth - 60), H = 200;

@@ -5,7 +5,7 @@ import { MAX_LIVES, addLives, clock, lives, msToNext } from '../lives';
 import { rewardedAvailable, showRewarded } from '../monetize';
 import { persist, save } from '../save';
 import { emo } from './emoji';
-import { button, fa, h, modal } from './hud';
+import { button, fa, h, modal, asBack } from './hud';
 
 export const REFILL_PRICE = 900;
 
@@ -44,6 +44,6 @@ export function showNoLives(onCoins: () => void): Promise<boolean> {
       });
       c.append(ad);
     }
-    c.append(button('صبر می‌کنم', 'ghost', () => finish(false)));
+    c.append(asBack(button('صبر می‌کنم', 'ghost', () => finish(false))));
   });
 }

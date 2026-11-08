@@ -134,3 +134,34 @@ export function button(label: string, cls: string, on: () => void) {
   b.onclick = () => { click(); on(); };
   return b;
 }
+
+/** Marks the button that Android's back button (and Escape) presses on its card: close, later, continue… */
+export function asBack<T extends HTMLElement>(b: T): T { b.dataset.back = ''; return b; }
+
+/** The topmost card that is open (not closing), or null. */
+export function topCard(): HTMLElement | null {
+  const open = document.querySelectorAll<HTMLElement>('.modal-back:not(.out)');
+  return open[open.length - 1] ?? null;
+}
+
+/**
+ * Back on the top card: press its back button. A card without one (a choice that must be made, like the lose
+ * card) stays and gives a small shake. Returns false when no card is open.
+ */
+export function backPress(): boolean {
+  const top = topCard();
+  if (!top) return false;
+  const marked = top.querySelectorAll<HTMLButtonElement>('[data-back]:not([disabled])');
+  const b = marked[marked.length - 1];
+  if (b) b.click();
+  else { const card = top.querySelector('.card'); card?.classList.remove('nudge'); void (card as HTMLElement | null)?.offsetWidth; card?.classList.add('nudge'); }
+  return true;
+}
+
+/** A short note that shows over any screen (the HUD's toast is hidden under menus). */
+export function note(text: string, ms = 1800) {
+  const n = h('div', 'note', text);
+  document.body.append(n);
+  void n.offsetWidth; n.classList.add('show');
+  setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, ms);
+}

@@ -7,7 +7,7 @@ import { haptic } from '../haptics';
 import { PRODUCTS } from '../config';
 import { buy, iapAvailable, priceLabel } from '../monetize';
 import { persist, save } from '../save';
-import { button, faNum, h, modal } from './hud';
+import { button, faNum, h, modal, asBack } from './hud';
 
 export const PIGGY_PER_WIN = 40, PIGGY_MIN = 1000, PIGGY_MAX = 4000;
 /** Levels before this (0-based) don't fill it, so it appears once players are settled in. */
@@ -60,5 +60,5 @@ export function showPiggy(onChange: () => void, onClose: () => void) {
     });
     c.append(b);
   }
-  c.append(button('بستن', 'ghost', () => { close(); onClose(); }));
+  c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }
