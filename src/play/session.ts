@@ -34,18 +34,26 @@ let hintWorker: Worker | null | undefined;
 const PICK_INV = new THREE.Matrix4(), PICK_RAY = new THREE.Ray(), PICK_P = new THREE.Vector3(), PICK_BOX = new THREE.Box3();
 const PICK_PAD = new THREE.Vector3(0.1, 0.1, 0.1), PICK_CAND: [number, number][] = [], PICK_HITS: THREE.Intersection[] = [];
 let hintSeq = 0;
-const hintWaiting = new Map<number, (move: number) => void>();
+const hintWaiting = new Map<number, { done: (move: number) => void; level: Level; s: State }>();
+/** The small main-thread search used when workers are unavailable. */
+const hintHere = (level: Level, s: State) => { const r = solve(level, 4000, s); return r.solvable ? r.solution[0] : -1; };
 function askHint(level: Level, s: State, done: (move: number) => void) {
   if (hintWorker === undefined) {
     try {
       hintWorker = new Worker(new URL('../workers/hint.worker.ts', import.meta.url), { type: 'module' });
-      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number }>) => { hintWaiting.get(e.data.id)?.(e.data.move); hintWaiting.delete(e.data.id); };
-      hintWorker.onerror = () => { hintWorker = null; };
+      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number }>) => { hintWaiting.get(e.data.id)?.done(e.data.move); hintWaiting.delete(e.data.id); };
+      // A worker can also fail after it was created (older WebViews without module workers): answer whatever was
+      // waiting here, and search on the main thread from now on, or the hint for that position would never come.
+      hintWorker.onerror = () => {
+        hintWorker = null;
+        const waiting = [...hintWaiting.values()]; hintWaiting.clear();
+        for (const w of waiting) w.done(hintHere(w.level, w.s));
+      };
     } catch { hintWorker = null; }
   }
-  if (!hintWorker) { const r = solve(level, 4000, s); done(r.solvable ? r.solution[0] : -1); return; }
+  if (!hintWorker) { done(hintHere(level, s)); return; }
   const id = ++hintSeq;
-  hintWaiting.set(id, done);
+  hintWaiting.set(id, { done, level, s });
   const { level: _l, ...plain } = s;
   hintWorker.postMessage({ id, level, state: { ...plain, level: null }, limit: 60_000 });
 }

@@ -27,6 +27,23 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # The production build must boot, win level 1 with real taps, go home with back and open the garage, with no
+      # page errors, before an APK is published (scripts/smoke.cjs).
+      - name: Smoke test (production build, headless browser)
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+          npx vite preview --port 4173 --host 127.0.0.1 > preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:4173/ && break; sleep 1; done
+          URL=http://127.0.0.1:4173/ node scripts/smoke.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-failure
+          path: smoke-fail.png
+          if-no-files-found: ignore
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

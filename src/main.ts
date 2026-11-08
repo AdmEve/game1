@@ -30,6 +30,7 @@ import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
 import { askNotifications, planReminders, syncReminders } from './notify';
 import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
+import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
 import { addStars, nextRenovation, showAgency } from './ui/agency';
@@ -1271,7 +1272,9 @@ async function boot() {
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
-    swooping: () => swooping, pointAt,
+    swooping: () => swooping, pointAt, errors,
+    /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
+    solve: (lv: Level) => solveLevel(lv).solution,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */

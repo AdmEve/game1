@@ -266,4 +266,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   `scripts/notes.cjs`.
 - Effects mix (`scripts/sfxmix.cjs`, `renderSound` in audio.ts): the effects bus (`SFX_BUS`) and per-sound gains set so feedback
   sits level with the music's average; thunder down 10 dB; weather beds and thunder on `ambBus`, which follows the sound slider.
+- CI smoke test (`scripts/smoke.cjs`, before the APK is built): the production build boots, wins level 1 following the hints
+  with real taps, goes home with back and opens the garage, with no page errors or error-log entries. `__rb.solve` and
+  `__rb.errors` are exposed for it.
+- Hint worker: if it fails after creation (older WebViews without module workers), waiting requests are answered on the main
+  thread and later ones are searched there (before, the hint for that position never came: no hand, no spotlight).
 
