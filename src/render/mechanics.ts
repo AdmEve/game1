@@ -1,5 +1,6 @@
 /** 3D pieces for the special mechanics: car covers, broken-car props, plate badges, VIP markers. */
 import * as THREE from 'three';
+import { slot, type Slot } from './instancer';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { curve, loft } from './cars.js';
 import { fbm } from './surfaces';
@@ -51,27 +52,46 @@ function projectUv(geo: THREE.BufferGeometry) {
 /** A cover sized for a vehicle of length L (along −z when the vehicle faces up); `top` = its roof height. */
 export function carCover(L: number, top = 0.95): THREE.Group {
   const g = new THREE.Group();
+  const H = Math.max(0.8, top + 0.04);
+  // The draped shape is built once per vehicle length and drawn instanced (two draw calls for all covers).
+  const k = `${L.toFixed(3)}|${top}`;
+  let kit = coverKits.get(k);
+  if (!kit) { kit = coverGeometry(L, top); coverKits.set(k, kit); }
+  const shape = new THREE.Group();
+  const body = slot(kit.body, fabricMat(), { castShadow: true }), hem = slot(kit.hem, hemMat);
+  shape.add(body, hem); shape.rotation.y = Math.PI / 2;
+  g.userData.top = H + 0.01;
+  g.add(shape);
+  return g;
+}
+const coverKits = new Map<string, { body: THREE.BufferGeometry; hem: THREE.BufferGeometry }>();
+function coverGeometry(L: number, top: number) {
   const box = top > 1.0, H = Math.max(0.8, top + 0.04), hl = L / 2 + (box ? 0.12 : 0.04), half = box ? 0.6 : 0.56;
   // A sedan's silhouette (trunk, rear window, roof, windscreen, hood) or a van/bus box.
   const prof = box
     ? [[-1, 0.9], [-0.97, 0.99], [-0.85, 1], [0.6, 1], [0.86, 0.9], [0.97, 0.7], [1, 0.55]]
     : [[-1, 0.52], [-0.95, 0.68], [-0.72, 0.72], [-0.42, 0.97], [-0.18, 1], [0.16, 1], [0.42, 0.74], [0.86, 0.64], [0.97, 0.56], [1, 0.42]];
   const top0 = curve(prof.map(([u, y]) => [u * hl, y * H]) as [number, number][]);
-  const geo = loft({ x0: -hl, x1: hl, nx: 56, nr: 40, planExp: 6, bot: 0.1, top: top0, half, rt: 0.22, rb: 0.04, tumble: box ? 0.06 : 0.22 });
-  geo.computeVertexNormals();
-  projectUv(geo);
-  const body = new THREE.Mesh(geo, fabricMat()); body.castShadow = true; body.receiveShadow = true;
+  const body = loft({ x0: -hl, x1: hl, nx: 56, nr: 40, planExp: 6, bot: 0.1, top: top0, half, rt: 0.22, rb: 0.04, tumble: box ? 0.06 : 0.22 });
+  body.computeVertexNormals();
+  projectUv(body);
   // The elastic hem that holds it under the bumpers.
-  const hem = new THREE.Mesh(loft({ x0: -hl - 0.012, x1: hl + 0.012, nx: 40, nr: 24, planExp: 6, bot: 0.09, top: 0.15, half: half + 0.012, rt: 0.02, rb: 0.02 }), hemMat);
-  const shape = new THREE.Group(); shape.add(body, hem); shape.rotation.y = Math.PI / 2;
-  g.userData.top = H + 0.01;
-  g.add(shape);
-  return g;
+  const hem = loft({ x0: -hl - 0.012, x1: hl + 0.012, nx: 40, nr: 24, planExp: 6, bot: 0.09, top: 0.15, half: half + 0.012, rt: 0.02, rb: 0.02 });
+  body.userData.keep = hem.userData.keep = true;
+  return { body, hem };
 }
 
 /** The cover flies off with the wind. */
 export function blowOff(cover: THREE.Object3D, tween: (d: number, f: (k: number) => void) => Promise<void>): Promise<void> {
   const p0 = cover.position.clone(), dir = Math.random() < 0.5 ? -1 : 1;
+  // The flying cover fades out on its own: swap its instanced parts for real meshes with their own materials.
+  const slots: Slot[] = [];
+  cover.traverse((m) => { if ((m as Slot).isSlot) slots.push(m as Slot); });
+  for (const sl of slots) {
+    const mesh = new THREE.Mesh(sl.batch.geometry, sl.batch.material);
+    mesh.position.copy(sl.position); mesh.quaternion.copy(sl.quaternion); mesh.scale.copy(sl.scale);
+    sl.parent!.add(mesh); sl.removeFromParent();
+  }
   cover.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.material = (mm.material as THREE.Material).clone(); (mm.material as THREE.Material).transparent = true; } });
   return tween(0.9, (k) => {
     cover.position.set(p0.x + dir * k * 1.6, p0.y + Math.sin(k * Math.PI) * 1.6 + k * 0.8, p0.z - k * 0.6);

@@ -10,6 +10,7 @@ import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as rule
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
+import { slot } from '../render/instancer';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
@@ -17,6 +18,16 @@ import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
+
+/** Shared pigeon geometry and materials (kept across levels). */
+let pigeonKit: { grey: THREE.Material; neck: THREE.Material; bodyG: THREE.BufferGeometry; headG: THREE.BufferGeometry } | null = null;
+function pigeonParts() {
+  if (pigeonKit) return pigeonKit;
+  const grey = new THREE.MeshStandardMaterial({ color: 0x8b93a1, roughness: 0.8 }), neck = new THREE.MeshStandardMaterial({ color: 0x4b6b74, roughness: 0.5, metalness: 0.3 });
+  const bodyG = new THREE.SphereGeometry(0.07, 10, 8), headG = new THREE.SphereGeometry(0.04, 8, 6);
+  for (const x of [grey, neck, bodyG, headG]) x.userData.keep = true;
+  return (pigeonKit = { grey, neck, bodyG, headG });
+}
 
 /** The hint worker (created on first use); falls back to a small search on the main thread if workers are unavailable. */
 let hintWorker: Worker | null | undefined;
@@ -270,13 +281,12 @@ export class Session {
         this.walkers.push({ p, x, dir, speed: 0.45 + rnd() * 0.5, phase: rnd() * 6 });
       }
     }
-    const grey = new THREE.MeshStandardMaterial({ color: 0x8b93a1, roughness: 0.8 }), neck = new THREE.MeshStandardMaterial({ color: 0x4b6b74, roughness: 0.5, metalness: 0.3 });
-    const bodyG = new THREE.SphereGeometry(0.07, 10, 8), headG = new THREE.SphereGeometry(0.04, 8, 6);
+    // Pigeons are drawn instanced (two draw calls for the whole flock).
+    const { grey, neck, bodyG, headG } = pigeonParts();
     for (let k = 0; k < 6; k++) {
       const o = new THREE.Group();
-      const b = new THREE.Mesh(bodyG, grey); b.scale.set(1.4, 1, 1); b.position.y = 0.07; o.add(b);
-      const hd = new THREE.Mesh(headG, neck); hd.position.set(0.09, 0.13, 0); hd.name = 'head'; o.add(hd);
-      o.traverse((m) => { m.castShadow = true; });
+      const b = slot(bodyG, grey); b.scale.set(1.4, 1, 1); b.position.y = 0.07; o.add(b);
+      const hd = slot(headG, neck); hd.position.set(0.09, 0.13, 0); hd.name = 'head'; o.add(hd);
       const home = new THREE.Vector3(this.L.bayX[this.L.bayX.length - 1] - 0.4 + rnd() * 2.2, 0.18, this.L.walkZ + 0.75 + rnd() * 0.3);
       o.position.copy(home); o.rotation.y = rnd() * 6.28;
       this.group.add(o);

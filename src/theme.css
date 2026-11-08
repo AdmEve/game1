@@ -235,3 +235,8 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 
 /* Toasts sit under the counters row (time / taps / plate camera / officer), never over it. */
 .toast { top: calc(160px + var(--sat)); transition-property: transform, opacity; transition-duration: .22s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }
+/* With a time/taps counter showing, the plate-camera and officer signs move to their own row beneath it
+   (they used to sit on the same row and overlap it), and toasts move down below them. */
+.hud:has(.limit:not(.hidden)) .camsign { top: calc(158px + var(--sat)); }
+.hud:has(.camsign:not(.hidden)) .toast { top: calc(160px + 40px + var(--sat)); }
+.hud:has(.limit:not(.hidden)):has(.camsign:not(.hidden)) .toast { top: calc(200px + 40px + var(--sat)); }
