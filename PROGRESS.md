@@ -260,4 +260,8 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   `arcLengthDivisions` to 1 per straight and 24 per arc (0.47 ms per route at 4× CPU, was 2.7). `scripts/perf.cjs` takes `URL=`.
 - Polish: the home streak line no longer collides with the lives pill (checked at 360×640/740; Play still fits); the level
   list opens centred on the current level; the boarding twirl is time-based (it spun twice as fast at 60 fps).
+- Start-of-level notes (tips, streak gift, clock/tap limits) go through a queue (`queueNote`/`pumpNotes`) shown only
+  while the level is in view. Before, they fired 0.9 s after the level was built, often behind the home screen, a
+  boss card or the daily gift, and were never seen. Bosses now announce both their clock and their tap budget.
+  `scripts/notes.cjs`.
 

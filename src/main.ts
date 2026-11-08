@@ -255,6 +255,23 @@ function updateHand() {
   hand.classList.add('show');
   showSpot(spotOn);
 }
+/** First-levels tips, one line each. */
+const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.'];
+/**
+ * Start-of-level notes wait for the player: shown one after another only while the level is in view (no card,
+ * no veil, the opening camera move done), so a warning built behind the home screen or an intro card isn't lost.
+ */
+const notes: { text: string; ms: number; buzz: boolean }[] = [];
+let noteReadyAt = 0;
+function queueNote(text: string, ms = 2800, buzz = false) { notes.push({ text, ms, buzz }); }
+function pumpNotes(now: number) {
+  if (!notes.length || now < noteReadyAt) return;
+  if (modalOpen || modalBacks.length || veil.classList.contains('on') || hud.root.classList.contains('hidden') || swooping) { noteReadyAt = now + 500; return; }
+  const n = notes.shift()!;
+  hud.toast(n.text, n.ms);
+  if (n.buzz) haptic('success');
+  noteReadyAt = now + n.ms + 350;
+}
 function nudgeHand() { hand.classList.remove('nudge'); void hand.offsetWidth; hand.classList.add('nudge'); haptic('light'); }
 
 let markAt: THREE.Vector3 | null = null, markUntil = 0;
@@ -603,13 +620,14 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
-  // Notes at the start: the streak's gift first (after the first-levels tip), then the level's limit.
-  const noteAt = n < 3 && !custom ? 5800 : 900;
-  if (streakNote) setTimeout(() => { hud.toast(streakNote, 2600); haptic('success'); }, noteAt);
-  const limitAt = streakNote ? noteAt + 2800 : noteAt;
-  if (level.time) setTimeout(() => hud.toast(`این مرحله ${fa(level.time!)} ثانیه وقت داره! ساعت از اولین ضربه شروع می‌شه.`), limitAt);
-  else if (level.moves) setTimeout(() => hud.toast(`فقط ${fa(level.moves!)} ضربه داری! ضربه‌ی اشتباه هم حساب می‌شه.`), limitAt);
-  else if (level.bays && level.bays < 5) setTimeout(() => hud.toast(`این مرحله فقط ${fa(level.bays!)} جای پارک داره!`), limitAt);
+  // Notes at the start (first-levels tip, the streak's gift, the level's limit) wait until the player can see them.
+  notes.length = 0; noteReadyAt = performance.now() + 700;
+  if (!custom && n < TIPS.length) queueNote(TIPS[n], 5000);
+  if (streakNote) queueNote(streakNote, 2600, true);
+  // Bosses have both a clock and a tap budget: each gets its note.
+  if (level.time) queueNote(`این مرحله ${fa(level.time)} ثانیه وقت داره! ساعت از اولین ضربه شروع می‌شه.`);
+  if (level.moves) queueNote(`فقط ${fa(level.moves)} ضربه داری! ضربه‌ی اشتباه هم حساب می‌شه.`);
+  if (!level.time && !level.moves && level.bays && level.bays < 5) queueNote(`این مرحله فقط ${fa(level.bays)} جای پارک داره!`);
   hud.refresh();
   hud.active(null);
   hud.show(true);
@@ -627,8 +645,6 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     if (unseen) { modalOpen = true; void showIntro(unseen[0]).then(() => { save.seen[unseen[0]] = true; persist(); modalOpen = false; pointAt(unseen[0]); }); }
     return;
   }
-  const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.'];
-  if (n < TIPS.length) hud.toast(TIPS[n], 5500);
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
     modalOpen = true;
     const c = h('div', 'newch');
@@ -1232,6 +1248,7 @@ async function boot() {
     applyShake(dt);
     updateHand();
     updateMark();
+    pumpNotes(t);
     // Lite: nothing that moves casts a shadow, so the shadow map is drawn once per level (no periodic spike).
     if (mobile && !profile.lite && ++shadowTick % 8 === 0) renderer.shadowMap.needsUpdate = true;
     // Behind a menu the 3D view settles for a few frames and then holds still, so the phone's GPU is free for
