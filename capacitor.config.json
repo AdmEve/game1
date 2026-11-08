@@ -13,8 +13,9 @@
     },
     "SplashScreen": {
       "launchShowDuration": 600,
-      "backgroundColor": "#1F7A47",
+      "backgroundColor": "#101c30",
       "showSpinner": false
     }
-  }
+  },
+  "backgroundColor": "#101c30"
 }

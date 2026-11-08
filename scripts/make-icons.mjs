@@ -3,7 +3,7 @@
 // Run: node scripts/make-icons.mjs   (the car art comes from scripts/icon-car.html; see PROGRESS.md)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
-import { readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -34,7 +34,19 @@ function iconHtml({ size, shape, transparent, scale }) {
   ${bg}<img class="car" src="${hero}" style="width:${d}px"></body></html>`;
 }
 
+/** The Android launch splash: the web loading screen's own markup (index.html), drawn at the drawable's size. */
 function splashHtml(w, h) {
+  const page = readFileSync(root + 'index.html', 'utf8');
+  const markup = page.slice(page.indexOf('<div id="splash">'), page.indexOf('<div id="app">'))
+    .replace('<div id="splash">', '<div id="splash" class="native">')
+    .replace('/hero-taxi.webp', `file://${root}public/hero-taxi.webp`)
+    .replace("url('/fonts/", `url('file://${root}public/fonts/`);
+  return `<html dir="rtl"><head><style>
+    @font-face { font-family: Vazirmatn; src: url('file://${font}Vazirmatn-Medium.woff2'); font-weight: 500; }
+    * { margin: 0; box-sizing: border-box; } body { width: ${w}px; height: ${h}px; position: relative; overflow: hidden; }
+  </style></head><body>${markup}</body></html>`;
+}
+function splashHtmlOld(w, h) {
   const s = Math.min(w, h);
   return `<html><head><style>${css} body{width:${w}px;height:${h}px;position:relative;overflow:hidden}</style></head><body>
   <div class="tile"></div>
@@ -61,7 +73,9 @@ async function render(html, w, h, file, transparent = true) {
 }
 
 const dens = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+const splashOnly = process.argv.includes('--splash');
 for (const [d, k] of Object.entries(dens)) {
+  if (splashOnly) break;
   const dir = res + `mipmap-${d}/`;
   const s = Math.round(48 * k);
   await render(iconHtml({ size: s, shape: 'rounded', scale: 0.62 }), s, s, dir + 'ic_launcher.png');
@@ -82,6 +96,6 @@ for (const dir of readdirSync(res)) {
 }
 await render(splashHtml(480, 800), 480, 800, res + 'drawable/splash.png', false);
 if (!existsSync(root + 'store')) mkdirSync(root + 'store');
-await render(iconHtml({ size: 512, shape: 'square', scale: 0.62 }), 512, 512, root + 'store/icon-512.png', false);
+if (!splashOnly) await render(iconHtml({ size: 512, shape: 'square', scale: 0.62 }), 512, 512, root + 'store/icon-512.png', false);
 await browser.close();
 console.log('icons written');

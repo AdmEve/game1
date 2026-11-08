@@ -18,5 +18,7 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ system splash: the same navy as the loading screen, so launch is one continuous screen. -->
+        <item name="windowSplashScreenBackground">#101c30</item>
     </style>
 </resources>
