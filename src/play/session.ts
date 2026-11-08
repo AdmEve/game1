@@ -971,10 +971,11 @@ export class Session {
     const from = p.root.position.clone();
     const to = new THREE.Vector3(car.root.position.x + (((idx * 7) % 3) - 1) * 0.15, 0.35, car.root.position.z - 0.25);
     const cap = KIND[this.level.vehicles[v].kind].cap;
+    const yaw0 = p.root.rotation.y;
     return tween(0.3, (e) => {
       p.root.position.lerpVectors(from, to, e);
       p.root.position.y = from.y + (to.y - from.y) * e + Math.sin(e * Math.PI) * 0.9;
-      p.root.rotation.y += 0.25;
+      p.root.rotation.y = yaw0 + e * 3.6; // a twirl in, the same at any frame rate
       if (e > 0.7) p.root.scale.setScalar(1.12 * (1 - (e - 0.7) / 0.3) + 0.001);
     }, ease.linear).then(() => {
       this.group.remove(p.root);

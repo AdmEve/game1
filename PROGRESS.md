@@ -258,4 +258,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   (`MAX_YAW_RATE`), and overtaking cars merge back before a stop. 0 pops on five levels.
 - Route set-up is cheap: `roundedPath` returns its `bends` (arc spans and radii) for `drive()`'s bend speed limit, and sets
   `arcLengthDivisions` to 1 per straight and 24 per arc (0.47 ms per route at 4× CPU, was 2.7). `scripts/perf.cjs` takes `URL=`.
+- Polish: the home streak line no longer collides with the lives pill (checked at 360×640/740; Play still fits); the level
+  list opens centred on the current level; the boarding twirl is time-based (it spun twice as fast at 60 fps).
 

@@ -1040,6 +1040,9 @@ function showLevels() {
   }
   close = modal(c, 'pop levels-card');
   c.append(asBack(button('بستن', 'ghost', () => { close(); modalOpen = false; })));
+  // Open where the player is (the list runs to level 240), not at chapter 1.
+  const here = c.querySelector<HTMLElement>('.lv.now') ?? c.querySelector<HTMLElement>(`.lgrid .lv:nth-child(1)`);
+  requestAnimationFrame(() => here?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }));
 }
 
 function showHome() {

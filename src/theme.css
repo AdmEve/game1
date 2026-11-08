@@ -367,3 +367,6 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 .streak-chip small { color: var(--muted); font-weight: 500; font-size: 12px; }
 .bst .cnt.free { left: 50%; transform: translateX(-50%); width: auto; padding: 0 6px; background: #2fbf71; color: #fff; font-size: 11px; }
 .btn.errs small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+/* The home streak line sits on the card's bottom row, right-aligned, clear of the lives pill pinned bottom-left. */
+.chapter .streak-chip { justify-content: flex-start; text-align: right; padding-left: 104px; margin-top: 8px; min-height: 30px; }
+.chapter .streak-chip small { flex-basis: 100%; text-align: right; }
