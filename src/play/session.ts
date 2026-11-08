@@ -725,7 +725,7 @@ export class Session {
         if (m) {
           const from = m.position.clone(), to = this.L.cell(e.col, e.row).setY(LOT_Y);
           const yaw = Math.abs(to.x - from.x) > 0.01 ? 0 : Math.PI / 2;
-          sfx.chirp(0.05, 0.03);
+          sfx.chirp(0.05, 0.2);
           void tween(0.5, (k) => { m.position.lerpVectors(from, to, k); m.position.y = LOT_Y + Math.abs(Math.sin(k * Math.PI * 3)) * 0.03; m.rotation.y = yaw; }, ease.inOut);
         }
       }
@@ -775,7 +775,7 @@ export class Session {
     const at = new THREE.Vector3(); cover.getWorldPosition(at);
     const q = new THREE.Quaternion(); cover.getWorldQuaternion(q);
     this.group.add(cover); cover.position.copy(at); cover.quaternion.copy(q);
-    sfx.chirp(0, 0.05);
+    sfx.chirp(0, 0.36);
     void blowOff(cover, (d, f) => tween(d, f, ease.out)).then(() => this.group.remove(cover));
   }
 
@@ -816,7 +816,7 @@ export class Session {
     const [dc, dr] = DELTA[v.dir];
     const dist = gap * CELL + 0.1;
     const start = o.root.position.clone();
-    sfx.chirp(0, 0.04);
+    sfx.chirp(0, 0.29);
     await tween(0.1 + gap * 0.07, (k) => { o.root.position.set(start.x + dc * dist * k, start.y, start.z + dr * dist * k); o.body.rotation.z = 0.04 * (1 - k); }, ease.in);
     sfx.bump(); haptic('medium');
     const kindHorn = v.kind === 'bus' ? 'bus' : v.kind === 'peykan' || v.kind === 'zamyad' ? 'old' : 'new';
@@ -885,7 +885,7 @@ export class Session {
       const into = this.L.cell(a[0], a[1]).setY(LOT_Y), out = this.L.cell(b[0], b[1]).setY(LOT_Y);
       const from = o.root.position.clone();
       await drive(o.root, o.body, roundedPath([from, into], 0.3), { vmax: 6 });
-      sfx.chirp(0, 0.04);
+      sfx.chirp(0, 0.29);
       await tween(0.22, (k) => { o.root.position.y = LOT_Y - k * 0.9; o.root.scale.setScalar(1 - k * 0.5); }, ease.in);
       o.root.position.set(out.x, LOT_Y - 0.9, out.z);
       await tween(0.26, (k) => { o.root.position.y = LOT_Y - 0.9 * (1 - k); o.root.scale.setScalar(0.5 + k * 0.5); }, ease.out);

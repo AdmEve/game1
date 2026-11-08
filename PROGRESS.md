@@ -264,4 +264,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   while the level is in view. Before, they fired 0.9 s after the level was built, often behind the home screen, a
   boss card or the daily gift, and were never seen. Bosses now announce both their clock and their tap budget.
   `scripts/notes.cjs`.
+- Effects mix (`scripts/sfxmix.cjs`, `renderSound` in audio.ts): the effects bus (`SFX_BUS`) and per-sound gains set so feedback
+  sits level with the music's average; thunder down 10 dB; weather beds and thunder on `ambBus`, which follows the sound slider.
 
