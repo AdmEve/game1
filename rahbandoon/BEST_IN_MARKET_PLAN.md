@@ -1,0 +1,252 @@
+# «راه‌بندون» — best-in-market plan, aspect by aspect (November 2026)
+
+The owner's brief: every aspect of the game should be top notch and best in the market. Plan before acting,
+and don't change things just for the sake of it. For each aspect this file sets out what the game does
+today (measured where possible), the bar the best games in the genre set, the gaps, and the actions, each
+with a check that shows it is done. The fluidity pass (`AAA_PLAN.md`) came first; this builds on it.
+
+Standing decisions from the owner that this plan keeps:
+- **Difficulty stays chess-like from level 9 on** (owner's requests "make levels seriously difficult" and
+  "chess-level difficulty"). Onboarding gets better at *teaching*; levels don't get easier.
+- **All Journey levels stay unlocked while testing** (`UNLOCK_ALL_LEVELS`). Set it to false for the store build
+  (see "Release checklist").
+
+Measurement tools: `scripts/perf.cjs`, `gpucost.cjs`, `cpuprof.cjs`, `fpsprobe.cjs`, `stress.cjs`,
+`playthrough.cjs`, `scripts/tapprobe.cjs` (new), vitest.
+
+---
+
+## A. Performance & technical feel
+
+**Now.** Draw calls on level 60 went from 384 to ~153. Idle board runs at 30 fps and play at 60. Startup is
+staged behind a loading bar. The next level loads in ~0.5 s (headless). The APK is 11.8 MB.
+**Bar.** The GDD targets: 60 fps on a Galaxy A12-class phone, < 120 draw calls, cold start < 4 s, install
+< 60 MB, crash-free > 99.5%.
+**Gaps.** ~153 draws is above the 120 target. Plate-rule levels add up to ~26 badge sprites, each its own
+draw call. Rain streaks are rewritten on the CPU every frame. The game has no field crash data.
+**Actions.**
+- A1. Draw badges as one instanced billboard batch with an atlas. *Done when* level 60 and an odd/even level
+  are each ≤ 120 draws (perf.cjs).
+- A2. Animate rain streaks in the vertex shader (static buffers, a time uniform). *Done when* the rain update
+  drops out of the CPU profile of a rainy level.
+- A3. Error log (see N4).
+
+## B. Core gameplay
+
+**Now.** The loop is tap → drive → park in a bay → board → leave. There are 10 mechanics, 3 boosters, combos,
+paid or ad continues, and the car to blame is highlighted on a loss.
+**Bar.** The leaders in the Bus Jam and Parking Jam genre make every tap give an instant, readable result,
+warn you before you lose, and make every loss clear.
+**Gaps.** A loss comes without warning: the last free bay looks like any other.
+**Actions.**
+- B1. Last free bay warning: when only one bay is left, it pulses red, the music tension rises (that part
+  exists already) and a light haptic plays once. *Done when* it shows in a screenshot of a board one bay from
+  full, and never shows while two or more bays are free.
+
+## C. Level design & difficulty
+
+**Now.** 240 solver-verified levels in 8 chapters, hardened by hill-climbing (average ~2300 solver nodes), with
+tap budgets and clocks. The difficulty curve is a sawtooth, with a «سخت» level every five.
+**Bar.** The best games tune their curve from fail-rate data per level.
+**Gaps.** The game records no attempts per level, so the real fail rates are unknown.
+**Actions.**
+- C1. Count attempts, fails and wins per level on the device. A tester view (the perf overlay, or a list under
+  the version line) shows the hardest levels, so the owner can report them. *Done when* unit tests cover the
+  counts and the tester list shows them.
+- The level curve itself stays as it is (owner's decision).
+
+## D. Controls & input
+
+**Now (measured).** A tap is picked by projecting it onto the ground plane (y = 0.45) and taking the cell
+under it. Cars are ~1.4 high and the camera looks down at 48°, so a tap on a car's roof lands about one cell
+behind that car. `scripts/tapprobe.cjs` samples points on every visible car body at 360×740:
+
+| Level | Right car | Wrong car | Nothing |
+|---|---|---|---|
+| 6 | 64% | 21% | 15% |
+| 31 | 57% | 25% | 18% |
+| 61 | 59% | 26% | 16% |
+| 121 | 58% | 21% | 21% |
+| 201 | 57% | 34% | 10% |
+| 240 | 62% | 23% | 15% |
+
+On move-limited levels a wrong car costs a move, and on every level it can cost the game.
+**Bar.** You tap what you see, and a near miss still counts. That is the norm for top touch games.
+**Actions.**
+- D1. Pick the car whose shape the tap ray hits first (the ray against each car's oriented box, in its own
+  frame). When the ray hits no car, fall back to the nearest car footprint within half a cell of the ground
+  point. *Done when* tapprobe shows ≥ 98% right and ≤ 1% wrong on the six levels, and agrees with real-mesh
+  raycasts in `?noinst`.
+- D2. A soft ring pulse on the ground under the tapped car on `pointerdown`: instant, cheap feedback.
+- D3. Back button cancels crane mode (see H1).
+
+## E. Game feel ("juice")
+
+**Now.** Press squash, a wiggle for blocked cars, floating coins, combo texts, smooth camera shake, confetti,
+a coin chime.
+**Bar.** Royal Match-class games give the win a beat of its own: the last piece leaves, the camera breathes, and
+the reward counts up and flies to the wallet.
+**Gaps.** The win card appears as soon as the last car leaves, and its numbers are static.
+**Actions.**
+- E1. Win finale: when the lot is clear, hold a short beat (~0.7 s) while the camera eases back and the
+  confetti falls, then show the card. The coin reward counts up, and coins fly from the card to the wallet
+  pill. *Done when* the win sequence is captured as a frame sequence and the e2e win flow still passes.
+- E2. Camera settles at level start with a critically damped ease instead of a linear stop.
+
+## F. Visual art
+
+**Now.** Several AAA passes, sharp on phones since the last pass.
+**Bar.** Every car color can be told apart at a glance in every chapter's light, even at night.
+**Gaps.** Nobody has measured color separation per chapter.
+**Actions.**
+- F1. Screenshot audit of all 8 chapters at 360×740, fixing any defect found.
+- F2. Measure rendered car colors per chapter (mean color of each car's roof pixels) and the minimum ΔE
+  between any two colors. *Done when* every chapter has a minimum ΔE ≥ 20 (CIE76), or the paint/lighting is
+  adjusted until it does.
+
+## G. Animation
+
+**Now.** Suspension pitch and roll, cars keeping their distance, passengers walking and boarding, the camera
+swoop.
+**Actions.**
+- G1. Covered by E1 and E2 (camera). Review boarding and leaving in slow motion while doing E1, and fix any pop.
+
+## H. UI / UX
+
+**Now.** Premium dark-glass theme, compositor-only card motion, pressed states, a responsive home screen.
+**Bar.** Android's core app quality guidelines: standard back navigation, and app state kept when the app
+leaves the foreground ([Core app quality](https://developer.android.com/docs/quality-guidelines/core-app-quality)).
+**Gaps.** The back button only opens Settings when no card is open. It can't close a card, cancel the crane
+or leave the game. Settings doubles as the pause screen.
+**Actions.**
+- H1. A back stack: every card registers how to close it. Back closes the top card (or does its "later"
+  action). During play, back cancels crane mode first, otherwise opens the pause card. On the home screen,
+  back twice within 2 s exits, with a toast after the first press. *Done when* unit tests cover the stack and
+  a headless run of `backButton` presses closes cards in order.
+- H2. Pause card (resume, restart, level select, settings) for a level in progress, opened by back, by the gear
+  and on returning from the background (N2).
+
+## I. Audio
+
+**Now.** Synthesized SFX with voice limits, a compressor on master, rendered music stems that loop, weather
+ambience.
+**Bar.** Separate music and SFX volumes, music that ducks under jingles, and audio that comes back after the
+app returns to the foreground (Android guidelines).
+**Gaps.** Sound and music are on/off only, music doesn't duck under the win/lose jingles, and the audio
+context is not explicitly resumed after a pause.
+**Actions.**
+- I1. Volume sliders for music and SFX (0–100) instead of on/off switches. Old saves migrate (off = 0).
+- I2. Duck music by about 8 dB for the length of the win/lose jingles.
+- I3. Resume the AudioContext on `visibilitychange` and `resume`. *Done when* a headless check shows the
+  context state is `running` after a hide/show cycle.
+
+## J. Onboarding
+
+**Now.** A hand hint on levels 1–3, three text toasts, and mechanic intro cards (emoji and text by Mash Rahim).
+**Bar.** Teach by showing ([Playtestcloud on Metacore's FTUE](https://start.playtestcloud.com/blog/perfecting-the-first-time-user-experience-in-mobile-games),
+[GameRefinery onboarding](https://www.gamerefinery.com/first-impression-seals-the-deal-onboarding-best-practices-part-1)):
+the first move is guided with everything else dimmed, and each new mechanic is pointed at in the world, not
+only described.
+**Actions.**
+- J1. Level 1 spotlight: for the first two taps, the board dims except for the hinted car, and a tap
+  elsewhere is gently refused (the hand bounces). *Done when* a screenshot shows the spotlight and the e2e run
+  still wins level 1.
+- J2. In-world mechanic intro: after the intro card closes, a pulsing ring and a short label mark the first car
+  (or obstacle) with that mechanic for ~2.5 s.
+- J3. Shorter tips (one line each).
+
+## K. Progression & meta
+
+**Now.** Coins, keys, stars, garage, Grandpa's agency, metro-card pass, achievements, chests, piggy bank,
+lives.
+**Bar.** Win streaks are the one proven feature this game lacks. Candy Crush added them in 2022 and Royal
+Match's version reportedly lifted revenue ~38% with a stable D30
+([Deconstructor of Fun](https://www.deconstructoroffun.com/blog/2024/8/5/win-streak-the-gift-that-keeps-on-giving),
+[Liquid & Grit](https://www.liquidandgrit.com/resource/eight-top-puzzle-apps-use-nearly-identical-win-streak-mechanics-casual-report/)).
+**Actions.**
+- K1. «گاز بده» win streak: consecutive first-try wins of new Journey levels fill three steps. Each step
+  grants a free help at the start of the next level: 1 = an extra bay for this level, 2 = + a whistle,
+  3 = + a crane. A loss or a retry resets it. It shows on the home screen and at level start. *Done when*
+  unit tests cover the streak rules and a screenshot shows the HUD badge.
+
+## L. Theme, narrative, characters
+
+**Now.** Tehran chapters with landmarks, Mash Rahim, Mr. Ajool's boss levels, radio bulletins, Yalda and Nowruz.
+**Gaps.** None blocking. Characters already open chapters and bosses.
+**Actions.** L1. Mr. Ajool's beaten line also shows on the chapter-complete chest (story closure). Low cost.
+
+## M. Accessibility & settings
+
+**Now.** Colorblind symbols, sound, music, haptics and quality settings.
+**Bar.** [Game Accessibility Guidelines](https://gameaccessibilityguidelines.com/basic/): readable default text,
+adjustable text size, a way to turn off screen shake and heavy motion, adjustable volumes.
+**Actions.**
+- M1. Reduced motion: a setting that defaults to the OS `prefers-reduced-motion`. It turns off camera shake,
+  shortens the swoop to a fade, stops the menu Ken Burns drift and softens card motion.
+- M2. Large text: scales all UI text by 1.15 (one CSS variable) without breaking the 360×640 layout
+  (screenshot check).
+- M3. Volume sliders (I1).
+
+## N. Platform integration
+
+**Now.** Android splash, portrait lock, `allowBackup=true`, music stops when hidden, the clock only runs while
+frames render.
+**Gaps.** Back navigation (H1). No pause on return (N2). The save is one localStorage key: a corrupted write
+resets all progress. JS errors leave no trace.
+**Actions.**
+- N1. = H1.
+- N2. Returning from the background to a level in progress opens the pause card.
+- N3. Save safety: every save is written to the main key and a rolling backup (`.bak`). Loading checks both
+  and uses the newest copy that parses, and the save carries a schema version. *Done when* unit tests
+  corrupt the main key and the progress survives.
+- N4. Error log: `error` and `unhandledrejection` go to a ring buffer of 20 in localStorage. Testers can copy
+  it from Settings.
+
+## O. Monetization & fairness
+
+**Now.** Poolakey IAP, Tapsell rewarded and interstitial ads (none before level 20, none after a loss, at most
+one per 4 minutes and 3 wins), no-ads and starter packs, double-coins and continue by ad.
+**Gaps.** The keys are empty (owner: Bazaar RSA key, Tapsell app and zone IDs, release keystore).
+**Actions.** Nothing in code; the owner supplies the keys (Release checklist).
+
+## P. Retention / live-ops
+
+**Now.** Daily «ساعت شلوغی» with a streak, daily gift calendar, Yalda and Nowruz events, monthly pass.
+**Bar.** Local notifications for "lives are full" and "today's challenge is waiting", asked for at a moment
+the player sees value in them, not at first launch.
+**Actions.**
+- P1. Local notifications (`@capacitor/local-notifications`): lives full, and one daily reminder at the time
+  of day the player usually plays (never between 22:00 and 09:00). The permission is asked after the 10th
+  level win, with a short explanation card first, and can be turned off in Settings.
+
+## Q. QA & tooling
+
+**Now.** 285 unit tests; CI runs the tests and builds the APK; stress, e2e and screenshot scripts.
+**Actions.**
+- Q1. `scripts/tapprobe.cjs` committed (D1's measurement).
+- Q2. Unit tests for every new rule (back stack, streak, save backup, level stats, volume migration).
+
+---
+
+## Order of work (impact first)
+
+1. D1–D2 tap accuracy. Everyone feels it, and it is measurable.
+2. H1, H2, N2, N3, N4: back navigation, pause, save safety, error log.
+3. J1–J3 onboarding.
+4. E1–E2 win finale, camera settle.
+5. M1, M2, I1–I3: accessibility and audio.
+6. K1 win streak; B1 last-bay warning; C1 level stats.
+7. P1 notifications.
+8. A1–A2: badges batch, rain on the GPU.
+9. F1–F2 screenshot audit and color separation; L1.
+10. Re-measure, tests, stress and e2e, screenshots, APK.
+
+## Release checklist (owner)
+
+- `UNLOCK_ALL_LEVELS = false` in `src/config.ts`.
+- Bazaar RSA key, Tapsell app and zone IDs in `src/config.ts`.
+- Release keystore secrets in GitHub (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`).
+
+## Status
+
+(Updated as items land.)
