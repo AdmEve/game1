@@ -32,6 +32,15 @@ describe('rounded paths', () => {
     const kinked = roundedPath([V(-0.63, 1.88), V(-3.35, 1.88), V(-3.79, 1.43), V(-3.79, -0.67)], 0.8);
     expect(maxTurnPer(kinked, 0.25)).toBeLessThan(0.4);
   });
+  it('list their bends where they lie, with the arc radius', () => {
+    const path = roundedPath([V(0, 0), V(-4, 0), V(-4, -4)], 0.8);
+    expect(path.bends).toHaveLength(1);
+    const b = path.bends![0];
+    expect(b.r).toBeCloseTo(0.8, 3);
+    expect(b.s0).toBeCloseTo(3.2, 2);
+    expect(b.s1 - b.s0).toBeCloseTo((Math.PI / 2) * 0.8, 2);
+    expect(path.getLength()).toBeCloseTo(3.2 + (Math.PI / 2) * 0.8 + 3.2, 2);
+  });
   it('leave turns the other way alone', () => {
     const pts = [V(0, 0), V(-3, 0), V(-3.5, -0.5), V(-3.5, 0.5)];
     expect(mergeKinks(pts)).toHaveLength(4);

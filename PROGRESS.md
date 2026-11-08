@@ -256,4 +256,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - **Motion pops** (`scripts/popcheck.cjs`): corners are circular arcs (`roundedPath`, cubic Bézier), lane-offset double
   kinks merge (`mergeKinks`), `drive()` limits speed in bends (`grip`, planned ahead) and heading turn rate
   (`MAX_YAW_RATE`), and overtaking cars merge back before a stop. 0 pops on five levels.
+- Route set-up is cheap: `roundedPath` returns its `bends` (arc spans and radii) for `drive()`'s bend speed limit, and sets
+  `arcLengthDivisions` to 1 per straight and 24 per arc (0.47 ms per route at 4× CPU, was 2.7). `scripts/perf.cjs` takes `URL=`.
 

@@ -84,30 +84,43 @@ export function mergeKinks(pts: THREE.Vector3[], shortLeg = 1.0): THREE.Vector3[
   return out;
 }
 
-/** Build a smooth path through waypoints (on the ground) with rounded corners. */
-export function roundedPath(pts0: THREE.Vector3[], radius = 0.75): THREE.CurvePath<THREE.Vector3> {
-  const path = new THREE.CurvePath<THREE.Vector3>();
+/** A bend of a rounded path: where along the path it starts and ends, and its radius. */
+export interface Bend { s0: number; s1: number; r: number }
+export type BendPath = THREE.CurvePath<THREE.Vector3> & { bends?: Bend[] };
+
+/** Build a smooth path through waypoints (on the ground) with rounded corners; `bends` lists its arcs. */
+export function roundedPath(pts0: THREE.Vector3[], radius = 0.75): BendPath {
+  const path: BendPath = new THREE.CurvePath<THREE.Vector3>();
+  const radii: number[] = []; // per curve: the arc's radius, or 0 for a straight
   const pts = mergeKinks(pts0);
   let cur = pts[0].clone();
   for (let i = 1; i < pts.length; i++) {
     const p = pts[i];
-    if (i === pts.length - 1) { if (cur.distanceTo(p) > 1e-4) path.add(new THREE.LineCurve3(cur, p.clone())); break; }
+    if (i === pts.length - 1) { if (cur.distanceTo(p) > 1e-4) { path.add(new THREE.LineCurve3(cur, p.clone())); radii.push(0); } break; }
     const next = pts[i + 1];
     const din = p.clone().sub(cur), dout = next.clone().sub(p);
     // The incoming leg's remainder is all ours (the bend before took its share already); the outgoing leg is shared.
     const r = Math.min(radius, din.length(), dout.length() / 2);
     din.normalize(); dout.normalize();
     const a = p.clone().addScaledVector(din, -r), b = p.clone().addScaledVector(dout, r);
-    if (cur.distanceTo(a) > 1e-4) path.add(new THREE.LineCurve3(cur, a));
+    if (cur.distanceTo(a) > 1e-4) { path.add(new THREE.LineCurve3(cur, a)); radii.push(0); }
     // A true circular arc (cubic Bézier), so the bend has one steady radius instead of a sharp kink at its apex.
     const turn = Math.acos(THREE.MathUtils.clamp(din.dot(dout), -1, 1));
-    if (turn < 1e-3) path.add(new THREE.LineCurve3(a, b));
+    if (turn < 1e-3) { path.add(new THREE.LineCurve3(a, b)); radii.push(0); }
     else {
       const R = r / Math.tan(turn / 2), h = (4 / 3) * Math.tan(turn / 4) * R;
       path.add(new THREE.CubicBezierCurve3(a, a.clone().addScaledVector(din, h), b.clone().addScaledVector(dout, -h), b));
+      radii.push(R);
     }
     cur = b;
   }
+  // Arc-length tables: a straight needs one division, an arc a couple of dozen (three.js defaults to 200 each,
+  // which made every route cost a few ms to set up on a phone).
+  radii.forEach((R, k) => { path.curves[k].arcLengthDivisions = R > 0 ? 24 : 1; });
+  // Where each arc lies along the path (the path's own arc lengths, so they match getPointAt).
+  const cum = path.getCurveLengths();
+  path.bends = [];
+  radii.forEach((R, k) => { if (R > 0) path.bends!.push({ s0: k ? cum[k - 1] : 0, s1: cum[k], r: R }); });
   return path;
 }
 
@@ -228,28 +241,16 @@ function oncoming(me: Driver) {
 export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.CurvePath<THREE.Vector3>, o: DriveOpts = {}): Promise<void> {
   const L = path.getLength();
   const vmax = o.vmax ?? 12, acc = o.accel ?? 26, brake = o.brake ?? true;
-  // Bends: the speed allowed at points every STEP along the route, from the curvature there, so a car eases off
-  // before a corner and takes it on one steady arc instead of pivoting in a frame or two.
-  const grip = o.grip ?? 70, STEP = 0.25, n = Math.max(2, Math.ceil(L / STEP) + 1);
-  const bend = new Float32Array(n);
-  {
-    const t0 = new THREE.Vector3(), t1 = new THREE.Vector3();
-    path.getTangentAt(0, t0);
-    for (let k = 0; k < n; k++) {
-      path.getTangentAt(Math.min(1, ((k + 1) * STEP) / L), t1);
-      const dth = Math.acos(THREE.MathUtils.clamp((t0.x * t1.x + t0.z * t1.z) / (Math.hypot(t0.x, t0.z) * Math.hypot(t1.x, t1.z) || 1), -1, 1));
-      bend[k] = dth > 1e-3 ? Math.sqrt(grip * (STEP / dth)) : Infinity;
-      t0.copy(t1);
-    }
-  }
+  // Bends: a car eases off before a corner and takes it on one steady arc (speed ≤ √(grip × radius)) instead of
+  // pivoting in a frame or two. The arcs come from roundedPath; other paths have no limit.
+  const grip = o.grip ?? 70, bends = (path as BendPath).bends ?? [];
   /** The fastest speed from which the car can still slow down for every bend ahead in time. */
-  const bendLimit = (s: number, v: number) => {
+  const bendLimit = (s: number) => {
     let lim = Infinity;
-    const reachK = Math.min(n - 1, Math.ceil((s + (v * v) / (2 * acc * 1.6) + STEP) / STEP));
-    for (let k = Math.max(0, Math.floor(s / STEP)); k <= reachK; k++) {
-      if (bend[k] === Infinity) continue;
-      const d = Math.max(0, k * STEP - s);
-      lim = Math.min(lim, Math.sqrt(bend[k] * bend[k] + 2 * acc * 1.6 * d));
+    for (const b of bends) {
+      if (b.s1 <= s) continue;
+      const vb = Math.sqrt(grip * b.r);
+      lim = Math.min(lim, s >= b.s0 ? vb : Math.sqrt(vb * vb + 2 * acc * 1.6 * (b.s0 - s)));
     }
     return lim;
   };
@@ -301,7 +302,7 @@ export function drive(root: THREE.Object3D, body: THREE.Object3D, path: THREE.Cu
     const left = L - s;
     let target = hold ? 0 : vmax;
     if (brake) target = Math.min(target, Math.sqrt(2 * acc * Math.max(0, left)) + 0.4);
-    target = Math.min(target, bendLimit(s, v));
+    target = Math.min(target, bendLimit(s));
     const v0 = v;
     v = target > v ? Math.min(target, v + acc * dt) : Math.max(target, v - acc * 1.6 * dt);
     s = Math.min(L, s + v * dt);

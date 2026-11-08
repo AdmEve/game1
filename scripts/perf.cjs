@@ -24,7 +24,7 @@ const { chromium } = require('playwright');
     setInterval(() => { const m = performance.memory; if (!m) return; const u = m.usedJSHeapSize; if (u > last) w.__alloc += u - last; last = u; }, 16);
   });
   const t0 = Date.now();
-  await p.goto(`http://127.0.0.1:5173/?${query}`);
+  await p.goto(`${process.env.URL || 'http://127.0.0.1:5173/'}?${query}`);
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 600000 });
   const ready = Date.now() - t0;
   const marks = await p.evaluate(() => performance.getEntriesByType('measure').map((m) => `${m.name}=${Math.round(m.duration)}`).join(' '));
