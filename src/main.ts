@@ -26,7 +26,8 @@ import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
 import { introTitle, maybeDaily, showChest, showIntro, showShop, type IntroKind } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
-import { FREE_LEVELS, lives, loseLife } from './lives';
+import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
+import { askNotifications, planReminders, syncReminders } from './notify';
 import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
 import { Share } from '@capacitor/share';
@@ -802,6 +803,7 @@ function showWin() {
     pay.close(); close(); modalOpen = true;
     if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
     if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
+    if (n + 1 === 10 && !save.notifyAsked && Capacitor.isNativePlatform()) await askReminders();
     await maybeInterstitial(n);
     if (home) goHome(); else await goLevel();
   };
@@ -829,6 +831,18 @@ function askRating(): Promise<void> {
     const close = modal(c, 'pop');
     c.append(button(`${emo('⭐', 'emo sm')} آره، پنج ستاره!`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
     c.append(asBack(button('بعداً', 'ghost', () => { close(); done(); })));
+  });
+}
+
+/** Ask once whether reminders are welcome (lives full, the daily rush hour), saying what they are first. */
+function askReminders(): Promise<void> {
+  return new Promise((done) => {
+    save.notifyAsked = true; persist();
+    const c = h('div', 'rate');
+    c.innerHTML = `<div class="burst">${emo('🔔', 'emo huge')}</div><h2>خبرت کنیم؟</h2><p>وقتی جون‌هات پر شد، یا چالش ساعت شلوغی رسید، یه خبر کوچیک می‌دیم. شب‌ها نه، و هر وقت بخوای از تنظیمات خاموشش کن.</p>`;
+    const close = modal(c, 'pop');
+    c.append(button(`${emo('🔔', 'emo sm')} آره، خبرم کن`, 'primary big', async () => { save.settings.notify = await askNotifications(); persist(); close(); done(); }));
+    c.append(asBack(button('نه، ممنون', 'ghost', () => { close(); done(); })));
   });
 }
 
@@ -941,6 +955,16 @@ function showSettings() {
   mt.onchange = () => { save.settings.reduceMotion = mt.checked; persist(); applyAccess(); };
   mr.append(mt); c.append(mr);
   row('متن بزرگ‌تر', 'bigText', applyAccess);
+  if (Capacitor.isNativePlatform()) {
+    const nr = h('label', 'row', '<span>اعلان‌ها<small>جون پر شد، ساعت شلوغی رسید (شب‌ها نه)</small></span>');
+    const nt = h('input') as HTMLInputElement; nt.type = 'checkbox'; nt.className = 'switch'; nt.checked = save.settings.notify;
+    nt.onchange = async () => {
+      save.settings.notify = nt.checked && (await askNotifications());
+      if (nt.checked && !save.settings.notify) { nt.checked = false; note('اجازه‌ی اعلان رو از تنظیمات گوشی بده'); }
+      save.notifyAsked = true; persist();
+    };
+    nr.append(nt); c.append(nr);
+  }
   row('حالت کوررنگی (نماد روی رنگ‌ها)', 'colorblind');
   // Graphics quality: automatic (steps down if the phone struggles), or fixed.
   const qr = h('div', 'row quality', '<span>کیفیت گرافیک</span>');
@@ -1164,8 +1188,16 @@ async function boot() {
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
+  // Reminders wait only while the game is away: scheduled on leaving, cleared on coming back.
+  save.opens = [...save.opens, new Date().getHours()].slice(-9); persist();
+  void syncReminders(false, []);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { stopMusic(0.2); return; }
+    if (document.hidden) {
+      stopMusic(0.2);
+      void syncReminders(save.settings.notify, planReminders({ now: Date.now(), livesFullAt: fullAt(), opens: save.opens }));
+      return;
+    }
+    void syncReminders(false, []);
     startMusic();
     // Back from another app in the middle of a level: wait on the pause card instead of dropping straight in.
     if (session && !session.s.over && session.taps > 0 && !modalOpen && !veil.classList.contains('on')) showSettings();

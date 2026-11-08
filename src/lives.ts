@@ -44,3 +44,9 @@ export function clock(ms: number) {
   const s = Math.ceil(ms / 1000), m = Math.floor(s / 60), r = s % 60;
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
 }
+
+/** When the hearts will be full again (ms timestamp), or null when they already are. */
+export function fullAt(now = Date.now()): number | null {
+  const n = lives(now);
+  return n >= MAX_LIVES ? null : save.lives.next + (MAX_LIVES - n - 1) * REGEN_MS;
+}

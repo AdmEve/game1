@@ -15,7 +15,12 @@ export interface Save {
   settings: {
     sound: boolean; music: boolean; haptics: boolean; colorblind: boolean; quality: 'auto' | 'high' | 'balanced' | 'low';
     sfxVol: number; musicVol: number; reduceMotion: boolean | null; bigText: boolean;
+    /** Reminders (lives full, daily rush hour); off until the player says yes. */
+    notify: boolean;
   };
+  /** Whether the reminders question has been asked; the hours of recent app opens (for its timing). */
+  notifyAsked: boolean;
+  opens: number[];
   stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
   /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
   ach: Record<string, number>;
@@ -58,7 +63,9 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false },
+  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, notify: false },
+  notifyAsked: false,
+  opens: [],
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
   ach: {},
   achSeen: {},
