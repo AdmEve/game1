@@ -295,7 +295,10 @@ export function stopMusic(fade = 0.6) {
 
 /** 0 = calm, 1 = every bay is taken. */
 export function setTension(x: number) {
-  tensionTarget = Math.max(0, Math.min(1, x));
+  const v = Math.max(0, Math.min(1, x));
+  // Called every frame: only schedule a change when the level actually moved (each call adds an automation event).
+  if (Math.abs(v - tensionTarget) < 0.02) return;
+  tensionTarget = v;
   if (out && ctx) out.tension.gain.setTargetAtTime(tensionTarget, ctx.currentTime, 0.5);
 }
 

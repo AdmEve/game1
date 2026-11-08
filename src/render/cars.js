@@ -252,8 +252,10 @@ function wheel(R, wd, style, Q = 1) {
   const g = new THREE.Group();
   const c = Math.min(0.06, wd * 0.35), r0 = R * 0.66, pts = [];
   pts.push(new THREE.Vector2(r0, -wd / 2));
-  for (let i = 0; i <= 6; i++) { const a = -Math.PI / 2 + (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(R - c + Math.cos(a) * c, -wd / 2 + c + Math.sin(a) * c)); }
-  for (let i = 0; i <= 6; i++) { const a = (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(R - c + Math.cos(a) * c, wd / 2 - c + Math.sin(a) * c)); }
+  // The shoulder's rounding: fewer steps at game-camera density (the tire is mostly hidden under the body).
+  const st = Q < 0.3 ? 2 : 6;
+  for (let i = 0; i <= st; i++) { const a = -Math.PI / 2 + (i / st) * Math.PI / 2; pts.push(new THREE.Vector2(R - c + Math.cos(a) * c, -wd / 2 + c + Math.sin(a) * c)); }
+  for (let i = 0; i <= st; i++) { const a = (i / st) * Math.PI / 2; pts.push(new THREE.Vector2(R - c + Math.cos(a) * c, wd / 2 - c + Math.sin(a) * c)); }
   pts.push(new THREE.Vector2(r0, wd / 2));
   const tire = new THREE.Mesh(new THREE.LatheGeometry(pts, seg), M.tire);
   tire.rotation.x = Math.PI / 2;

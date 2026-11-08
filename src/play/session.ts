@@ -17,6 +17,25 @@ import { confetti, coinBurst, puff } from '../render/fx';
 import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
+
+/** The hint worker (created on first use); falls back to a small search on the main thread if workers are unavailable. */
+let hintWorker: Worker | null | undefined;
+let hintSeq = 0;
+const hintWaiting = new Map<number, (move: number) => void>();
+function askHint(level: Level, s: State, done: (move: number) => void) {
+  if (hintWorker === undefined) {
+    try {
+      hintWorker = new Worker(new URL('../workers/hint.worker.ts', import.meta.url), { type: 'module' });
+      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number }>) => { hintWaiting.get(e.data.id)?.(e.data.move); hintWaiting.delete(e.data.id); };
+      hintWorker.onerror = () => { hintWorker = null; };
+    } catch { hintWorker = null; }
+  }
+  if (!hintWorker) { const r = solve(level, 4000, s); done(r.solvable ? r.solution[0] : -1); return; }
+  const id = ++hintSeq;
+  hintWaiting.set(id, done);
+  const { level: _l, ...plain } = s;
+  hintWorker.postMessage({ id, level, state: { ...plain, level: null }, limit: 60_000 });
+}
 export const MAX_BAYS = 6;
 
 /**
@@ -491,11 +510,23 @@ export class Session {
   }
 
   /** The next move of a winning line from the current state (for the tutorial hand and idle hints). */
+  /**
+   * The vehicle to suggest, or -1 (none yet, or none). The search runs in a worker: the first call for a
+   * position starts it and returns -1; later calls return the answer once it has arrived, until the state moves on.
+   */
   hint(): number {
     if (this.ended || this.pending > 0) return -1;
-    const r = solve(this.level, 60_000, this.s);
-    return r.solvable ? r.solution[0] : -1;
+    const at = this.stateKey();
+    if (this.hintFor === at) return this.hintMove;
+    if (this.hintAsked === at) return -1;
+    this.hintAsked = at;
+    askHint(this.level, this.s, (move) => { if (this.hintAsked === at) { this.hintFor = at; this.hintMove = move; } });
+    return -1;
   }
+  private hintFor = '';
+  private hintAsked = '';
+  private hintMove = -1;
+  private stateKey() { return `${this.s.exits}|${this.s.q}|${this.s.inLot.map((x) => (x ? 1 : 0)).join('')}|${this.s.queue.slice(this.s.q, this.s.q + 4).join()}`; }
 
   /** Screen anchor for a vehicle (world point on its roof). */
   anchor(i: number): THREE.Vector3 {

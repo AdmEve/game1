@@ -232,3 +232,6 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 /* Tester overlay: fps, worst frame, refresh/divisor, resolution, draw calls (render/pacing.ts, ui/perfhud.ts). */
 .perfhud { position: fixed; top: calc(var(--sat, 0px) + 2px); left: 4px; z-index: 98; pointer-events: none; padding: 2px 6px; border-radius: 6px;
   background: rgba(0, 0, 0, .62); color: #8ef58e; font: 600 10px/1.4 ui-monospace, Menlo, monospace; white-space: nowrap; }
+
+/* Toasts sit under the counters row (time / taps / plate camera / officer), never over it. */
+.toast { top: calc(160px + var(--sat)); transition-property: transform, opacity; transition-duration: .22s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }

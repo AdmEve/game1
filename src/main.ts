@@ -153,6 +153,8 @@ function applyLight(light: Light) {
   hemi.intensity = L.hemi[2] * (light === 'night' ? 1 : 0.4);
   // Night: sodium floodlights over the lot so every car's color still reads.
   flood.intensity = light === 'night' ? 260 : light === 'dusk' ? 120 : 0;
+  // An unlit spotlight still costs every pixel its lighting math: leave it out of the scene by day.
+  flood.visible = flood.intensity > 0;
   grade = { ...DEFAULT_GRADE, ...L.grade };
   post.setGrade(grade);
   lightsMaterial.emissiveIntensity = L.lamps;
@@ -201,7 +203,8 @@ function updateHand() {
   const idle = performance.now() - session.lastInput;
   const want = (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || idle > 10000;
   if (!want) { hand.classList.remove('show'); hintFor = -1; return; }
-  if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); hintAt = performance.now(); }
+  // The hint is searched in a worker: until it arrives (a frame or two) no hand shows.
+  if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); if (hintFor >= 0) hintAt = performance.now(); }
   if (hintFor < 0) { hand.classList.remove('show'); return; }
   const p = session.anchor(hintFor).project(camera);
   hand.style.left = `${((p.x + 1) / 2) * window.innerWidth}px`;
