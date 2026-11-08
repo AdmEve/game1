@@ -454,19 +454,23 @@ function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | nul
     const heavy = !worldCached(p.level.w, p.level.h, p.seed, p.world);
     modalOpen = true;
     await veilTo(true, heavy);
-    prepBudget = 14; // a build already running ahead now goes at full speed
-    if (heavy) await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world));
-    startLevel(pick, custom, false, ev);
-    if (heavy) {
-      syncInstances();
-      await renderer.compileAsync(scene, camera).catch(() => {});
-      // The new chapter's music loop starts rendering now (off the main thread), not in the middle of play.
-      void prepareMusic();
+    try {
+      prepBudget = 14; // a build already running ahead now goes at full speed
+      if (heavy) await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world));
+      startLevel(pick, custom, false, ev);
+      if (heavy) {
+        syncInstances();
+        await renderer.compileAsync(scene, camera).catch(() => {});
+        // The new chapter's music loop starts rendering now (off the main thread), not in the middle of play.
+        void prepareMusic();
+      }
+      post.render(scene, camera);
+      under?.();
+      if (swoop && !under) introSwoop();
+    } finally {
+      // Never leave the player behind the veil, whatever happened while building.
+      await veilTo(false);
     }
-    post.render(scene, camera);
-    under?.();
-    if (swoop && !under) introSwoop();
-    await veilTo(false);
   };
   veilBusy = veilBusy.then(run, run);
   return veilBusy;

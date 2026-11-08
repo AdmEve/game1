@@ -243,3 +243,39 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 /* Shop boosters: the same line icons as the booster bar, on dark tiles. */
 .shop-card .ic, .shop-card.bst-bay .ic, .shop-card.bst-whistle .ic, .shop-card.bst-crane .ic { background: rgba(255, 255, 255, .06); border: 1px solid var(--line); color: var(--accent); box-shadow: none; }
 .shop-card .ic .ico { width: 28px; height: 28px; }
+
+/* Title screen: the 3D view holds still behind the home card, and the compositor slowly pushes in on it (a Ken Burns
+   drift that costs no rendering). When play starts it eases back while the camera swoops down. */
+#app canvas { transform-origin: 50% 38%; transition: transform .8s cubic-bezier(.2, .8, .2, 1); }
+body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform 40s cubic-bezier(.3, 0, .7, 1); }
+
+/* ───── Home screen fits every phone ─────
+   The card fills the screen height as a column: the logo takes whatever room is left (centered in it, shrinking
+   first), so the play button always sits on screen. Short screens drop the radio line and tighten spacing;
+   narrow ones shrink the button row's text. */
+.modal-back:has(.home-card) { place-items: stretch center; padding-top: calc(10px + var(--sat)); padding-bottom: calc(18px + var(--sab)); }
+.card.home-card { width: min(380px, 100%); height: 100%; display: flex; flex-direction: column; }
+.card.home-card > .home { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.home > .logo { margin: auto 0; flex: 0 1 auto; min-height: 0; overflow: hidden; }
+.home > .radio { flex: none; margin-bottom: 8px; }
+@media (max-height: 780px) {
+  .home > .radio { display: none; }
+  .logo .sign { font-size: 54px; }
+  .logo { padding: 14px 0 10px; }
+  .chapter { padding: 10px 14px 9px; }
+  .btn.agency-btn { margin-top: 8px; padding: 8px 12px; }
+  .home-row .btn { margin-top: 8px; }
+  .btn.huge { padding: 10px; font-size: 22px; }
+}
+@media (max-height: 660px) {
+  .logo small, .logo .en::before, .logo .en::after { display: none; }
+  .logo .sign { font-size: 44px; }
+  .ch-map { margin-bottom: 4px; } .ch-map span { width: 24px; height: 24px; font-size: 12px; } .ch-map i { width: 22px; }
+  .home-row .btn small { display: none; }
+}
+@media (max-width: 380px) {
+  .home-row:has(.ach-btn) { grid-template-columns: 1fr 1fr 46px 46px; gap: 6px; }
+  .home-row:has(.ach-btn) .btn { font-size: 14px; }
+  .home-row .btn small { font-size: 11px; }
+  .ch-map i { width: 24px; }
+}
