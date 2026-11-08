@@ -31,6 +31,8 @@ export class Hud {
   private camSign = h('div', 'camsign hidden');
   private copSign = h('div', 'camsign cop hidden');
   private btns = new Map<BoosterId, HTMLButtonElement>();
+  /** Helps that are free on this level (the win streak); shown instead of the count. */
+  free = new Set<BoosterId>();
   onBooster: (id: BoosterId) => void = () => {};
   onSettings: () => void = () => {};
   onCoins: () => void = () => {};
@@ -97,7 +99,7 @@ export class Hud {
     for (const b of BOOSTERS) {
       const n = save.boosters[b.id];
       this.btns.get(b.id)!.innerHTML = `<span class="ic">${icon(b.icon)}</span><span class="nm">${b.name}</span>` +
-        (n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${icon('coin', 'ico coin')}${fa(b.price)}</span>`);
+        (this.free.has(b.id) ? '<span class="cnt free">مجانی</span>' : n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${icon('coin', 'ico coin')}${fa(b.price)}</span>`);
     }
   }
   active(id: BoosterId | null) { for (const [k, b] of this.btns) b.classList.toggle('on', k === id); }

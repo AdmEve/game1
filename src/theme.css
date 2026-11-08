@@ -355,3 +355,15 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 .settings .row > span { text-align: start; flex: 1 1 auto; }
 .settings .row .switch { flex: 0 0 auto; }
 .settings .row.slider input[type=range] { flex: 0 0 52%; }
+
+/* Win streak «پشت‌سرهم»: a note on the win/lose cards, a chip on the home screen, "free" on a booster. */
+.streak-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px; margin: 10px auto 2px; padding: 8px 12px;
+  border-radius: 12px; background: rgba(255, 138, 0, .12); border: 1px solid rgba(255, 138, 0, .35); color: var(--text); font-weight: 700; font-size: 14px; }
+.streak-note b { color: #ffb347; font-size: 16px; }
+.streak-note small { flex-basis: 100%; color: var(--muted); font-weight: 500; font-size: 12px; }
+.streak-note.risk { background: rgba(255, 74, 61, .12); border-color: rgba(255, 74, 61, .4); }
+.streak-chip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 6px; margin-top: 8px; font-weight: 700; font-size: 13px; color: var(--text); }
+.streak-chip b { color: #ffb347; }
+.streak-chip small { color: var(--muted); font-weight: 500; font-size: 12px; }
+.bst .cnt.free { left: 50%; transform: translateX(-50%); width: auto; padding: 0 6px; background: #2fbf71; color: #fff; font-size: 11px; }
+.btn.errs small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }

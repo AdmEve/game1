@@ -14,7 +14,7 @@ import { raycastModel, slot } from '../render/instancer';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
-import { confetti, coinBurst, puff, tapRing } from '../render/fx';
+import { bayWarning, confetti, coinBurst, puff, tapRing } from '../render/fx';
 import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
@@ -1036,8 +1036,22 @@ export class Session {
     await wait(1.1);
   }
 
+  /** The bay that is the last one free (warned about), or -1; and whether this level has said so yet. */
+  private warnBay = -1; private warned = false;
+  private updateBayWarning(t: number) {
+    let free = 0, k = -1;
+    for (let b = 0; b < this.s.bays.length; b++) if (!this.s.bays[b]) { free++; k = b; }
+    const bay = !this.ended && !this.s.over && free === 1 && this.s.inLot.some(Boolean) ? k : -1;
+    if (bay !== this.warnBay) {
+      this.warnBay = bay;
+      if (bay >= 0) { haptic('light'); if (!this.warned) { this.warned = true; this.hooks.toast('آخرین جای پارک! با حساب بزن.'); } }
+    }
+    bayWarning(this.group, bay >= 0 ? PICK_P.set(this.L.bayX[bay], LOT_Y, this.L.bayZ) : null, BAY_W, BAY_D, t);
+  }
+
   /** Ambient life each frame: passengers shift their weight and glance around. */
   idle(t: number) {
+    this.updateBayWarning(t);
     const real = Math.max(0, t - this.lastT), dt = Math.min(0.05, real); this.lastT = t;
     // Hard mode clock: runs from the first tap while cars are still in the lot and no modal is open.
     if (this.level.time && this.taps > 0 && !this.ended && this.hooks.canPlay() && this.s.inLot.some(Boolean)) {

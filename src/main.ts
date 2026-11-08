@@ -42,6 +42,8 @@ import { HAFT_SIN, nowruzLevel, yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
 import { countUp, floatingWallet, flyCoins } from './ui/juice';
+import { nextStreak, streakHelps, type Help } from './streak';
+import { count, hardest, statsCsv } from './levelstats';
 import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
@@ -423,9 +425,11 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const i = d.i >= 0 ? d.i : pick(e.clientX, e.clientY);
   if (i < 0) return;
   if (craneMode) {
-    if (session.crane(i)) { save.boosters.crane--; helped = true; persist(); hud.refresh(); }
+    if (session.crane(i)) { if (hud.free.has('crane')) hud.free.delete('crane'); else save.boosters.crane--; helped = true; persist(); hud.refresh(); }
     craneMode = false; hud.active(null);
   } else session.tap(i);
+  // An attempt at a Journey level counts from its first tap (levels are also built behind the home screen).
+  if (session.taps === 1 && !rush && !event) { count(save.lvStats, current, 'attempt'); persist(); }
   hand.classList.remove('show'); hintFor = -1;
 });
 
@@ -578,14 +582,30 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   }, n + 1, plan.world);
   scene.add(session.group);
   addInstanceRoot(session.group);
+  // Journey bookkeeping: attempts per level, and the win streak's free helps on a new level.
+  hud.free.clear();
+  newLevelRun = !custom && !ev && n === save.level && n < levels.length;
+  let streakNote = '';
+  if (newLevelRun && save.streak > 0) {
+    const got: string[] = [];
+    for (const k of streakHelps(save.streak)) {
+      if (k === 'bay') { if (session.extraBay()) got.push(HELP_NAME.bay); }
+      else { hud.free.add(k); got.push(HELP_NAME[k]); }
+    }
+    if (got.length) streakNote = `${fa(save.streak)} برد پشت‌سرهم: ${got.join(' و ')} مجانی!`;
+  }
   renderer.shadowMap.needsUpdate = true;
   if (session.weather) session.weather.onThunder = () => sfx.thunder();
   if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
-  if (level.time) setTimeout(() => hud.toast(`این مرحله ${fa(level.time!)} ثانیه وقت داره! ساعت از اولین ضربه شروع می‌شه.`), 900);
-  else if (level.moves) setTimeout(() => hud.toast(`فقط ${fa(level.moves!)} ضربه داری! ضربه‌ی اشتباه هم حساب می‌شه.`), 900);
-  else if (level.bays && level.bays < 5) setTimeout(() => hud.toast(`این مرحله فقط ${fa(level.bays!)} جای پارک داره!`), 900);
+  // Notes at the start: the streak's gift first (after the first-levels tip), then the level's limit.
+  const noteAt = n < 3 && !custom ? 5800 : 900;
+  if (streakNote) setTimeout(() => { hud.toast(streakNote, 2600); haptic('success'); }, noteAt);
+  const limitAt = streakNote ? noteAt + 2800 : noteAt;
+  if (level.time) setTimeout(() => hud.toast(`این مرحله ${fa(level.time!)} ثانیه وقت داره! ساعت از اولین ضربه شروع می‌شه.`), limitAt);
+  else if (level.moves) setTimeout(() => hud.toast(`فقط ${fa(level.moves!)} ضربه داری! ضربه‌ی اشتباه هم حساب می‌شه.`), limitAt);
+  else if (level.bays && level.bays < 5) setTimeout(() => hud.toast(`این مرحله فقط ${fa(level.bays!)} جای پارک داره!`), limitAt);
   hud.refresh();
   hud.active(null);
   hud.show(true);
@@ -629,7 +649,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
 function useBooster(id: BoosterId) {
   if (!session || modalOpen) return;
   const def = BOOSTERS.find((b) => b.id === id)!;
-  if (save.boosters[id] <= 0) {
+  const free = hud.free.has(id);
+  if (!free && save.boosters[id] <= 0) {
     if (save.coins < def.price) { hud.toast('سکه کافی نداری!'); return; }
     save.coins -= def.price; save.boosters[id]++; persist(); hud.refresh(); coin();
   }
@@ -641,7 +662,30 @@ function useBooster(id: BoosterId) {
   }
   const ok = id === 'bay' ? session.extraBay() : session.whistle();
   if (!ok) { hud.toast(id === 'bay' ? 'همه‌ی جاهای پارک بازه!' : 'یه لحظه صبر کن…'); return; }
-  save.boosters[id]--; helped = true; persist(); hud.refresh(); hud.bump(id); haptic('medium');
+  if (free) hud.free.delete(id); else save.boosters[id]--;
+  helped = true; persist(); hud.refresh(); hud.bump(id); haptic('medium');
+}
+
+const HELP_NAME: Record<Help, string> = { bay: 'جای پارک', crane: 'جرثقیل', whistle: 'سوت پلیس' };
+/** The streak's free helps as words: «جای پارک و جرثقیل». */
+const helpsText = (n: number) => streakHelps(n).map((k) => HELP_NAME[k]).join(' و ');
+/** Whether the level being played is the next new Journey level (the one the streak is riding on). */
+let newLevelRun = false;
+/**
+ * Giving up a level that has been played (restart, home): it ends the streak, so with a streak at stake ask
+ * first. Resolves true to go ahead.
+ */
+function giveUp(): Promise<boolean> {
+  const playing = newLevelRun && !!session && session.taps > 0 && !session.s.over;
+  if (!playing || save.streak <= 0) { if (playing) { save.streak = 0; persist(); } return Promise.resolve(true); }
+  return new Promise((done) => {
+    modalOpen = true;
+    const c = h('div', 'confirm');
+    c.innerHTML = `<div class="burst">${emo('🔥', 'emo huge')}</div><h2>پشت‌سرهمت می‌سوزه!</h2><p>${fa(save.streak)} برد پشت‌سرهم داری. اگه این مرحله رو ول کنی، از صفر شروع می‌شه.</p>`;
+    const close = modal(c, 'pop');
+    c.append(asBack(button('ادامه می‌دم', 'primary big', () => { close(); modalOpen = false; done(false); })));
+    c.append(button('ول کن', 'ghost', () => { close(); save.streak = nextStreak(save.streak, 'gaveUp', true); persist(); done(true); }));
+  });
 }
 
 function reward(n: number) {
@@ -727,6 +771,8 @@ function showWin() {
   const piggy = replay ? 0 : fillPiggy(n);
   const station = !replay && punch();
   const stars = replay ? 0 : starsFor(lvl?.tag);
+  count(save.lvStats, n, 'win');
+  save.streak = nextStreak(save.streak, 'won', !replay);
   if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
   const before = save.coins;
@@ -746,9 +792,10 @@ function showWin() {
     + (keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ</small></div>` : '');
   const notes = (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
     + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
+  const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small></div>` : '';
   const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
-    <div class="rewards">${rewards}</div>${notes}${beaten}${ach}`;
+    <div class="rewards">${rewards}</div>${streakLine}${notes}${beaten}${ach}`;
   const close = modal(c, 'pop');
   const pay = payout(c, coins, before);
   const next = async (home = false) => {
@@ -788,6 +835,7 @@ function askRating(): Promise<void> {
 function showLose(limit?: 'time' | 'moves') {
   duckMusic(1.6);
   save.stats.losses++;
+  if (!rush && !event) count(save.lvStats, current, 'loss');
   persist();
   modalOpen = true;
   const c = h('div', 'result lose');
@@ -799,7 +847,8 @@ function showLose(limit?: 'time' | 'moves') {
   const culprit = bride >= 0 ? bride : session ? session.culprit() : -1;
   if (culprit >= 0) session!.highlight(culprit);
   const why = limit === 'time' ? 'وقت تموم شد و هنوز ماشین‌ها تو پارکینگ موندن! سریع‌تر تصمیم بگیر.' : limit === 'moves' ? 'ضربه‌هات تموم شد! ضربه روی ماشین گیر کرده هم حساب می‌شه، پس قبل از زدن خوب نگاه کن.' : bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
-  c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>`;
+  const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>ادامه بدی، می‌مونه؛ از اول، می‌سوزه.</small></div>` : '';
+  c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${risk}`;
   const close = modal(c, 'pop');
   const canBay = !!session && (!!limit || session.s.bays.length < 6 || bride >= 0);
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
@@ -819,6 +868,7 @@ function showLose(limit?: 'time' | 'moves') {
   }
   c.append(button('از اول', canBay ? 'ghost' : 'primary big', async () => {
     close();
+    if (newLevelRun) { save.streak = nextStreak(save.streak, 'gaveUp', true); persist(); }
     // Giving up on a Journey level costs a life (the daily challenge and events are free).
     if (!rush && current >= FREE_LEVELS) {
       loseLife();
@@ -854,9 +904,9 @@ function showSettings() {
   const resume = asBack(button(`${icon('play')} ادامه`, 'primary big', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
   nav.append(resume);
   const row2 = h('div', 'pause-row');
-  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', () => { close(); void goLevel(current, rush ?? undefined, true, event); }));
+  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', async () => { close(); if (await giveUp()) void goLevel(current, rush ?? undefined, true, event); else modalOpen = false; }));
   row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
-  row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', () => { close(); goHome(); }));
+  row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', async () => { close(); if (await giveUp()) goHome(); else modalOpen = false; }));
   nav.append(row2);
   c.append(nav);
   c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
@@ -922,7 +972,20 @@ function showSettings() {
   // Version label: three taps show the performance overlay, seven unlock every level (for testers).
   const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)} · ساخت ${__BUILD__}`);
   let taps = 0;
-  ver.onclick = () => { ++taps; if (taps === 3) togglePerfHud(); if (taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); } };
+  ver.onclick = () => {
+    ++taps;
+    if (taps === 3) {
+      togglePerfHud();
+      // Testers: which levels are hardest on this phone (copied or shared as text).
+      const top = hardest(save.lvStats, 5).map((x) => `${fa(x.level)} (${fa(Math.round(x.lossRate * 100))}٪)`).join('، ');
+      c.append(button(`${icon('doc')} آمار مرحله‌ها${top ? `<small>سخت‌ترین: ${top}</small>` : ''}`, 'ghost errs', async () => {
+        const text = `Rahbandoon ${__APP_VERSION__} (${__BUILD__})\n${statsCsv(save.lvStats)}`;
+        if (Capacitor.isNativePlatform()) { await Share.share({ title: 'Rahbandoon level stats', text }).catch(() => {}); return; }
+        try { await navigator.clipboard.writeText(text); note('آمار کپی شد'); } catch { note('کپی نشد'); }
+      }));
+    }
+    if (taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); }
+  };
   c.append(ver);
 }
 
@@ -1007,6 +1070,7 @@ function showHome() {
     close(); showAchievements(() => showHome(), () => hud.refresh());
   }));
   c.querySelector('.chapter')!.append(livesPill());
+  if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم<small>${helpsText(save.streak)} مجانی</small>`));
   c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
@@ -1156,7 +1220,7 @@ async function boot() {
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
-    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); await new Promise((r) => setTimeout(r, 0)); } updateHand(); post.render(scene, camera, 1 / 30); },
+    async advance(sec: number) { for (let t = 0; t < sec; t += 1 / 30) { catchUp(); tick(1 / 30); session?.idle(performance.now() / 1000); await new Promise((r) => setTimeout(r, 0)); } updateHand(); post.render(scene, camera, 1 / 30); },
   };
   const splash = document.getElementById('splash');
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }

@@ -43,6 +43,10 @@ export interface Save {
   lives: { n: number; next: number };
   /** «قلک»: coins saved up from wins, paid out when it is broken open. */
   piggy: number;
+  /** «پشت‌سرهم»: new Journey levels won in a row (see streak.ts). */
+  streak: number;
+  /** Attempts, losses and wins per Journey level (see levelstats.ts). */
+  lvStats: Record<string, [number, number, number]>;
   /** «کارت بلیت»: this month's punches, stations collected on each track, and the premium card. */
   pass: { month: string; punches: number; free: number[]; prem: number[]; premium: boolean };
 }
@@ -71,6 +75,8 @@ const fresh = (): Save => ({
   agency: { stars: 0, done: [], init: true },
   lives: { n: 5, next: 0 },
   piggy: 0,
+  streak: 0,
+  lvStats: {},
   pass: { month: '', punches: 0, free: [], prem: [], premium: false },
 });
 

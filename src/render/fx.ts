@@ -133,6 +133,24 @@ export function tapRing(parent: THREE.Object3D, at: THREE.Vector3, rotY: number,
 }
 
 /**
+ * Last free bay: a red outline on the one bay still open. It pulses for a moment when it becomes the last one,
+ * then holds steady (a warning, not an alarm).
+ */
+const warnMat = ringMat.clone(); warnMat.color.set(0xff4a3d); warnMat.opacity = 0; warnMat.userData.keep = true;
+const warn = new THREE.Mesh(ringGeo, warnMat);
+warn.renderOrder = 1; warn.visible = false; warn.userData.noPick = true;
+let warnSince = 0;
+/** `at` is the bay's centre (null hides it); `t` the clock in seconds. */
+export function bayWarning(parent: THREE.Object3D, at: THREE.Vector3 | null, w: number, d: number, t: number) {
+  if (!at) { if (warn.visible) { warn.visible = false; warn.removeFromParent(); } return; }
+  if (!warn.visible || warn.parent !== parent) { parent.add(warn); warn.visible = true; warnSince = t; }
+  warn.position.set(at.x, at.y + 0.03, at.z);
+  warn.scale.set(w + 0.25, 1, d + 0.25);
+  const k = t - warnSince;
+  warnMat.opacity = k < 2.4 ? 0.45 + 0.4 * Math.sin(k * 7.5) ** 2 : 0.5;
+}
+
+/**
  * One object per effect material, for compiling their shaders at load time with the real (kept) materials, so
  * the first puff, coin or confetti burst of a level never stalls a frame.
  */
@@ -140,6 +158,6 @@ export function fxWarmObjects(): THREE.Object3D[] {
   const coin = new THREE.Sprite(coinMat);
   const conf = new THREE.InstancedMesh(confettiGeo, confettiMat, 1);
   conf.setColorAt(0, new THREE.Color(1, 1, 1));
-  const r = new THREE.Mesh(ringGeo, ringMat);
-  return [puffPool[0].s, coin, conf, r];
+  const r = new THREE.Mesh(ringGeo, ringMat), wm = new THREE.Mesh(ringGeo, warnMat);
+  return [puffPool[0].s, coin, conf, r, wm];
 }
