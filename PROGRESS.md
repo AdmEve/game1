@@ -217,3 +217,10 @@ Tools: `scripts/perf.cjs` (startup timings, long tasks, frame stats per scenario
 - Home screen fits every phone height (it overflowed on 360×640 / 360×740: the play button was off-screen).
 - Checks used this pass: `npm test`, `scripts/stress.cjs` against `vite preview` (URL=… env), an end-to-end
   play-to-win-and-next run, screenshots at 360×640 / 360×740 / 412×915.
+- **Sharpness (owner: "fluid now, but blurry")**: phones drew the 3D view at ~1.1 pixels per point (screens have
+  2.5–3). Lite tiers are now 1.0 / 1.4 / 1.8 (full: 1 / 1.5 / 2), ground textures use 4× anisotropy, and the
+  'auto' governor steps down only if a phone can't hold its frame rate (two steps at once when far behind). What it
+  settles on is remembered per phone (`rahbandoon.pace.v1`), including the sharpest step it proved it can't hold.
+  Two governor flaws found by `tests/pacing.test.ts` are fixed: a struggling phone's slow rAF read as a "30 Hz
+  screen" (refresh is now snapped to 60/90/120), and intervals over 40 ms were ignored (a ~20 fps phone never
+  measured anything).
