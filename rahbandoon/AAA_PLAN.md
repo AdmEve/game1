@@ -136,3 +136,27 @@ fluidity needs it (e.g. the settings quality switch).
 5. Frame pacing governor and perf HUD (A7, A9), per-frame hygiene and audio voice cap (A8, I).
 6. Feel and presentation polish (D, E, F, H) inside the budget.
 7. Re-measure, screenshots, tests, APK.
+
+## 5. Status (end of this pass)
+
+Done, measured on level 60 (a full lot) unless noted:
+
+| Plan item | Result |
+|---|---|
+| A1 instanced fleet | Cars drawn per kind with per-instance paint; arrows, blobs, covers, pigeons instanced. Car draws no longer grow with the number of cars. |
+| A2 instanced people | 8 prebuilt looks, coat color per instance, coarser meshes on phones; nothing built during play. |
+| Atlas merge | Facades/plates packed into shared textures: world draw calls 85 → 38. |
+| Draw calls | 384 → ~153 per frame. Triangles 387k → ~330k. |
+| A3 hitches | Pooled smoke; effect shaders warmed with the real materials; materials kept across levels (programs never recompiled); hint search in a worker (it froze the game every 4 s while a player was thinking); music tension no longer schedules an automation event every frame. |
+| A4 startup | Loading screen with progress; only the first level's car kinds, the passenger looks and the first world are built; everything compiled and drawn once before the menu appears. No background work behind menus. |
+| A5 menus | 3D view holds still behind cards; compositor-only card motion; pressed states; garage/agency reuse one persistent 3D view (2nd open 3.3 s → 65 ms headless). |
+| A6 transitions | Veil dips for level changes; a new world is built in slices behind it, or ahead of time while the win card shows (next level ~3.7 s → ~0.5 s headless). |
+| A7 pacing | Refresh-aware (even 60 on 120 Hz screens), resolution governor in 'auto' (steps down when late, up to 1.5× when there's headroom, half rate only as a last resort). |
+| A9 perf HUD | `?perf` or three taps on the version line. |
+| A8 / I | Allocation-free drive loop; voice limits for engine/horn/chirp/pop/coin. |
+| H | Shop icons fixed (were broken images), HUD sign/counter overlap fixed, toasts below counters, dim boxes on the dark theme. |
+| E | Smooth (sine-noise) camera shake. |
+
+Not done (lower value per cost): badge sprites as one instanced billboard batch (saves up to ~26 draws on plate-rule
+levels, more with colour-blind symbols on), rain streaks animated on the GPU, an offline asset cache for car
+models (would cut the remaining loading time).

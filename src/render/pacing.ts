@@ -5,8 +5,9 @@
  *   when that is what it can hold, so frames come at an even rhythm instead of jittering.
  * - In 'auto' quality a governor watches rendered frames during play: if too many arrive late it lowers the
  *   render resolution a step (at most one change every few seconds), and only when the lowest step still can't
- *   keep up does it drop to an even half rate. When frames are comfortably on time for a while it steps back up,
- *   and stops trying if a step up immediately proved too much.
+ *   keep up does it drop to an even half rate. When frames are comfortably on time for a while it steps up (even
+ *   past the setting's resolution, for a sharper picture on strong phones), and stops trying if a step up
+ *   immediately proved too much.
  */
 export interface Pacing {
   /** Render one refresh out of `div`. */
@@ -17,7 +18,9 @@ export interface Pacing {
   vsync: number;
 }
 
-const SCALES = [1, 0.85, 0.72, 0.6];
+/** Resolution steps: above 1 only when a phone has headroom to spare (sharper image), below 1 when it struggles. */
+const SCALES = [1.5, 1.25, 1, 0.85, 0.72, 0.6];
+const START = 2;
 
 export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) => void }) {
   const p: Pacing = { div: 1, scale: 1, vsync: 1000 / 60 };
@@ -26,8 +29,8 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
   const raf: number[] = [];
   let measured = false;
   // Governor state.
-  let level = 0, windowStart = 0, n = 0, late = 0, calm = 0, lastChange = 0, lockedUp = false, lastStep: 'up' | 'down' | null = null;
-  let baseDiv = 1;
+  let level = START, windowStart = 0, n = 0, late = 0, calm = 0, lastChange = 0, lockedUp = false, lastStep: 'up' | 'down' | null = null;
+  let baseDiv = 1, eff = 1;
 
   function setLevel(l: number) {
     level = Math.max(0, Math.min(SCALES.length - 1, l));
@@ -36,8 +39,12 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
 
   return {
     state: p,
-    /** Call at the top of every rAF; returns the dt (s) to advance by, or null to skip this refresh. */
-    frame(t: number): number | null {
+    /**
+     * Call at the top of every rAF; returns the dt (s) to advance by, or null to skip this refresh. `calm` (nothing
+     * moving, no recent touch) halves the rate: an idle board at 30 fps keeps the phone cool, and a phone that
+     * stays cool doesn't throttle itself into stutter later.
+     */
+    frame(t: number, calm = false): number | null {
       if (!measured && lastRaf) {
         const d = t - lastRaf;
         if (d > 4 && d < 40) raf.push(d);
@@ -52,7 +59,8 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
       }
       lastRaf = t;
       frame++;
-      if (frame % p.div !== 0) return null;
+      eff = calm ? p.div * 2 : p.div;
+      if (frame % eff !== 0) return null;
       const dt = lastRender ? Math.min(0.05, (t - lastRender) / 1000) : 1 / 60;
       lastRender = t;
       return dt;
@@ -64,7 +72,7 @@ export function createPacer(o: { adaptive: () => boolean; onScale: (s: number) =
       if (!o.adaptive() || !measured) return;
       if (!windowStart) { windowStart = t; n = 0; late = 0; return; }
       n++;
-      if (dt * 1000 > p.vsync * p.div * 1.45) late++;
+      if (dt * 1000 > p.vsync * eff * 1.45) late++;
       if (t - windowStart < 2000) return;
       const ratio = n ? late / n : 0;
       windowStart = t; n = 0; late = 0;

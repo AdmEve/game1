@@ -13,21 +13,23 @@ const PANTS = [0x283447, 0x1f2937, 0x3b3b46, 0x4a3b2c];
 
 // Real proportions: about 7½ heads tall. Units match the cars (a 4.4 m sedan is ~2.2 here), but people are
 // drawn a little larger than true scale so the queue stays readable on a phone.
+// Phones (lite) use coarser meshes: a passenger is ~25 px tall on screen, a few hundred triangles do.
+const R = (n: number) => (profile.lite ? Math.max(5, Math.round(n * 0.6)) : n);
 const geo = {
-  leg: new THREE.CylinderGeometry(0.036, 0.03, 0.44, 8).translate(0, -0.22, 0),
-  shoe: new RoundedBoxGeometry(0.06, 0.035, 0.11, 2, 0.012),
-  hips: new THREE.CylinderGeometry(0.085, 0.09, 0.1, 12),
-  torso: new THREE.CylinderGeometry(0.11, 0.085, 0.32, 14),
-  shoulders: new THREE.CapsuleGeometry(0.05, 0.14, 4, 10).rotateZ(Math.PI / 2),
-  coat: new THREE.CylinderGeometry(0.105, 0.15, 0.56, 16, 1, true),
-  arm: new THREE.CylinderGeometry(0.03, 0.025, 0.34, 8).translate(0, -0.17, 0),
-  hand: new THREE.SphereGeometry(0.026, 8, 6),
-  neck: new THREE.CylinderGeometry(0.028, 0.032, 0.05, 8),
-  head: new THREE.SphereGeometry(0.068, 18, 14).scale(0.92, 1.12, 1),
-  hair: new THREE.SphereGeometry(0.072, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52).scale(0.94, 1.1, 1.02),
-  scarf: new THREE.SphereGeometry(0.083, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.7).scale(0.94, 1.12, 1),
-  drape: new THREE.ConeGeometry(0.1, 0.16, 14, 1, true),
-  bag: new RoundedBoxGeometry(0.11, 0.13, 0.05, 2, 0.015),
+  leg: new THREE.CylinderGeometry(0.036, 0.03, 0.44, R(8)).translate(0, -0.22, 0),
+  shoe: new RoundedBoxGeometry(0.06, 0.035, 0.11, profile.lite ? 1 : 2, 0.012),
+  hips: new THREE.CylinderGeometry(0.085, 0.09, 0.1, R(12)),
+  torso: new THREE.CylinderGeometry(0.11, 0.085, 0.32, R(14)),
+  shoulders: new THREE.CapsuleGeometry(0.05, 0.14, profile.lite ? 2 : 4, R(10)).rotateZ(Math.PI / 2),
+  coat: new THREE.CylinderGeometry(0.105, 0.15, 0.56, R(16), 1, true),
+  arm: new THREE.CylinderGeometry(0.03, 0.025, 0.34, R(8)).translate(0, -0.17, 0),
+  hand: new THREE.SphereGeometry(0.026, R(8), R(6)),
+  neck: new THREE.CylinderGeometry(0.028, 0.032, 0.05, R(8)),
+  head: new THREE.SphereGeometry(0.068, R(18), R(14)).scale(0.92, 1.12, 1),
+  hair: new THREE.SphereGeometry(0.072, R(16), R(10), 0, Math.PI * 2, 0, Math.PI * 0.52).scale(0.94, 1.1, 1.02),
+  scarf: new THREE.SphereGeometry(0.083, R(16), R(12), 0, Math.PI * 2, 0, Math.PI * 0.7).scale(0.94, 1.12, 1),
+  drape: new THREE.ConeGeometry(0.1, 0.16, R(14), 1, true),
+  bag: new RoundedBoxGeometry(0.11, 0.13, 0.05, profile.lite ? 1 : 2, 0.015),
 };
 const mats = new Map<number, THREE.Material>();
 const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => {
@@ -57,7 +59,7 @@ function look(i: number): THREE.Group {
   const hit = looks.get(i);
   if (hit) return hit;
   const body = new THREE.Group();
-  const woman = i % 2 === 1;
+  const woman = [1, 3, 4, 6].includes(i); // an irregular mix, not a strict man–woman alternation
   const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = !profile.lite; body.add(o); return o; };
   const pants = mat(PANTS[i % PANTS.length]), top = CLOTH_MARK, skin = mat(SKIN[i % SKIN.length], { roughness: 0.6 });
   for (const sx of [-1, 1]) {

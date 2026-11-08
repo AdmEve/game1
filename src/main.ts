@@ -9,7 +9,7 @@ import { App as CapApp } from '@capacitor/app';
 import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
 import type { Kind, Level } from './game/rules';
-import { ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
+import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { skyEnv } from './render/env.js';
 import { profile } from './render/profile';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
@@ -87,7 +87,7 @@ function setTier(t: number) {
   if (debug.has('shot')) return;
   // Lite (phones): no film post pass, fewer pixels. Full: the post pass while the device keeps up.
   const ratio = profile.lite ? [0.85, 1.0, 1.1][tier] : [1, mobile ? 1.05 : 1.5, mobile ? 1.25 : 2][tier];
-  renderer.setPixelRatio(Math.max(0.5, Math.min(dpr, ratio) * pacer.state.scale));
+  renderer.setPixelRatio(Math.max(0.5, Math.min(dpr, ratio * pacer.state.scale)));
   post.enabled = !profile.lite && tier > 0;
   document.body.classList.toggle('lite', !post.enabled);
   const size = tier === 0 ? 512 : mobile || tier === 1 ? 1024 : 2048;
@@ -312,9 +312,14 @@ function cameraFlash() {
   click(); setTimeout(() => click(), 70);
   setTimeout(() => f.remove(), 450);
 }
+/** Camera shake: two incommensurate sines per axis (smooth, like a real jolt) instead of per-frame random jitter. */
+let shakeT = 0;
+const shakeV = new THREE.Vector3();
 function applyShake(dt: number) {
   if (shakeAmp <= 0.001) { if (shakeAmp > 0) { camera.position.copy(camBase); shakeAmp = 0; } return; }
-  camera.position.copy(camBase).add(new THREE.Vector3((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp));
+  shakeT += dt;
+  const n = (a: number, b: number, c: number, d: number) => (Math.sin(shakeT * a + b) * 0.6 + Math.sin(shakeT * c + d) * 0.4) * 0.5 * shakeAmp;
+  camera.position.copy(camBase).add(shakeV.set(n(53, 0, 97, 1.7), n(61, 2.1, 89, 0.4), n(47, 4.2, 83, 2.9)));
   shakeAmp *= Math.exp(-dt * 14);
 }
 
@@ -329,6 +334,9 @@ function pick(x: number, y: number): number {
   if (!ray.ray.intersectPlane(groundY, p)) return -1;
   return session.vehicleAt(p);
 }
+/** Last touch anywhere (the frame rate goes back to full the moment a finger lands). */
+let lastTouch = 0;
+window.addEventListener('pointerdown', () => { lastTouch = performance.now(); }, { capture: true, passive: true });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!session || modalOpen) return;
   const i = pick(e.clientX, e.clientY);
@@ -390,6 +398,11 @@ function levelPlan(pick?: number, custom?: Level, ev: EventRun | null = null) {
   return { n, level, ch, world, seed: world.worldSeed ?? n + 1 };
 }
 
+/** The vehicle kinds a level shows: its own, plus the plain sedans parked along the kerbs. */
+function kindsFor(level: Level): Kind[] {
+  return [...new Set<Kind>(['pride', 'peykan', 'p405', ...level.vehicles.map((v) => v.kind)])];
+}
+
 /** Run a step generator, letting a frame through whenever a slice has taken longer than `budget` ms. */
 async function runSteps<T>(it: Generator<void, T>, budget: number | (() => number) = 14): Promise<T> {
   let t = performance.now();
@@ -412,6 +425,7 @@ function prepareAhead(pick?: number) {
   prepBudget = 5;
   void (async () => {
     await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world), () => prepBudget);
+    for (const k of kindsFor(p.level)) { if (!modalBacks.length) break; warmFleet([k]); await nextFrame(); }
     for (const t of worldTextures(p.level.w, p.level.h, p.seed, p.world)) { if (!modalBacks.length) break; renderer.initTexture(t); await nextFrame(); }
   })();
 }
@@ -852,15 +866,16 @@ async function boot() {
   // Nothing heavy is left for later: once the menu shows, it has the phone to itself.
   const bar = document.querySelector('#splash .bar i') as HTMLElement | null;
   let done = 0;
-  const STEPS = 16;
+  const STEPS = 6 + kindsFor(levelPlan().level).length;
   const progress = async (n = 1) => { done += n; if (bar) bar.style.transform = `scaleX(${Math.min(1, done / STEPS)})`; await nextFrame(); };
   await document.fonts.load('900 40px Vazirmatn').catch(() => {});
   performance.measure('fonts', 'b0');
   await progress();
   // Every vehicle model (one per kind, shared by all colors), the garage classics the player owns, and every passenger look.
   performance.mark('b1');
-  for (const k of ['pride', 'peykan', 'p405', 'samand', 'zamyad', 'bus', 'bike'] as Kind[]) { warmFleet([k]); await progress(); }
-  warmFleet([], save.garage.restored);
+  // Only the kinds the first level shows (and the kerbside parked cars); later levels build what they need
+  // behind their veil, or while the win card is up.
+  for (const k of kindsFor(levelPlan().level)) { warmFleet([k]); await progress(); }
   warmPeople();
   performance.measure('fleet', 'b1');
   await progress();
@@ -906,7 +921,9 @@ async function boot() {
     requestAnimationFrame(loop);
     // Frame pacing: on 90/120 Hz screens (or when the governor halves the rate) only some refreshes render,
     // on an even rhythm; the animations advance by the time since the last rendered frame.
-    const dt = pacer.frame(t);
+    // Calm: no animation running, no touch for a moment, no shake (idle people and weather are fine at 30 fps).
+    const calm = !busy() && t - lastTouch > 1500 && shakeAmp <= 0.001 && !modalBacks.length;
+    const dt = pacer.frame(t, calm);
     if (dt === null) return;
     const interval = lastFrame ? t - lastFrame : 16.7; lastFrame = t;
     // When taps pile up faster than cars can park and load, play the backlog a little faster to catch up.
