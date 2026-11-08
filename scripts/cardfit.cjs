@@ -1,7 +1,7 @@
 // Card layout audit: opens every card the game can show at small and large phone sizes and checks that it fits the
 // screen, that every button can be seen without scrolling (cards built to scroll only need to fit as a whole),
 // and that nothing overflows sideways.
-//   node scripts/cardfit.cjs [360x640,412x915]
+//   node scripts/cardfit.cjs [360x640,412x915]      BIG=1 with the larger-text setting, ONLY=garage,shop for a subset
 const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:5173/';
 const SIZES = (process.argv[2] || '360x640,412x915').split(',').map((s) => s.split('x').map(Number));
@@ -39,14 +39,17 @@ const CARDS = ONLY ? CARDS0.filter(([n]) => ONLY.some((o) => n.startsWith(o))) :
   for (const [W, H] of SIZES) {
     const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1, userAgent: 'Mozilla/5.0 (Linux; Android 12) Mobile' });
     const errors = []; p.on('pageerror', (e) => errors.push(e.message));
+    if (process.env.BIG) await p.addInitScript(() => { window.__bigText = true; });
     await p.goto(URL + '?play&shot', { waitUntil: 'load' });
     await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
-    console.log(`== ${W}×${H}`);
+    console.log(`== ${W}×${H}${process.env.BIG ? ' (larger text)' : ''}`);
     for (const [name, open] of CARDS) {
       const res = await p.evaluate(async ([seen, src]) => {
         const r = window.__rb;
         document.querySelectorAll('.modal-back').forEach((m) => m.remove());
         r.save.seen = Object.fromEntries(seen.map((k) => [k, true])); for (let k = 0; k < 400; k++) r.save.seen['boss' + k] = true;
+        // BIG=1: the larger-text setting on (cards must still fit).
+        document.documentElement.classList.toggle('big-text', !!window.__bigText);
         // Many cards return a promise that settles only when the card closes: don't wait on those for long.
         await Promise.race([Promise.resolve((0, eval)(`(${src})`)(r)), new Promise((x) => setTimeout(x, 1500))]);
         await new Promise((x) => setTimeout(x, 450));

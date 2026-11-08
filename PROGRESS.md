@@ -287,4 +287,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   give-up) at 360×640 and 412×915. It must fit, every button must show without scrolling (cards built to scroll need
   only fit), and nothing may overflow sideways. Found: the garage ran 20 px off a 640-tall screen and hid its close
   button; its turntable is now 160 px on short screens. 44/44 pass.
+- Card audit with larger text (`BIG=1 node scripts/cardfit.cjs`): all 22 cards fit at 360×640 except the home row, whose
+  icon buttons were pushed past the screen edge. The home row now keeps its size and wraps labels in that mode.
 

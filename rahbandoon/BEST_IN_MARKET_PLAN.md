@@ -289,4 +289,5 @@ the player sees value in them, not at first launch.
 | GDD alignment | First session: levels 1–3 can't be lost (Mash Rahim opens another bay). Haptics as specified: light per launch, medium per full car, success on the win; no per-passenger buzz. Session hook: the win card shows progress to the next chest. |
 | Win card fit (bug) | On a 360×640 phone a boss win's card was 746 px tall: Next level and Home were off-screen and the card didn't scroll. Now 584 px in that worst case (rewards in one row, Double and Home side by side, compact short-screen rules), and card backdrops scroll as a safety net. |
 | H3 card fit audit | All 22 cards at 360×640 and 412×915 (`scripts/cardfit.cjs`): fit on screen, buttons visible without scrolling, no sideways overflow. One failure found and fixed: the garage's close button was 20 px below a 640-tall screen. 44/44. |
+| M2b larger text × card fit | The card audit with larger text on (`BIG=1`): at 360×640 the home row's icon buttons overflowed the screen edge. Fixed (the row keeps its size and lets labels wrap). 22/22. |
 
