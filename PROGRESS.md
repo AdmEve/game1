@@ -282,4 +282,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   medal): rewards share a row, Double and Home share a row under Next, short screens drop the flavour line (journey
   wins only), and card backdrops scroll as a safety net. Before, Next and Home were below the screen there. The lose card's
   streak line no longer promises a continue when none is offered.
+- Card layout audit (`scripts/cardfit.cjs`, cards exposed on `__rb.cards`): every card (22: home, pause, levels, shop, garage,
+  agency, pass, achievements, chest, intro, no lives, daily, rate, chapter, boss, lose ×2, win, rush/Yalda/Nowruz wins,
+  give-up) at 360×640 and 412×915. It must fit, every button must show without scrolling (cards built to scroll need
+  only fit), and nothing may overflow sideways. Found: the garage ran 20 px off a 640-tall screen and hid its close
+  button; its turntable is now 160 px on short screens. 44/44 pass.
 

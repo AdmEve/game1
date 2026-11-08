@@ -1287,6 +1287,13 @@ async function boot() {
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
     swooping: () => swooping, pointAt, errors,
+    /** Every card the game shows, for layout checks (scripts/cardfit.cjs). */
+    cards: {
+      home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
+      shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
+      achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
+      daily: () => maybeDaily(() => {}), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+    },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */

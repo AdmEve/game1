@@ -403,3 +403,4 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 .result .rewards .reward { flex: 1 1 0; min-width: 0; justify-content: center; padding: 6px 6px; font-size: 22px; gap: 4px; flex-wrap: wrap; }
 .result .rewards .reward small { flex-basis: 100%; text-align: center; font-size: 11px; line-height: 1.1; }
 .result .rewards .reward .ico, .result .rewards .reward .emo { width: 22px; height: 22px; }
+.card.garage-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }

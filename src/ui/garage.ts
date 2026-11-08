@@ -71,7 +71,8 @@ export function showGarage(onClose: () => void) {
   c.append(asBack(button('بستن', 'ghost', () => { stop = true; renderer.domElement.remove(); close(); onClose(); })));
 
   // The shared turntable view (kept between visits), and the turntable scene (built once).
-  const W = Math.min(340, window.innerWidth - 60), H = 200;
+  // A shorter turntable on short phones, so the card (and its close button) fits on a 640-tall screen.
+  const W = Math.min(340, window.innerWidth - 60), H = window.innerHeight < 700 ? 160 : 200;
   const renderer = stageRenderer(W, H);
   stage.append(renderer.domElement);
   const { scene, cam } = turntable(renderer, W, H);
