@@ -264,4 +264,6 @@ the player sees value in them, not at first launch.
 | J2 marker | After a mechanic's intro card, an amber ring and the mechanic's name mark where it first shows (covered car, broken Peykan, courier, wedding car, cart, tunnel, VIP or granny passenger). The plate rule and the officer pulse their HUD sign instead. |
 | J3 tips | Level 1–3 tips cut to one line each. |
 | Fixes found | The cover intro taught an old rule ("the cover blows off when the neighbour leaves"). Covers now come off only when the car drives out, and the card says so. A level-start camera swoop still running when the level changed kept steering the camera (two swoops fighting); level start now cancels it. |
+| E1 win finale | During the existing 1.1 s win beat (confetti, jingle), the camera drifts back 8% along its view. On the card, the coin reward counts up from zero and 4–10 coins arc into a wallet pill shown over the card, which ticks up as each lands (by landings, so the order doesn't matter) and ends on the saved total. The doubled reward flies in too. Also on the daily rush card. Transform and opacity only (Web Animations API). |
+| E2 camera settle | Already in place: the level-start swoop ends on an ease-in-out (zero velocity) and the shake decays exponentially. No change needed. |
 

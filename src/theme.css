@@ -323,3 +323,13 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 /* A HUD sign being introduced pulses. */
 .camsign.point { animation: signpoint .7s ease-in-out 4; }
 @keyframes signpoint { 50% { transform: scale(1.12); } }
+
+/* Win payout: a wallet over the card's backdrop and coins flying into it. */
+.wallet-float { position: fixed; z-index: 25; left: 12px; top: calc(12px + var(--sat)); display: flex; align-items: center; gap: 6px; pointer-events: none;
+  background: var(--glass-hi); opacity: 0; transform: translateY(-6px); transition: opacity .22s, transform .22s cubic-bezier(.16, 1, .3, 1); }
+.wallet-float.show { opacity: 1; transform: none; }
+.wallet-float .emo { width: 24px; height: 24px; }
+.wallet-float.bump { animation: walletbump .22s ease-out; }
+@keyframes walletbump { 40% { transform: scale(1.12); } }
+.flycoin { position: fixed; left: 0; top: 0; z-index: 26; pointer-events: none; will-change: transform, opacity; }
+.flycoin .emo { display: block; width: 28px; height: 28px; margin: -14px 0 0 -14px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }

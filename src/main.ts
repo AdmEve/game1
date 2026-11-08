@@ -41,6 +41,7 @@ import { passReady, punch, showPass } from './ui/pass';
 import { HAFT_SIN, nowruzLevel, yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
 import { radioCard } from './ui/radio';
+import { countUp, floatingWallet, flyCoins } from './ui/juice';
 import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
@@ -565,6 +566,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     toast: (t) => hud.toast(t),
     canPlay: () => !modalOpen,
     won: () => showWin(),
+    cheer: breathe,
     lost: (why) => showLose(why),
     limits: (t, m) => hud.setLimits(t, m),
     float: floatText,
@@ -657,19 +659,50 @@ function recordWin(boss: boolean) {
   return got.length ? `<div class="newach">${emo('🏅', 'emo sm')} افتخار جدید: <b>${got.map((a) => a.name).join('، ')}</b><small>جایزه‌ش تو صفحه‌ی افتخارات منتظرته</small></div>` : '';
 }
 
+/** The win beat: the camera drifts back a little along its view while the confetti falls. */
+function breathe() {
+  if (reduceMotion()) return;
+  const from = camBase.clone(), back = camBase.clone().sub(camTarget).multiplyScalar(0.08);
+  void tween(1.6, (k) => { camBase.copy(from).addScaledVector(back, k); }, ease.out);
+}
+
+/**
+ * A card's coin reward: the number counts up and coins fly into a wallet shown over the card, which ticks up
+ * as they land. `more` pays again (the doubled reward); `close` removes the wallet with the card.
+ */
+function payout(c: HTMLElement, coins: number, before: number) {
+  const b = c.querySelector('.reward b') as HTMLElement;
+  b.textContent = '+۰';
+  const wallet = floatingWallet(hud.wallet, faNum(before));
+  let shown = before, owed = 0;
+  const pay = (amount: number, delay: number) => {
+    const from = owed, base = shown;
+    owed += amount; shown += amount;
+    const n = Math.min(10, 4 + Math.round(amount / 30));
+    setTimeout(() => {
+      void countUp(b, from, from + amount, 650, (v) => `+${faNum(v)}`);
+      let landed = 0; // coins can land out of order: count them
+      void flyCoins(b, wallet.el, n, () => { landed++; wallet.set(faNum(base + Math.round((amount * landed) / n))); });
+    }, delay);
+  };
+  pay(coins, 420);
+  return { more: (amount: number) => pay(amount, 0), close: () => wallet.remove() };
+}
+
 function showRushWin() {
   const streak = save.rush.day === new Date(Date.now() - 864e5).toISOString().slice(0, 10) ? save.rush.streak + 1 : 1;
   save.rush = { day: today(), streak };
   const coins = 250 + Math.min(6, streak - 1) * 50;
+  const before = save.coins;
   save.coins += coins; addKeys(1); const ach = recordWin(false); persist();
   modalOpen = true; hud.show(false); hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
   const close = modal(c, 'pop');
+  const pay = payout(c, coins, before);
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
-  c.append(asBack(button('برگرد به خونه', 'primary big', () => { close(); void goLevel(undefined, undefined, false, null, showHome); })));
-  for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
+  c.append(asBack(button('برگرد به خونه', 'primary big', () => { pay.close(); close(); void goLevel(undefined, undefined, false, null, showHome); })));
 }
 
 function showWin() {
@@ -694,6 +727,7 @@ function showWin() {
   const stars = replay ? 0 : starsFor(lvl?.tag);
   if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
+  const before = save.coins;
   save.coins += coins;
   if (!replay) save.level = Math.min(save.level + 1, levels.length);
   persist();
@@ -714,8 +748,9 @@ function showWin() {
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
     <div class="rewards">${rewards}</div>${notes}${beaten}${ach}`;
   const close = modal(c, 'pop');
+  const pay = payout(c, coins, before);
   const next = async (home = false) => {
-    close(); modalOpen = true;
+    pay.close(); close(); modalOpen = true;
     if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
     if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
     await maybeInterstitial(n);
@@ -726,8 +761,7 @@ function showWin() {
       dbl.setAttribute('disabled', '');
       if (await showRewarded()) {
         save.coins += coins; persist(); hud.refresh();
-        (c.querySelector('.reward b') as HTMLElement).textContent = `+${faNum(coins * 2)}`;
-        for (let i = 0; i < 5; i++) coin(i * 0.08);
+        pay.more(coins);
         dbl.remove();
       } else dbl.removeAttribute('disabled');
     });
@@ -736,7 +770,6 @@ function showWin() {
   c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   // Home: spend the stars and keys (agency, garage) before going on.
   c.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
-  for (let i = 0; i < 5; i++) coin(0.15 + i * 0.09);
 }
 
 /** Ask happy players (right after a win) to rate the game on Bazaar; unhappy ones are not sent there. */
@@ -791,6 +824,9 @@ function showLose(limit?: 'time' | 'moves') {
     void goLevel(current, rush ?? undefined, true, event);
   }));
 }
+
+/** Reduced motion (a setting; it follows the phone's own preference until changed). */
+function reduceMotion(): boolean { return document.documentElement.classList.contains('reduce-motion'); }
 
 /** Leave whatever is being played for the home screen (the Journey's next level waits behind it). */
 function goHome() { void goLevel(undefined, undefined, false, null, showHome); }

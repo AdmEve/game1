@@ -108,6 +108,8 @@ export interface SessionHooks {
   toast(text: string): void;
   won(): void;
   lost(reason?: 'time' | 'moves'): void;
+  /** The win beat begins (the lot is clear; the card follows in a moment). */
+  cheer?(): void;
   /** Hard-mode counters: seconds left and taps left (null when the level has no such limit). */
   limits(time: number | null, moves: number | null): void;
   /** Whether input should currently be accepted (no modal open). */
@@ -1029,6 +1031,7 @@ export class Session {
 
   private async celebrate() {
     sfx.win(); haptic('success');
+    this.hooks.cheer?.();
     confetti(this.group, new THREE.Vector3(0, 6, this.L.lotH / 2));
     await wait(1.1);
   }

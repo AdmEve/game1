@@ -102,6 +102,8 @@ export class Hud {
   }
   active(id: BoosterId | null) { for (const [k, b] of this.btns) b.classList.toggle('on', k === id); }
   bump(id: BoosterId) { const b = this.btns.get(id)!; b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+  /** The coin pill (for flying coins to it). */
+  get wallet(): HTMLElement { return this.coins; }
   toast(text: string, ms = 1400) {
     this.toastEl.textContent = text;
     this.toastEl.classList.add('show');
