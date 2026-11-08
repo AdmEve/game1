@@ -6,7 +6,9 @@ const TEXTURE_SLOTS = ['map', 'alphaMap', 'emissiveMap', 'normalMap', 'roughness
 function disposeMaterial(mat: THREE.Material) {
   if (mat.userData.keep) return;
   for (const slot of TEXTURE_SLOTS) (mat as unknown as Record<string, THREE.Texture | null | undefined>)[slot]?.dispose();
-  mat.dispose();
+  // The material itself is not disposed: that would release its compiled shader program once nothing else uses
+  // it, and the next level (which builds the same kinds of materials again) would stall compiling it anew. A
+  // material holds no GPU memory of its own; the program cache stays bounded by the handful of shader variants.
 }
 
 /** Dispose everything under `root` except what is flagged `userData.keep` (vehicle templates and shared materials). */

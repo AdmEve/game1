@@ -199,3 +199,12 @@ Tools: `scripts/perf.cjs` (startup timings, long tasks, frame stats per scenario
   via a pseudo-element, buttons squash on press, glow keyframes are transform-only.
 - **Level changes**: `goLevel()` dips to a veil, builds a new chapter's world in slices (loading dots), compiles,
   draws one frame underneath and lifts the veil.
+- **Next level ready before you tap**: the world depends on the lot size, so most level changes need a new one.
+  While the win card is up (after the confetti) the next level's world is built in thin slices and its
+  textures uploaded one per frame; `worlds` keeps two (on screen + prepared), builds in progress are shared.
+  Next-level change: ~3.7 s → ~0.5 s headless (the veil's dip).
+- Level cleanup no longer disposes materials (only textures/geometry): their shader programs stay compiled,
+  so the next level doesn't stall recompiling weather, badges and props.
+- Hints are searched in a worker (`src/workers/hint.worker.ts`); the tutorial hand waits for the answer.
+- Garage and agency share one persistent small WebGL view (`ui/stage.ts`) with cached models.
+- Pigeons and car covers are instanced; parity/officer signs sit under the time/taps counter.

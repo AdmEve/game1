@@ -53,23 +53,53 @@ export const MAX_BAYS = 6;
  * The last world built. Levels of one chapter share their scenery, so going on to the next level (or trying
  * again) reuses it instead of rebuilding hundreds of meshes.
  */
-let cached: { key: string; world: ReturnType<typeof buildWorld> } | null = null;
+type World = ReturnType<typeof buildWorld>;
+/**
+ * Built worlds by key, oldest first. Two are kept: the one on screen and one prepared ahead (the next level's,
+ * built while the win card shows), so going on usually finds its world ready.
+ */
+const worlds = new Map<string, World>();
 const worldKey = (w: number, h: number, seed: number, o: WorldOpts) => [w, h, seed, o.night, o.snow, o.landmark, o.autumn, o.boulevard, o.yalda, o.nowruz, o.stop].join('|');
 function worldFor(w: number, h: number, seed: number, o: WorldOpts) {
   const it = worldSteps(w, h, seed, o);
   for (;;) { const r = it.next(); if (r.done) return r.value; }
 }
-/** The level's world, built in steps (a loading screen yields between them) unless it is already cached. */
-export function* worldSteps(w: number, h: number, seed: number, o: WorldOpts): Generator<void, ReturnType<typeof buildWorld>> {
+/** Builds in progress, so a prepare and a level start asking for the same world share one build. */
+const building = new Map<string, Generator<void, World>>();
+/** The level's world, built in steps (a loading screen yields between them) unless it is already built. */
+export function* worldSteps(w: number, h: number, seed: number, o: WorldOpts): Generator<void, World> {
   const key = worldKey(w, h, seed, o);
-  if (cached?.key === key) return cached.world;
-  if (cached) { disposeTree(cached.world.group); cached = null; }
-  const world: ReturnType<typeof buildWorld> = yield* buildWorldSteps(w, h, MAX_BAYS, seed, o);
-  cached = { key, world };
-  return world;
+  const hit = worlds.get(key);
+  if (hit) { worlds.delete(key); worlds.set(key, hit); return hit; }
+  let it = building.get(key);
+  if (!it) { it = buildWorldSteps(w, h, MAX_BAYS, seed, o); building.set(key, it); }
+  for (;;) {
+    const r = it.next();
+    if (r.done) {
+      building.delete(key);
+      // Another caller may have finished this same build a moment ago.
+      const world = worlds.get(key) ?? r.value;
+      worlds.set(key, world);
+      // Keep at most two; never free one that is on screen (its group still has a parent).
+      for (const [k, wd] of worlds) { if (worlds.size <= 2) break; if (k !== key && !wd.group.parent) { disposeTree(wd.group); worlds.delete(k); } }
+      return world;
+    }
+    yield;
+  }
 }
 /** Whether a level with these settings needs a new world (a chapter change), i.e. a longer load. */
-export const worldCached = (w: number, h: number, seed: number, o: WorldOpts) => cached?.key === worldKey(w, h, seed, o);
+export const worldCached = (w: number, h: number, seed: number, o: WorldOpts) => worlds.has(worldKey(w, h, seed, o));
+/** The textures of a built world (to upload ahead of its first frame). */
+export function worldTextures(w: number, h: number, seed: number, o: WorldOpts): THREE.Texture[] {
+  const wd = worlds.get(worldKey(w, h, seed, o));
+  const out = new Set<THREE.Texture>();
+  wd?.group.traverse((m) => {
+    const mat = (m as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!mat) return;
+    for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'alphaMap'] as const) if (mat[k]) out.add(mat[k]!);
+  });
+  return [...out];
+}
 
 export interface SessionHooks {
   queueLeft(n: number, total: number): void;

@@ -17,7 +17,7 @@ import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { addInstanceRoot, attachInstancer, instanceStats, removeInstanceRoot, syncInstances } from './render/instancer';
 import { setSnow } from './render/cars.js';
 import { sky } from './render/world';
-import { Session, worldCached, worldSteps } from './play/session';
+import { Session, worldCached, worldSteps, worldTextures } from './play/session';
 import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
@@ -391,14 +391,32 @@ function levelPlan(pick?: number, custom?: Level, ev: EventRun | null = null) {
 }
 
 /** Run a step generator, letting a frame through whenever a slice has taken longer than `budget` ms. */
-async function runSteps<T>(it: Generator<void, T>, budget = 14): Promise<T> {
+async function runSteps<T>(it: Generator<void, T>, budget: number | (() => number) = 14): Promise<T> {
   let t = performance.now();
   for (;;) {
     const r = it.next();
     if (r.done) return r.value;
-    if (performance.now() - t > budget) { await nextFrame(); t = performance.now(); }
+    if (performance.now() - t > (typeof budget === 'number' ? budget : budget())) { await nextFrame(); t = performance.now(); }
   }
 }
+
+/**
+ * Build the next level's world ahead of time, in thin slices, while a menu covers the 3D view (the win card), and
+ * upload its textures one per frame. Going on then finds it ready and the change is a quick dip. A level start
+ * that needs the same world while this is still running joins the same build at full speed.
+ */
+let prepBudget = 5;
+function prepareAhead(pick?: number) {
+  const p = levelPlan(pick);
+  if (worldCached(p.level.w, p.level.h, p.seed, p.world)) return;
+  prepBudget = 5;
+  void (async () => {
+    await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world), () => prepBudget);
+    for (const t of worldTextures(p.level.w, p.level.h, p.seed, p.world)) { if (!modalBacks.length) break; renderer.initTexture(t); await nextFrame(); }
+  })();
+}
+/** Every open (or closing) menu card; a live list, so checking it each frame costs nothing. */
+const modalBacks = document.getElementsByClassName('modal-back');
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
 /** The full-screen veil that covers level changes (a quick dip) and world builds (with a loading line). */
@@ -422,6 +440,7 @@ function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | nul
     const heavy = !worldCached(p.level.w, p.level.h, p.seed, p.world);
     modalOpen = true;
     await veilTo(true, heavy);
+    prepBudget = 14; // a build already running ahead now goes at full speed
     if (heavy) await runSteps(worldSteps(p.level.w, p.level.h, p.seed, p.world));
     startLevel(pick, custom, false, ev);
     if (heavy) {
@@ -560,6 +579,7 @@ function showRushWin() {
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
     <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
   const close = modal(c, 'pop');
+  setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
   c.append(button('برگرد به خونه', 'primary big', () => { close(); void goLevel(undefined, undefined, false, null, showHome); }));
   for (let i = 0; i < 6; i++) coin(0.15 + i * 0.09);
 }
@@ -569,6 +589,7 @@ function showWin() {
     recordWin(false);
     modalOpen = true; hud.show(false); hud.refresh();
     const back = () => { hud.refresh(); void goLevel(undefined, undefined, false, null, showHome); };
+    setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
     if (event.kind === 'yalda') showYaldaWin(event.i, back); else showNowruzWin(event.i, back);
     return;
   }
@@ -592,6 +613,8 @@ function showWin() {
   hud.show(false);
   hud.refresh();
   liveUntil = performance.now() + 2800;
+  // While the card is up (after the confetti), build the next level's world.
+  setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 2900);
   const c = h('div', 'result win');
   // Rewards in one row, then the notes (pass, money box), then Mr. Ajool and any new medal.
   const rewards = `<div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`
@@ -878,8 +901,6 @@ async function boot() {
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMusic(0.2); else startMusic(); });
   let shadowTick = 0, frozen = 0, lastFrame = 0;
-  // Every open (or closing) menu card; a live list, so checking it each frame costs nothing.
-  const modalBacks = document.getElementsByClassName('modal-back');
   if (debug.has('perf')) togglePerfHud(true);
   const loop = (t: number) => {
     requestAnimationFrame(loop);
