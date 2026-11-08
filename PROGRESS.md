@@ -289,4 +289,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   button; its turntable is now 160 px on short screens. 44/44 pass.
 - Card audit with larger text (`BIG=1 node scripts/cardfit.cjs`): all 22 cards fit at 360×640 except the home row, whose
   icon buttons were pushed past the screen edge. The home row now keeps its size and wraps labels in that mode.
+- HUD audit in play (`scripts/hudfit.cjs`): on the levels with the most HUD (clock, tap budget, plate-rule or officer
+  sign), at 360×640 and 412×915, with and without larger text: no overlaps, nothing off-screen, the top HUD never covers a
+  car, and toasts never sit over cars. Fixed: toasts now show in the free band between the lot and the booster bar (they
+  covered the top rows of cars right when the player was deciding). Larger text sizes positioned HUD pieces by font size,
+  not zoom (zoom pushed the centred toast off the right edge). 12/12.
 

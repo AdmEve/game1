@@ -407,3 +407,13 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 /* Larger text: the home row (two labels and two icon buttons in a fixed grid) keeps its size and lets labels wrap,
    so it can't push past the screen edge on a 360-wide phone. */
 .big-text .home-row .btn { zoom: 1; white-space: normal; }
+/* Larger text on positioned HUD pieces: a bigger font, not zoom (zoom also scales their left/top offsets, which pushed
+   the centred toast off the right edge and the pills down). */
+.big-text .toast, .big-text .note, .big-text .people, .big-text .limit, .big-text .camsign, .big-text .bst .nm { zoom: 1; }
+.big-text .toast, .big-text .note { font-size: 16px; }
+.big-text .people, .big-text .camsign { font-size: 16px; }
+.big-text .limit { font-size: 17px; }
+.big-text .bst .nm { font-size: 14px; }
+/* Toasts sit in the free band between the lot and the booster bar, never over the cars or the signs at the top. */
+.hud .toast, .hud:has(.camsign:not(.hidden)) .toast, .hud:has(.limit:not(.hidden)):has(.camsign:not(.hidden)) .toast {
+  top: auto; bottom: calc(106px + var(--sab)); max-width: calc(100vw - 32px); }
