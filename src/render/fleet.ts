@@ -3,7 +3,7 @@
  * into a handful of merged meshes (one per material family) so a full lot stays cheap to draw.
  */
 import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { profile } from './profile';
 import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve, paint } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
@@ -26,10 +26,37 @@ lights.onBeforeCompile = (sh) => {
   sh.fragmentShader = sh.fragmentShader.replace('vec3 totalEmissiveRadiance = emissive;', 'vec3 totalEmissiveRadiance = emissive * vColor;');
 };
 
-function extract(geo: THREE.BufferGeometry, start: number, count: number, keepUv: boolean) {
+/**
+ * The part of `geo` that one material group covers, as its own geometry. Indexed sources stay indexed (only the
+ * vertices the group uses are copied, renumbered), so merged models share vertices without a slow re-welding
+ * pass; non-indexed sources (and flat-shaded parts, which need per-face normals) come out as plain triangles.
+ */
+function extract(geo: THREE.BufferGeometry, start: number, count: number, keepUv: boolean, flat: boolean) {
   const out = new THREE.BufferGeometry();
-  for (const name of ['position', 'normal', ...(keepUv ? ['uv'] : [])]) {
-    const a = geo.getAttribute(name) as THREE.BufferAttribute | undefined;
+  const names = ['position', 'normal', ...(keepUv ? ['uv'] : [])];
+  const index = geo.index;
+  if (index && !flat) {
+    const ia = index.array, remap = new Int32Array(geo.getAttribute('position').count).fill(-1), order: number[] = [];
+    const idx = new Uint32Array(count);
+    for (let i = 0; i < count; i++) {
+      const v = ia[start + i];
+      if (remap[v] < 0) { remap[v] = order.length; order.push(v); }
+      idx[i] = remap[v];
+    }
+    for (const name of names) {
+      const a = geo.getAttribute(name) as THREE.BufferAttribute | undefined;
+      if (!a) continue;
+      const k = a.itemSize, src = a.array as Float32Array, dst = new Float32Array(order.length * k);
+      for (let j = 0; j < order.length; j++) for (let c = 0; c < k; c++) dst[j * k + c] = src[order[j] * k + c];
+      out.setAttribute(name, new THREE.BufferAttribute(dst, k));
+    }
+    if (keepUv && !out.getAttribute('uv')) out.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(order.length * 2), 2));
+    out.setIndex(new THREE.BufferAttribute(order.length > 65535 ? idx : new Uint16Array(idx), 1));
+    return out;
+  }
+  const src = index ? geo.toNonIndexed() : geo;
+  for (const name of names) {
+    const a = src.getAttribute(name) as THREE.BufferAttribute | undefined;
     if (!a) continue;
     out.setAttribute(name, new THREE.BufferAttribute((a.array as Float32Array).slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize));
   }
@@ -74,16 +101,16 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+    const src = mesh.geometry;
     // A part only casts if it (or its ancestors' policy) says so; flat ground never does.
     caster = mesh.castShadow;
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const ranges = mesh.geometry.groups.length ? mesh.geometry.groups : [{ start: 0, count: src.getAttribute('position').count, materialIndex: 0 }];
+    const ranges = src.groups.length ? src.groups : [{ start: 0, count: src.index ? src.index.count : src.getAttribute('position').count, materialIndex: 0 }];
     for (const r of ranges) {
       const mat = (Array.isArray(mesh.material) ? mats[r.materialIndex ?? 0] : mesh.material) as THREE.MeshStandardMaterial;
       if (!mat || !r.count) continue;
       const hasMap = !!mat.map;
-      const g = extract(src, r.start, r.count, hasMap);
+      const g = extract(src, r.start, Math.min(r.count, (src.index ? src.index.count : src.getAttribute('position').count) - r.start), hasMap, !!mat.flatShading);
       g.applyMatrix4(mesh.matrixWorld);
       // Flat-shaded parts (foliage, rocks) keep their facets: per-face normals on the unindexed copy.
       if (mat.flatShading) g.computeVertexNormals();
@@ -100,10 +127,12 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
   atlas(buckets, casts);
   const out = new THREE.Group();
   for (const [mat, geos] of buckets) {
-    let merged = mergeGeometries(geos, false);
+    // Merging needs all parts indexed or none: plain-triangle parts get a trivial index.
+    if (geos.some((g) => g.index)) for (const g of geos) if (!g.index) { const n = g.getAttribute('position').count; const ix = n > 65535 ? new Uint32Array(n) : new Uint16Array(n); for (let i = 0; i < n; i++) ix[i] = i; g.setIndex(new THREE.BufferAttribute(ix, 1)); }
+    // Mixed 16/32-bit indices can't be merged as they are: widen them all when any part needs 32 bits.
+    if (geos.some((g) => g.index && g.index.array instanceof Uint32Array)) for (const g of geos) if (g.index && !(g.index.array instanceof Uint32Array)) g.setIndex(new THREE.BufferAttribute(Uint32Array.from(g.index.array as Uint16Array), 1));
+    const merged = mergeGeometries(geos, false);
     if (!merged) continue;
-    // Share vertices again (the parts were un-indexed to merge): about a third of the vertex work.
-    merged = mergeVertices(merged, 1e-4);
     merged.userData.keep = true;
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = (opts.shadows ?? true) && casts.has(mat) && !(mat as THREE.Material).transparent;

@@ -269,9 +269,72 @@ function wheel(R, wd, style, Q = 1) {
 
 // ───── Decals stuck onto the body by raycasting ─────
 const ray = new THREE.Raycaster();
+/**
+ * First hit of a ray on one mesh, like `ray.intersectObject(mesh, false)[0]` (same culling by material side), but
+ * fast: every decal ray is axis-aligned, so the mesh's triangles are bucketed once in a grid over the two other
+ * axes and a ray only tests the few in its cell (a plain raycast tests all of them, which was most of a car's
+ * build time).
+ */
+const castGrids = new WeakMap();
+const _o = new THREE.Vector3(), _d = new THREE.Vector3();
+function castGrid(mesh, ax) {
+  let per = castGrids.get(mesh);
+  if (!per) castGrids.set(mesh, (per = []));
+  if (per[ax]) return per[ax];
+  mesh.updateMatrixWorld(true);
+  const geo = mesh.geometry, pos = geo.getAttribute('position'), index = geo.index, mw = mesh.matrixWorld;
+  const triCount = (index ? index.count : pos.count) / 3;
+  const vi = (t, k) => (index ? index.getX(t * 3 + k) : t * 3 + k);
+  const mats = Array.isArray(mesh.material) ? mesh.material : null;
+  const sideOf = new Int8Array(triCount).fill(-1);
+  if (mats && geo.groups.length) for (const g of geo.groups) { const m = mats[g.materialIndex]; if (!m) continue; for (let t = Math.floor(g.start / 3); t < Math.min(triCount, Math.floor((g.start + g.count) / 3)); t++) sideOf[t] = m.side; }
+  else sideOf.fill(mesh.material.side);
+  const W = new Float32Array(triCount * 9), N = new Float32Array(triCount * 3);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  for (let t = 0; t < triCount; t++) {
+    a.fromBufferAttribute(pos, vi(t, 0)); b.fromBufferAttribute(pos, vi(t, 1)); c.fromBufferAttribute(pos, vi(t, 2));
+    THREE.Triangle.getNormal(a, b, c, n); N[t * 3] = n.x; N[t * 3 + 1] = n.y; N[t * 3 + 2] = n.z;
+    a.applyMatrix4(mw); b.applyMatrix4(mw); c.applyMatrix4(mw);
+    W.set([a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z], t * 9);
+  }
+  const u = (ax + 1) % 3, v = (ax + 2) % 3, G = 48;
+  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for (let i = 0; i < triCount * 3; i++) { u0 = Math.min(u0, W[i * 3 + u]); u1 = Math.max(u1, W[i * 3 + u]); v0 = Math.min(v0, W[i * 3 + v]); v1 = Math.max(v1, W[i * 3 + v]); }
+  const du = (u1 - u0) / G || 1, dv = (v1 - v0) / G || 1, cells = Array.from({ length: G * G }, () => []);
+  for (let t = 0; t < triCount; t++) {
+    if (sideOf[t] < 0) continue;
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (let k = 0; k < 3; k++) { const x = W[t * 9 + k * 3 + u], y = W[t * 9 + k * 3 + v]; a0 = Math.min(a0, x); a1 = Math.max(a1, x); b0 = Math.min(b0, y); b1 = Math.max(b1, y); }
+    const i0 = Math.max(0, Math.floor((a0 - u0) / du) - 1), i1 = Math.min(G - 1, Math.floor((a1 - u0) / du) + 1);
+    const j0 = Math.max(0, Math.floor((b0 - v0) / dv) - 1), j1 = Math.min(G - 1, Math.floor((b1 - v0) / dv) + 1);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) cells[i * G + j].push(t);
+  }
+  return (per[ax] = { u, v, u0, v0, du, dv, G, cells, W, N, sideOf });
+}
+const _ta = new THREE.Vector3(), _tb = new THREE.Vector3(), _tc = new THREE.Vector3(), _hit = new THREE.Vector3();
+function firstHit(mesh, origin, dir) {
+  _d.copy(dir).normalize();
+  const ax = Math.abs(_d.x) > 0.9999 ? 0 : Math.abs(_d.y) > 0.9999 ? 1 : Math.abs(_d.z) > 0.9999 ? 2 : -1;
+  if (ax < 0) { ray.set(origin, _d); return ray.intersectObject(mesh, false)[0]; }
+  const g = castGrid(mesh, ax), o = _o.copy(origin);
+  const i = Math.floor((o.getComponent(g.u) - g.u0) / g.du), j = Math.floor((o.getComponent(g.v) - g.v0) / g.dv);
+  if (i < 0 || j < 0 || i >= g.G || j >= g.G) return undefined;
+  ray.set(o, _d);
+  let best = Infinity, bestT = -1;
+  for (const t of g.cells[i * g.G + j]) {
+    const W = g.W, side = g.sideOf[t];
+    _ta.set(W[t * 9], W[t * 9 + 1], W[t * 9 + 2]); _tb.set(W[t * 9 + 3], W[t * 9 + 4], W[t * 9 + 5]); _tc.set(W[t * 9 + 6], W[t * 9 + 7], W[t * 9 + 8]);
+    // Same convention as Mesh.raycast: front faces only for FrontSide, back faces (reversed winding) for BackSide.
+    const p = side === THREE.BackSide ? ray.ray.intersectTriangle(_tc, _tb, _ta, true, _hit) : ray.ray.intersectTriangle(_ta, _tb, _tc, side === THREE.FrontSide, _hit);
+    if (!p) continue;
+    const dist = o.distanceTo(p);
+    if (dist < best) { best = dist; bestT = t; }
+  }
+  if (bestT < 0) return undefined;
+  return { distance: best, point: o.clone().addScaledVector(_d, best), face: { normal: new THREE.Vector3(g.N[bestT * 3], g.N[bestT * 3 + 1], g.N[bestT * 3 + 2]) } };
+}
 function stick(target, from, dir, obj, lift = 0.004) {
-  ray.set(from, dir.clone().normalize());
-  const hit = ray.intersectObject(target, false)[0];
+  const hit = firstHit(target, from, dir);
   if (!hit) return null;
   const n = hit.face.normal.clone().transformDirection(target.matrixWorld);
   obj.position.copy(hit.point).addScaledVector(n, lift);
@@ -873,8 +936,7 @@ function wrapper(car, body) {
           const y = yc + (j / rows - 0.5) * h;
           let z = zt, hit = null;
           for (let r = 0; r < 12 && !hit; r++, z *= 0.97) {
-            ray.set(new THREE.Vector3(from, y, sg * z), dir.clone().normalize());
-            hit = ray.intersectObject(body, false)[0];
+            hit = firstHit(body, new THREE.Vector3(from, y, sg * z), dir);
           }
           if (!hit) { pos.push(0, 0, 0); ok.push(0); } else {
             const nn = hit.face.normal.clone().transformDirection(body.matrixWorld);
