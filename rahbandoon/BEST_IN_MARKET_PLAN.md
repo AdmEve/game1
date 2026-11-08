@@ -260,4 +260,8 @@ the player sees value in them, not at first launch.
 | N2 | Coming back from another app in the middle of a level opens the pause card. |
 | N3 save | Each save is written to the main key and a backup key, with a format version. Loading takes the first copy that parses and looks like a save. Unit tests corrupt the main copy, return non-saves, and fail the main write. |
 | N4 errors | Script errors and rejections go to a 20-entry log on the phone, repeats counted. Settings shows «گزارش خطا (n)» to share it (Android share sheet, or the clipboard in a browser). |
+| J1 spotlight | The first time on level 1, the board dims around the suggested car for the first two taps. A tap on another car is refused (the hand shakes, with a light haptic), and the suggested car always answers. Once only (`seen.spot`). `scripts/onboarding.cjs` checks the refusal and acceptance. |
+| J2 marker | After a mechanic's intro card, an amber ring and the mechanic's name mark where it first shows (covered car, broken Peykan, courier, wedding car, cart, tunnel, VIP or granny passenger). The plate rule and the officer pulse their HUD sign instead. |
+| J3 tips | Level 1–3 tips cut to one line each. |
+| Fixes found | The cover intro taught an old rule ("the cover blows off when the neighbour leaves"). Covers now come off only when the car drives out, and the card says so. A level-start camera swoop still running when the level changed kept steering the camera (two swoops fighting); level start now cancels it. |
 

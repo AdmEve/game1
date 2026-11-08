@@ -479,6 +479,43 @@ export class Session {
   // ───── Input ─────
   /** Which vehicle (if any) is under a ground point. */
   /**
+   * Where a newly introduced mechanic first shows on the board (for pointing at it after its intro card), or
+   * null when it lives in the HUD or is not in sight.
+   */
+  mechanicSpot(kind: string): THREE.Vector3 | null {
+    const v = this.level.vehicles;
+    const car = (f: (x: (typeof v)[number]) => boolean) => { const i = v.findIndex((x, j) => this.s.inLot[j] && f(x)); return i >= 0 ? this.anchor(i) : null; };
+    switch (kind) {
+      case 'cover': return car((x) => !!x.covered);
+      case 'broken': return car((x) => !!x.wait);
+      case 'courier': return car((x) => x.kind === 'bike');
+      case 'wedding': return car((x) => !!x.wedding);
+      case 'cart': case 'tunnel': {
+        const o = (this.level.obstacles ?? []).find((x) => x.kind === kind);
+        return o ? this.L.cell(o.col, o.row).setY(0.9) : null;
+      }
+      case 'vip': case 'granny': {
+        const p = this.queue.find((q) => (kind === 'vip' ? q.userData?.vip : q.userData?.gran));
+        return p ? p.root.getWorldPosition(new THREE.Vector3()).setY(1.6) : null;
+      }
+      default: return null;
+    }
+  }
+
+  /** A car's outline on screen: the centre and half-size of its projected bounds, in CSS pixels. */
+  screenBounds(i: number, cam: THREE.Camera, W: number, H: number) {
+    const o = this.cars[i];
+    o.body.updateWorldMatrix(true, false);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let k = 0; k < 8; k++) {
+      PICK_P.set(k & 1 ? o.box.max.x : o.box.min.x, k & 2 ? o.box.max.y : o.box.min.y, k & 4 ? o.box.max.z : o.box.min.z).applyMatrix4(o.body.matrixWorld).project(cam);
+      const x = ((PICK_P.x + 1) / 2) * W, y = ((1 - PICK_P.y) / 2) * H;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, rx: (x1 - x0) / 2, ry: (y1 - y0) / 2 };
+  }
+
+  /**
    * The car a tap lands on: the car whose drawn shape (body, cover, arrow, badges) the tap's ray hits first.
    * A tap just beside a car, within a third of a cell of its body, still counts.
    */

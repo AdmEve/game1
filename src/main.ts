@@ -24,7 +24,7 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
-import { maybeDaily, showChest, showIntro, showShop } from './ui/meta';
+import { introTitle, maybeDaily, showChest, showIntro, showShop, type IntroKind } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, lives, loseLife } from './lives';
 import { UNLOCK_ALL_LEVELS } from './config';
@@ -211,20 +211,65 @@ const safe = { top: 132, bottom: 128 };
 
 // Tutorial hand: on the first levels before the first tap, and after a long idle anywhere.
 const hand = h('div', 'hand', emo('👆', 'emo'));
-document.body.append(hand);
-let hintFor = -1, hintAt = 0;
+// Level 1, the first time: the board dims around the suggested car for the first two taps, and a tap anywhere
+// else is gently refused (the hand bounces). The first moves are shown, not explained.
+const spot = h('div', 'spot');
+// After a new mechanic's card: a pulsing ring and its name over where it first shows on the board.
+const mark = h('div', 'mark', '<i></i><span></span>');
+document.body.append(spot, mark, hand);
+let hintFor = -1, hintAt = 0, spotKey = '';
+let swooping = false, swoopId = 0;
+function spotWanted() {
+  if (!session || current !== 0 || rush || event || save.seen.spot) return false;
+  if (session.taps >= 2) { save.seen.spot = true; persist(); return false; } // shown once, ever
+  return !modalOpen && !session.s.over && !swooping;
+}
+function showSpot(on: boolean) {
+  if (on && session && hintFor >= 0) {
+    const b = session.screenBounds(hintFor, camera, window.innerWidth, window.innerHeight);
+    const x = Math.round(b.x), y = Math.round(b.y), rx = Math.round(b.rx * 1.3 + 16), ry = Math.round(b.ry * 1.3 + 16);
+    const key = `${x},${y},${rx},${ry}`;
+    if (key !== spotKey) { spotKey = key; spot.style.background = `radial-gradient(${rx}px ${ry}px at ${x}px ${y}px, rgba(6, 10, 18, 0) 70%, rgba(6, 10, 18, .64) 100%)`; }
+    spot.classList.add('show');
+  } else spot.classList.remove('show');
+}
 function updateHand() {
-  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); hintFor = -1; return; }
+  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); showSpot(false); hintFor = -1; return; }
   const idle = performance.now() - session.lastInput;
-  const want = (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || idle > 10000;
-  if (!want) { hand.classList.remove('show'); hintFor = -1; return; }
+  const spotOn = spotWanted();
+  const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || idle > 10000;
+  if (!want) { hand.classList.remove('show'); showSpot(false); hintFor = -1; return; }
   // The hint is searched in a worker: until it arrives (a frame or two) no hand shows.
   if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); if (hintFor >= 0) hintAt = performance.now(); }
-  if (hintFor < 0) { hand.classList.remove('show'); return; }
+  if (hintFor < 0) { hand.classList.remove('show'); showSpot(false); return; }
   const p = session.anchor(hintFor).project(camera);
   hand.style.left = `${((p.x + 1) / 2) * window.innerWidth}px`;
   hand.style.top = `${((1 - p.y) / 2) * window.innerHeight}px`;
   hand.classList.add('show');
+  showSpot(spotOn);
+}
+function nudgeHand() { hand.classList.remove('nudge'); void hand.offsetWidth; hand.classList.add('nudge'); haptic('light'); }
+
+let markAt: THREE.Vector3 | null = null, markUntil = 0;
+function pointAt(kind: IntroKind, ms = 2800) {
+  if (!session) return;
+  // The plate rule and the officer live in the HUD: their sign pulses instead.
+  if (kind === 'oddEven' || kind === 'officer') {
+    const el = document.querySelector<HTMLElement>(kind === 'oddEven' ? '.camsign:not(.cop)' : '.camsign.cop');
+    if (el) { el.classList.remove('point'); void el.offsetWidth; el.classList.add('point'); setTimeout(() => el.classList.remove('point'), 2800); }
+    return;
+  }
+  const at = session.mechanicSpot(kind);
+  if (!at) return;
+  markAt = at; markUntil = performance.now() + ms;
+  mark.querySelector('span')!.textContent = introTitle(kind);
+  mark.classList.add('show');
+}
+function updateMark() {
+  if (!markAt) return;
+  if (performance.now() > markUntil || !session || modalOpen) { mark.classList.remove('show'); markAt = null; return; }
+  const p = markAt.clone().project(camera);
+  mark.style.transform = `translate(${((p.x + 1) / 2) * window.innerWidth}px, ${((1 - p.y) / 2) * window.innerHeight}px)`;
 }
 
 /** Fit the level's focus box between the top bar and the booster bar. */
@@ -307,12 +352,21 @@ function introSwoop() {
   if (debug.has('shot')) return;
   // Hold on the landmark for a beat, then sweep down.
   const hold = full ? 0.7 : 0;
+  // A newer swoop (or a level change) takes the camera over; this one then stops steering it.
+  const id = ++swoopId;
+  swooping = true;
   void tween(hold + (full ? 2.0 : 1.5), (t) => {
+    if (id !== swoopId) return;
     const k = full ? Math.max(0, (t * (hold + 2.0) - hold) / 2.0) : t;
     swoopPose(ease.inOut(k), startPos, startLook, endPos, endLook);
     camBase.copy(camera.position);
-  }, ease.linear).then(() => { camera.position.copy(endPos); camera.lookAt(endLook); camBase.copy(endPos); });
+  }, ease.linear).then(() => {
+    if (id !== swoopId) return;
+    camera.position.copy(endPos); camera.lookAt(endLook); camBase.copy(endPos); swooping = false;
+  });
 }
+/** Stop any level-start camera move (the level is changing under it). */
+function cancelSwoop() { swoopId++; swooping = false; }
 function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
   const p = at.clone().project(camera);
   const el = h('div', 'float float-' + kind, kind === 'coin' ? `${emo('🧍', 'emo sm')}<b dir="ltr">${fa(text)}</b>` : `<b>${fa(text)}</b>`);
@@ -353,6 +407,8 @@ window.addEventListener('pointerdown', () => { lastTouch = performance.now(); },
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!session || modalOpen) return;
   const i = pick(e.clientX, e.clientY);
+  // Level 1's spotlight: only the suggested car answers.
+  if (spot.classList.contains('show') && i !== hintFor) { nudgeHand(); return; }
   down = { x: e.clientX, y: e.clientY, i };
   if (i >= 0) session.press(i, true);
 });
@@ -490,6 +546,7 @@ function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | nul
 }
 
 function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null) {
+  cancelSwoop();
   disposeSession();
   rush = custom ?? null;
   event = ev;
@@ -540,10 +597,10 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
       ['wedding', v.some((x) => x.wedding)], ['granny', !!level.granny?.length], ['tunnel', o.some((x) => x.kind === 'tunnel')],
     ];
     const unseen = has.find(([k, on]) => on && !save.seen[k]);
-    if (unseen) { modalOpen = true; void showIntro(unseen[0]).then(() => { save.seen[unseen[0]] = true; persist(); modalOpen = false; }); }
+    if (unseen) { modalOpen = true; void showIntro(unseen[0]).then(() => { save.seen[unseen[0]] = true; persist(); modalOpen = false; pointAt(unseen[0]); }); }
     return;
   }
-  const TIPS = ['روی ماشینی بزن که مسافرهای جلوی صف رنگش رو می‌خوان!', 'فلش روی ماشین جهت حرکتشه. اول ماشین‌های جلویی رو رد کن!', 'جای پارک ایستگاه محدوده؛ ماشینی رو بفرست که مسافرش تو صف نزدیکه.'];
+  const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.'];
   if (n < TIPS.length) hud.toast(TIPS[n], 5500);
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
     modalOpen = true;
@@ -554,7 +611,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     c.append(asBack(button('بزن بریم!', 'primary big', () => { save.seen['ch' + ch.n] = true; persist(); close(); modalOpen = false; })));
   } else if (level.intro && !save.seen[level.intro]) {
     modalOpen = true;
-    showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; });
+    showIntro(level.intro).then(() => { save.seen[level.intro!] = true; persist(); modalOpen = false; pointAt(level.intro!); });
   } else if (level.tag === 'boss' && !save.seen['boss' + n]) {
     // Mr. Ajool walks in before his boss level.
     modalOpen = true;
@@ -1005,6 +1062,7 @@ async function boot() {
     }
     applyShake(dt);
     updateHand();
+    updateMark();
     // Lite: nothing that moves casts a shadow, so the shadow map is drawn once per level (no periodic spike).
     if (mobile && !profile.lite && ++shadowTick % 8 === 0) renderer.shadowMap.needsUpdate = true;
     // Behind a menu the 3D view settles for a few frames and then holds still, so the phone's GPU is free for
@@ -1027,6 +1085,7 @@ async function boot() {
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
+    swooping: () => swooping, pointAt,
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
