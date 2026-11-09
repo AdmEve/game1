@@ -309,16 +309,26 @@ const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو 
  * Start-of-level notes wait for the player: shown one after another only while the level is in view (no card,
  * no veil, the opening camera move done), so a warning built behind the home screen or an intro card isn't lost.
  */
-const notes: { text: string; ms: number; buzz: boolean }[] = [];
+const notes: { text: string; ms: number; buzz: boolean; banner?: boolean }[] = [];
 let noteReadyAt = 0;
-function queueNote(text: string, ms = 2800, buzz = false) { notes.push({ text, ms, buzz }); }
+function queueNote(text: string, ms = 2800, buzz = false, banner = false) { notes.push({ text, ms, buzz, banner }); }
+/** A hard level's call across the board once the camera has settled (the first of its notes; taps go through it). */
+const banner = h('div', 'level-banner');
+banner.setAttribute('aria-live', 'polite');
+document.body.append(banner);
+function showBanner(html: string, ms: number) {
+  banner.innerHTML = `<div class="rib">${html}</div>`;
+  banner.classList.remove('show'); void banner.offsetWidth; banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), ms);
+  haptic('medium');
+}
 function pumpNotes(now: number) {
   if (!notes.length || now < noteReadyAt) return;
   if (modalOpen || modalBacks.length || veil.classList.contains('on') || hud.root.classList.contains('hidden') || swooping) { noteReadyAt = now + 500; return; }
   const n = notes.shift()!;
-  hud.toast(n.text, n.ms);
+  if (n.banner) showBanner(n.text, n.ms); else hud.toast(n.text, n.ms);
   if (n.buzz) haptic('success');
-  noteReadyAt = now + n.ms + 350;
+  noteReadyAt = now + n.ms + (n.banner ? 100 : 350);
 }
 function nudgeHand() { hand.classList.remove('nudge'); void hand.offsetWidth; hand.classList.add('nudge'); haptic('light'); }
 
@@ -689,7 +699,9 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
   // Notes at the start (first-levels tip, the streak's gift, the level's limit) wait until the player can see them.
-  notes.length = 0; noteReadyAt = performance.now() + 700;
+  notes.length = 0; noteReadyAt = performance.now() + 700; banner.classList.remove('show');
+  // A «سخت» level is an event: its call first, with what winning it pays on a level not yet beaten (showWin).
+  if (!custom && level.tag === 'hard') queueNote(`<b>مرحله‌ی سخت!</b>${n >= save.level ? `<small>${emo('🔑', 'emo xs')} یه سوئیچ و ${emo('🪙', 'emo xs')} سکه‌ی بیشتر</small>` : ''}`, 2200, false, true);
   if (!custom && n < TIPS.length) queueNote(TIPS[n], 5000);
   if (streakNote) queueNote(streakNote, 2600, true);
   // Bosses have both a clock and a tap budget: each gets its note.
@@ -1033,11 +1045,13 @@ function showLose(limit?: 'time' | 'moves') {
       c.append(ad);
     }
   }
-  c.append(button('از اول', canBay ? 'ghost' : 'primary big', async () => {
+  // Starting over costs a life on a Journey level (below); the button says so, so continuing is a real choice.
+  const costsLife = !rush && current >= FREE_LEVELS;
+  c.append(button(costsLife ? `از اول <small class="life-cost">${emo('💔', 'emo xs')} یه جون</small>` : 'از اول', canBay ? 'ghost' : 'primary big', async () => {
     close();
     if (newLevelRun) { save.streak = nextStreak(save.streak, 'gaveUp', true); persist(); }
     // Giving up on a Journey level costs a life (the daily challenge and events are free).
-    if (!rush && current >= FREE_LEVELS) {
+    if (costsLife) {
       loseLife();
       if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
     }

@@ -376,3 +376,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - A new player starts playing at once: the first launch goes from the loading screen straight into level 1 (the camera
   sweeps down from the Milad tower, then the first tip and the spotlight), instead of stopping on the home screen
   first. Home appears from the first win on.
+- Hard levels feel like an event: the plate turns into a yellow taxi plate (bosses get the red government plate), and a
+  «مرحله‌ی سخت!» ribbon opens across the board naming the extra reward (a key and more coins). The lose card's
+  «از اول» now says it costs a life when it does, so paying to continue is an informed choice.

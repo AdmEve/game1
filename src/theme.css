@@ -58,6 +58,23 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .plate .lv { font-size: 27px; font-weight: 800; color: #0e1013; }
 .plate .lv small { font-size: 12px; font-weight: 700; color: #59616c; }
 .plate .lv .ico { color: #0e1013; }
+/* Hard and boss levels on plates every Iranian knows: the yellow public (taxi) plate and the red government one. */
+.plate.plate-hard { background: linear-gradient(180deg, #ffd54a, #f2b124); }
+.plate.plate-hard .lv, .plate.plate-hard .lv small { color: #1d1503; }
+.plate.plate-boss { background: linear-gradient(180deg, #d32f2f, #a61b1b); border-color: #3b0a0a; }
+.plate.plate-boss .lv, .plate.plate-boss .lv small, .plate.plate-boss .lv .ico { color: #fff; }
+/* A hard level's call across the board (main.ts showBanner): a ribbon that opens, the words sliding in from the right. */
+.level-banner { position: fixed; left: 0; right: 0; top: 40%; z-index: 7; pointer-events: none; opacity: 0; }
+.level-banner .rib { padding: 10px 16px 12px; text-align: center; color: #fff; border-block: 2px solid rgba(255, 209, 102, .55);
+  background: linear-gradient(90deg, rgba(154, 52, 18, 0), rgba(154, 52, 18, .94) 16%, rgba(194, 65, 12, .96) 50%, rgba(154, 52, 18, .94) 84%, rgba(154, 52, 18, 0)); }
+.level-banner b { display: block; font-size: 30px; font-weight: 900; line-height: 1.3; text-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.level-banner small { display: block; margin-top: 2px; font-size: 14px; font-weight: 700; color: #ffe2a8; }
+.level-banner.show { animation: bannerin 2.2s ease-out both; }
+.level-banner.show b { animation: bannerword 2.2s cubic-bezier(.2, .9, .3, 1.15) both; }
+@keyframes bannerin { 0% { opacity: 0; transform: scaleY(.3); } 9% { opacity: 1; transform: none; } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scaleY(.7); } }
+@keyframes bannerword { 0% { opacity: 0; transform: translateX(40%) scale(1.25); } 14%, 100% { opacity: 1; transform: none; } }
+.reduce-motion .level-banner.show, .reduce-motion .level-banner.show b { animation-name: bannerfade; }
+@keyframes bannerfade { 0%, 100% { opacity: 0; } 10%, 85% { opacity: 1; } }
 
 .boosters { left: 14px; right: 14px; bottom: calc(14px + var(--sab)); height: 88px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line);
   box-shadow: 0 20px 50px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .06); }
@@ -124,6 +141,10 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 /* Its «tell me when they're back» is a quiet link under the choices, not a fourth button. */
 .nolives .btn.notify-me { background: none; border: 0; box-shadow: none; min-height: 40px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: var(--accent-hi); }
 .nolives .notify-on { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+/* «از اول» on the lose card when it costs a life. */
+.btn .life-cost { display: inline; margin-inline-start: 8px; font-size: 13px; font-weight: 700; color: #ff9895; opacity: 1; }
+.btn.primary .life-cost { color: #7f1d1d; }
+.btn .life-cost .emo { width: 14px; height: 14px; vertical-align: -2px; }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }
 .speech .who { color: var(--accent); }
