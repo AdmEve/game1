@@ -359,3 +359,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   first appear, lost 36–45% of them, more than the «سخت» level 5. Mash Rahim's extra bay on a would-be loss now covers
   levels 1–8 (it was 1–3), so the first lose card comes at level 9 as the GDD says; level 7 falls to 3–7%. Levels 9 and
   on are untouched (chess-level, as decided).
+- Hints on request: past the first eight levels the game no longer shows the answer after 10 s of thinking. After
+  20 s a small «راهنما؟» chip offers a hint; tapping it shows the hand on the next move. The first eight levels keep
+  the automatic hand for beginners. Checked by `scripts/hintoffer.cjs` (in CI).

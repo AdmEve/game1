@@ -44,6 +44,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/holdpreview.cjs
           # Helps open one at a time on levels 6, 9 and 12, as a new player meets them (scripts/helpsopen.cjs).
           URL=http://127.0.0.1:4173/ node scripts/helpsopen.cjs
+          # Past the ramp, hints come only when asked (scripts/hintoffer.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/hintoffer.cjs
 
       - uses: actions/upload-artifact@v4
         if: failure()

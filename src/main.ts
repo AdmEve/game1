@@ -248,14 +248,19 @@ let craneMode = false;
 let modalOpen = false;
 const safe = { top: 132, bottom: 128 };
 
-// Tutorial hand: on the first levels before the first tap, and after a long idle anywhere.
+// Tutorial hand: on the first levels before the first tap, and after a long idle on the ramp (levels 1–8). Past the
+// ramp it shows only when asked: the puzzles there are built to be thought through (BEST_IN_MARKET_PLAN C3).
 const hand = h('div', 'hand', emo('👆', 'emo'));
+/** Past the ramp, a long idle brings this offer instead of the answer. */
+const HINT_OFFER_MS = 20000;
+const hintChip = button(`${icon('bulb')} راهنما؟`, 'hint-chip', () => { hintAsked = performance.now(); hintChip.classList.remove('show'); haptic('light'); });
+let hintAsked = 0; // when the player asked for a hint (0: not asked); any move after it ends the request
 // Level 1, the first time: the board dims around the suggested car for the first two taps, and a tap anywhere
 // else is gently refused (the hand bounces). The first moves are shown, not explained.
 const spot = h('div', 'spot');
 // After a new mechanic's card: a pulsing ring and its name over where it first shows on the board.
 const mark = h('div', 'mark', '<i></i><span></span>');
-document.body.append(spot, mark, hand);
+document.body.append(spot, mark, hand, hintChip);
 let hintFor = -1, hintAt = 0, spotKey = '';
 let swooping = false, swoopId = 0;
 function spotWanted() {
@@ -273,11 +278,19 @@ function showSpot(on: boolean) {
   } else spot.classList.remove('show');
 }
 function updateHand() {
-  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); showSpot(false); hintFor = -1; return; }
-  const idle = performance.now() - session.lastInput;
-  const spotOn = spotWanted();
-  const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || idle > 10000;
-  if (!want) { hand.classList.remove('show'); showSpot(false); hintFor = -1; return; }
+  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); hintChip.classList.remove('show'); showSpot(false); hintFor = -1; return; }
+  const now = performance.now(), idle = now - session.lastInput;
+  const spotOn = spotWanted(), ramp = current < MERCY_LEVELS && !rush && !event;
+  if (hintAsked && session.lastInput > hintAsked) hintAsked = 0; // a move since: that hint is done
+  // Asked, but the search found nothing for this position (or gave up): say so once rather than leave them waiting.
+  if (hintAsked && now - hintAsked > 3000 && hintFor < 0) { hintAsked = 0; hud.toast('این‌بار راهنمایی پیدا نشد؛ شاید بهتره مرحله رو از اول شروع کنی.', 3200); }
+  hintChip.classList.toggle('show', !ramp && !spotOn && !hintAsked && idle > HINT_OFFER_MS);
+  const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || (ramp && idle > 10000) || !!hintAsked;
+  if (!want) {
+    // Search a little ahead of the offer, so a tap on the chip shows the hand at once.
+    if (!ramp && idle > HINT_OFFER_MS - 3000) session.hint();
+    hand.classList.remove('show'); showSpot(false); hintFor = -1; return;
+  }
   // The hint is searched in a worker: until it arrives (a frame or two) no hand shows.
   if (hintFor < 0 || !session.s.inLot[hintFor] || performance.now() - hintAt > 4000) { hintFor = session.hint(); if (hintFor >= 0) hintAt = performance.now(); }
   if (hintFor < 0) { hand.classList.remove('show'); showSpot(false); return; }

@@ -76,6 +76,15 @@ body::after { display: none; } /* the vignette now lives in the post pass */
   border: 1px solid rgba(242, 177, 36, .45); box-shadow: 0 0 34px rgba(242, 177, 36, .25); }
 .help-intro .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
 .help-intro .have { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
+/* Past the ramp a hint is offered, not shown: a chip over the booster bar after a long idle (main.ts updateHand). */
+.btn.hint-chip { position: fixed; z-index: 6; left: 50%; bottom: calc(112px + var(--sab)); width: auto; margin: 0; padding: 8px 16px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: var(--text); background: var(--glass-hi);
+  border: 1px solid var(--line); box-shadow: var(--shadow); opacity: 0; pointer-events: none; transform: translate(-50%, 10px);
+  transition: opacity .3s, transform .3s cubic-bezier(.2, .9, .3, 1); }
+.btn.hint-chip.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.btn.hint-chip .ico { width: 18px; height: 18px; color: var(--accent); }
+.big-text .btn.hint-chip { font-size: 16px; }
+.reduce-motion .btn.hint-chip { transition: opacity .3s; transform: translate(-50%, 0); }
 .bst .cnt .ico { width: 12px; height: 12px; vertical-align: -1px; }
 .bst.on .ic { outline: none; border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px rgba(242, 177, 36, .18) !important; animation: none; }
 
