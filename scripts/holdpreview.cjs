@@ -46,13 +46,20 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   let c = await level(59);
   if (c.free === undefined || c.blocked === undefined) report(false, `level 60: no free/blocked car found (${JSON.stringify(c)})`);
   else {
-    // A quick tap: the route never shows (the car does go).
-    const [x, y] = await p.evaluate((i) => window.__screen(i), c.free);
-    await p.evaluate(([x, y]) => window.__ptr('pointerdown', x, y), [x, y]);
-    const during = []; for (let k = 0; k < 4; k++) { await p.waitForTimeout(25); during.push((await lane()).length); }
-    await p.evaluate(([x, y]) => window.__ptr('pointerup', x, y), [x, y]);
-    await p.waitForTimeout(150);
-    report(during.every((n) => n === 0) && (await lane()).length === 0, `quick tap (100 ms): route never shows (${during.join(',')})`);
+    // A quick tap: the route never shows (the car does go). Done inside the page on timers, released (90 ms) before
+    // the preview's own timer is due (150 ms): timers fire in that order however slow the machine, where round trips
+    // from here once stretched a "quick" tap past 150 ms on a slow CI runner.
+    const during = await p.evaluate((i) => new Promise((done) => {
+      const [x, y] = window.__screen(i), seen = [];
+      window.__ptr('pointerdown', x, y);
+      setTimeout(() => seen.push(window.__lane().length), 40);
+      setTimeout(() => {
+        seen.push(window.__lane().length);
+        window.__ptr('pointerup', x, y);
+        setTimeout(() => { seen.push(window.__lane().length); done(seen); }, 300);
+      }, 90);
+    }), c.free);
+    report(during.every((n) => n === 0), `quick tap (90 ms): route never shows (${during.join(',')})`);
     c = await level(59);
     // Held on a free car: a clear route.
     const [hx, hy] = await hold(c.free);
