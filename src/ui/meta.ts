@@ -7,7 +7,7 @@ import { persist, save } from '../save';
 import { RAHIM } from './characters';
 import { emo } from './emoji';
 import { icon } from './icons';
-import { BOOSTERS, button, fa, faNum, h, modal, type BoosterId, asBack } from './hud';
+import { BOOSTERS, button, fa, faNum, h, modal, note, type BoosterId, asBack } from './hud';
 import { PIGGY_FROM, PIGGY_MAX, PIGGY_MIN, piggyArt, showPiggy } from './piggy';
 
 /** The shop, styled as a Tehran newspaper kiosk. */
@@ -28,10 +28,18 @@ export function showShop(onClose: () => void, onChange: () => void) {
   // Boosters for coins.
   c.append(h('h3', '', 'کمک‌ها'));
   const row = h('div', 'shop-row');
+  /** Where coins come from further down (a video, the packs), for a help the player can't afford yet. */
+  let coinsAt: HTMLElement | null = null;
   for (const b of BOOSTERS) {
     const card = h('button', 'shop-card bst-' + b.id, `<span class="ic">${icon(b.icon)}</span><b>${b.name}</b><small>${b.hint}</small><span class="price">${emo('🪙', 'emo xs')} ${fa(b.price)}</span><span class="have">داری: ${fa(save.boosters[b.id])}</span>`);
     card.onclick = () => {
-      if (save.coins < b.price) { card.classList.add('nope'); setTimeout(() => card.classList.remove('nope'), 400); haptic('warn'); return; }
+      if (save.coins < b.price) {
+        card.classList.add('nope'); setTimeout(() => card.classList.remove('nope'), 400); haptic('warn');
+        // Not just a shake: how many are missing, and where more come from (it used to say nothing).
+        const short = `${fa(b.price - save.coins)} سکه‌ی دیگه لازم داری`;
+        if (coinsAt) { note(short); coinsAt.scrollIntoView({ behavior: 'smooth', block: 'center' }); } else note(`${short}؛ با بردن مرحله‌ها جمع می‌شه.`, 2600);
+        return;
+      }
       save.coins -= b.price; save.boosters[b.id as BoosterId]++; persist(); coin(); haptic('light');
       (card.querySelector('.have') as HTMLElement).textContent = `داری: ${fa(save.boosters[b.id])}`;
       refresh();
@@ -48,11 +56,14 @@ export function showShop(onClose: () => void, onChange: () => void) {
       free.removeAttribute('disabled');
     });
     c.append(free);
+    coinsAt = free;
   }
 
   // Coin packs for real money.
   if (iapAvailable()) {
-    c.append(h('h3', '', 'سکه و بسته‌ها'));
+    const packs = h('h3', '', 'سکه و بسته‌ها');
+    c.append(packs);
+    coinsAt ??= packs;
     const grid = h('div', 'shop-grid');
     for (const p of PRODUCTS) {
       if (p.sku === 'piggy' || p.sku === 'pass' || (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads'])) continue;

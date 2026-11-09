@@ -404,3 +404,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Checked every "all done" state: the fully renovated agency and the fully restored garage were already handled; the
   metro card at the end of the line still pointed to a "next station" and now says the line is finished and that next
   month's card starts again at Tajrish.
+- Shop: tapping a help you can't afford now says how many coins you're missing and scrolls to where to get more (it
+  only shook before). On-screen notes are solid so they read over anything.
