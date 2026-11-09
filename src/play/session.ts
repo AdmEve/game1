@@ -97,6 +97,8 @@ export function* worldSteps(w: number, h: number, seed: number, o: WorldOpts): G
     yield;
   }
 }
+/** Test hook: the cached worlds, oldest first, and what holds each one. */
+export const worldCacheInfo = () => [...worlds].map(([k, wd]) => ({ key: k, parent: wd.group.parent ? (wd.group.parent.type + (wd.group.parent.parent ? '+' : '')) : null }));
 /** Whether a level with these settings needs a new world (a chapter change), i.e. a longer load. */
 export const worldCached = (w: number, h: number, seed: number, o: WorldOpts) => worlds.has(worldKey(w, h, seed, o));
 /** The textures of a built world (to upload ahead of its first frame). */
@@ -366,7 +368,7 @@ export class Session {
   private refreshWeddings(ev: Event[]) {
     for (const [i, b] of [...this.weddings]) {
       const o = this.cars[i];
-      if (!this.s.inLot[i]) { this.weddings.delete(i); void tween(0.3, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b)); continue; }
+      if (!this.s.inLot[i]) { this.weddings.delete(i); void tween(0.3, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => this.retire(b)); continue; }
       const late = ev.some((e) => e.t === 'late' && e.v === i);
       const left = late ? 0 : (this.level.vehicles[i].wedding ?? 0) - this.s.exits;
       setWeddingBadge(b, left);
@@ -374,7 +376,7 @@ export class Session {
       if (late) {
         this.weddings.delete(i);
         this.lastLate = i;
-        void tween(0.6, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b));
+        void tween(0.6, (k) => b.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => this.retire(b));
         this.hooks.float('عروس دیر رسید!', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
         void this.wiggle(o);
       } else if (left === 1) this.hooks.float('عجله کن! عروس منتظره', o.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'bad');
@@ -391,8 +393,8 @@ export class Session {
       sfx.engine(0.1, false); sfx.horn('old', 1, 0.5);
       this.hooks.float('درست شد!', o.root.position.clone().add(new THREE.Vector3(0, 1.3, 0)), 'combo');
       void this.wiggle(o);
-      void tween(0.3, (k) => b.badge.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => o.root.remove(b.badge));
-      void tween(0.4, (k) => { b.hazard.scale.setScalar(Math.max(0.001, 1 - k)); }, ease.in).then(() => o.root.remove(b.hazard));
+      void tween(0.3, (k) => b.badge.scale.setScalar(Math.max(0.001, (1 - k) * 0.6)), ease.in).then(() => this.retire(b.badge));
+      void tween(0.4, (k) => { b.hazard.scale.setScalar(Math.max(0.001, 1 - k)); }, ease.in).then(() => this.retire(b.hazard));
     }
   }
 
@@ -582,6 +584,15 @@ export class Session {
     return bd <= 0.75 ? best : -1;
   }
 
+  /**
+   * Things taken off the board during the level (departed cars, badges, covers, the crane's cable). They are freed
+   * with the rest of the level when it ends; only what is still attached would be otherwise, and these leaked.
+   */
+  readonly retired: THREE.Object3D[] = [];
+  private retire(...objs: (THREE.Object3D | undefined)[]) {
+    for (const o of objs) { if (!o) continue; o.removeFromParent(); this.retired.push(o); }
+  }
+
   taps = 0;
   /** Hard mode: the clock starts at the first tap; bonuses come from a paid continue. */
   private timeLeft = 0; private moveBonus = 0; private lastShown = -1;
@@ -700,7 +711,7 @@ export class Session {
       if (!p || idx >= this.s.queue.length || (p.color === this.s.queue[idx] && p.userData?.gran === this.s.granny[idx] && p.userData?.vip === this.s.vip[idx])) return;
       const np = this.passenger(idx);
       np.root.position.copy(p.root.position); np.root.rotation.copy(p.root.rotation);
-      this.group.remove(p.root); this.group.add(np.root); this.queue[k] = np;
+      this.retire(p.root); this.group.add(np.root); this.queue[k] = np;
       void tween(0.35, (e) => { np.root.position.y = 0.18 + Math.sin(e * Math.PI) * 0.35; }, ease.linear);
     });
     this.chain = this.chain.then(() => wait(0.2)).then(() => this.playBoards(ev));
@@ -784,7 +795,7 @@ export class Session {
     const q = new THREE.Quaternion(); cover.getWorldQuaternion(q);
     this.group.add(cover); cover.position.copy(at); cover.quaternion.copy(q);
     sfx.chirp(0, 0.36);
-    void blowOff(cover, (d, f) => tween(d, f, ease.out)).then(() => this.group.remove(cover));
+    void blowOff(cover, (d, f) => tween(d, f, ease.out)).then(() => this.retire(cover));
   }
 
   private animLocked(i: number, why: 'broken' | 'plate' | 'officer') {
@@ -884,8 +895,8 @@ export class Session {
     const turn = this.claimBay(bay, i);
     const o = this.cars[i], v = this.level.vehicles[i];
     this.uncover(i);
-    const sy = this.symbols.get(i); if (sy) { o.root.remove(sy); this.symbols.delete(i); }
-    const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
+    const sy = this.symbols.get(i); if (sy) { this.retire(sy); this.symbols.delete(i); }
+    const pb = this.plates.get(i); if (pb) { this.retire(pb); this.plates.delete(i); }
     const heavy = v.kind === 'bus' || v.kind === 'zamyad';
     sfx.engine(0, heavy); sfx.chirp(0.05);
     // «تونل نیایش»: drive into the mouth, drop out of sight, come up out of its twin.
@@ -926,9 +937,9 @@ export class Session {
     const turn = this.claimBay(bay, i);
     const o = this.cars[i];
     this.uncover(i);
-    const sy0 = this.symbols.get(i); if (sy0) { o.root.remove(sy0); this.symbols.delete(i); }
-    const pb = this.plates.get(i); if (pb) { o.root.remove(pb); this.plates.delete(i); }
-    const br = this.broken.get(i); if (br) { o.root.remove(br.badge, br.hazard); this.broken.delete(i); }
+    const sy0 = this.symbols.get(i); if (sy0) { this.retire(sy0); this.symbols.delete(i); }
+    const pb = this.plates.get(i); if (pb) { this.retire(pb); this.plates.delete(i); }
+    const br = this.broken.get(i); if (br) { this.retire(br.badge, br.hazard); this.broken.delete(i); }
     sfx.craneSound(); haptic('medium');
     const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 6), new THREE.MeshStandardMaterial({ color: 0x222831, metalness: 0.6 }));
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 16, Math.PI * 1.4), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 }));
@@ -955,7 +966,7 @@ export class Session {
     sfx.bump(); this.hooks.shake(0.12); puff(this.group, o.root.position, 0.8); puff(this.group, o.root.position.clone().add(new THREE.Vector3(0.4, 0, 0.3)), 0.8);
     void settleBody(o.body);
     await tween(0.3, (k) => { cable.position.y += k * 3; hook.position.y += k * 3; }, ease.in);
-    this.group.remove(cable, hook);
+    this.retire(cable, hook);
     this.seat(bay, i);
   }
 
@@ -986,7 +997,7 @@ export class Session {
       p.root.rotation.y = yaw0 + e * 3.6; // a twirl in, the same at any frame rate
       if (e > 0.7) p.root.scale.setScalar(1.12 * (1 - (e - 0.7) / 0.3) + 0.001);
     }, ease.linear).then(() => {
-      this.group.remove(p.root);
+      this.retire(p.root);
       // The rules may already have sent this car off; count seats from the animation instead.
       const st = this.seats.get(bay);
       const boarded = (st?.sprite.userData.boarded ?? 0) + (this.s.granny[idx] ? 2 : 1);
@@ -1036,7 +1047,7 @@ export class Session {
     sfx.engine(0, kind === 'bus' || kind === 'zamyad');
     await drive(o.root, o.body, out, { vmax: 14, accel: 26, brake: true, onProgress: (u) => { if (!freed && u >= cleared) { freed = true; this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v); } } });
     if (!freed) { this.bayRelease.get(v)?.freed(); this.bayRelease.delete(v); }
-    this.group.remove(o.root);
+    this.retire(o.root);
   }
 
   private async celebrate() {

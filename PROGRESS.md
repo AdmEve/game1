@@ -300,3 +300,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   287k triangles instead of 341k on level 60, still readable.
 - The home screen with event banners (Yalda, Nowruz, both) still fits a 360×640 phone (Play ends at 616 px).
 
+- Long-session memory (`scripts/leakcheck.cjs`, 20 levels across chapter changes and back): GPU memory grew without
+  limit (geometries 75 → 540, textures 40 → 165, heap 35 → 74 MB), which on a phone ends in a WebView crash in a long
+  sitting. Worlds dropped from the two-world cache are now freed (their bake no longer marks itself "keep"), and things
+  removed during a level (badges with canvas textures, covers, crane parts, departed cars, boarded passengers) are freed
+  with the level. Now geometries plateau at ~160, textures, shader programs and DOM stay flat, heap 35–49 MB with no trend.
+  Rebuilt worlds draw correctly after eviction (screenshots across four chapters and back).

@@ -92,7 +92,13 @@ function inflated(g: THREE.BufferGeometry, by: number): THREE.BufferGeometry {
   return o;
 }
 
-export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: number } = {}): THREE.Group {
+/**
+ * Merge a model into one mesh per material. `keep` (default) marks the result as shared and never freed: right for
+ * vehicle templates and passenger looks, which every level reuses; a world passes false so it can be freed when it
+ * leaves the cache.
+ */
+export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: number; keep?: boolean } = {}): THREE.Group {
+  const keep = opts.keep ?? true;
   root.updateMatrixWorld(true);
   const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const casts = new Set<THREE.Material>();
@@ -124,7 +130,7 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
       } else put(mat, g);
     }
   });
-  atlas(buckets, casts);
+  atlas(buckets, casts, keep);
   const out = new THREE.Group();
   for (const [mat, geos] of buckets) {
     // Merging needs all parts indexed or none: plain-triangle parts get a trivial index.
@@ -133,7 +139,7 @@ export function bake(root: THREE.Object3D, opts: { shadows?: boolean; outline?: 
     if (geos.some((g) => g.index && g.index.array instanceof Uint32Array)) for (const g of geos) if (g.index && !(g.index.array instanceof Uint32Array)) g.setIndex(new THREE.BufferAttribute(Uint32Array.from(g.index.array as Uint16Array), 1));
     const merged = mergeGeometries(geos, false);
     if (!merged) continue;
-    merged.userData.keep = true;
+    merged.userData.keep = keep;
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = (opts.shadows ?? true) && casts.has(mat) && !(mat as THREE.Material).transparent;
     m.receiveShadow = true;
@@ -168,7 +174,7 @@ function atlasKey(m: THREE.Material, geos: THREE.BufferGeometry[]): string | nul
   }
   return [s.color.getHex(), s.roughness.toFixed(2), s.metalness.toFixed(2), s.emissive.getHex(), s.emissiveIntensity.toFixed(2), !!s.emissiveMap, s.side, s.envMapIntensity, s.flatShading, s.vertexColors, s.polygonOffset, s.polygonOffsetFactor, s.depthWrite, s.fog, t.colorSpace].join('|');
 }
-function atlas(buckets: Map<THREE.Material, THREE.BufferGeometry[]>, casts: Set<THREE.Material>) {
+function atlas(buckets: Map<THREE.Material, THREE.BufferGeometry[]>, casts: Set<THREE.Material>, keep = true) {
   const groups = new Map<string, THREE.MeshStandardMaterial[]>();
   for (const [m, geos] of buckets) {
     const k = atlasKey(m, geos);
@@ -210,6 +216,8 @@ function atlas(buckets: Map<THREE.Material, THREE.BufferGeometry[]>, casts: Set<
       };
       const first = placed[0].m;
       const mat = first.clone();
+      // The atlas material and its textures belong to this bake: freed with it unless it is kept.
+      mat.userData = { ...first.userData, keep };
       mat.map = draw((m) => m.map);
       if (first.emissiveMap) mat.emissiveMap = draw((m) => m.emissiveMap);
       const geos: THREE.BufferGeometry[] = [];

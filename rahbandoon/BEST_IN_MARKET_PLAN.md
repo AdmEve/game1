@@ -203,6 +203,18 @@ resets all progress. JS errors leave no trace.
   corrupt the main key and the progress survives.
 - N4. Error log: `error` and `unhandledrejection` go to a ring buffer of 20 in localStorage. Testers can copy
   it from Settings.
+- N5. Long sessions: GPU memory, scene, DOM and heap stay bounded over 20+ levels across chapter changes.
+  *Done when* `scripts/leakcheck.cjs` shows no growth on the second round.
+- N6. GPU context loss (added after the first pass). Android WebViews drop the WebGL context when the GPU
+  process restarts or memory runs short, often after the app sat in the background. three.js re-uploads
+  geometry and textures by itself, but whatever was drawn once into a render target is gone: the sky
+  reflections (PMREM) on every car and building, the garage's and agency's own reflections, and the shadow
+  map, which phones draw once per level. Plan: rebuild the reflection maps and redraw the shadow map on
+  `webglcontextrestored` (main renderer and the shared stage renderer); bound the shader-compile wait so a
+  loss during a level change can't leave the veil up; if no restore comes within a few seconds of being
+  visible, reload (the save is already on disk). *Done when* `scripts/ctxloss.cjs` (lose and restore the
+  context with `WEBGL_lose_context`) shows the same frame before and after, in play on three chapters and
+  in the garage, with no errors, and it failed before the fix.
 
 ## O. Monetization & fairness
 
@@ -293,3 +305,4 @@ the player sees value in them, not at first launch.
 | H4 HUD audit | `scripts/hudfit.cjs`: busiest HUD levels × two phone sizes × larger text on/off. Found: toasts (level notes, "last bay", "bays full") covered the top rows of cars, so they moved to the free band above the booster bar. With larger text the toast slid off the right edge (zoom scales its `left: 50%`), so positioned HUD pieces now scale by font size. 12/12. |
 | A3 quality settings | All four settings boot and play without errors (`scripts/qualities.cjs`) and set the intended pixel ratio (1.8 / 2.0 full / 1.4 / 1.0) and shadows. "Simple" also lightens geometry now, for the weakest phones: −16% triangles on level 60. |
 
+| N5 long-session memory | `scripts/leakcheck.cjs` plays 20 levels in a row (chapter 1 → 2 → 1 → 2, real `goLevel` path) and records GPU objects, scene size, DOM and heap after each. Before: geometries 75 → 540 and textures 40 → 165 with no plateau, heap 35 → 74 MB; on a phone that ends in a WebView crash after an hour or so. Two leaks: worlds evicted from the two-world cache were never freed (the bake flagged its merged mesh "keep", so 53k-vertex meshes and 2048² atlases piled up), and pieces removed mid-level (wedding, broken-car and plate badges with canvas textures, covers, crane cable and hook, departed cars, boarded passengers) were detached but never disposed. Now a world's bake is freed when it leaves the cache, and the session keeps what it removes and frees it with the level. After: geometries plateau at 156–163, textures and shader programs flat, DOM flat, heap 35–49 MB with no trend; second round vs first: +0 geometries, −4 textures, +0 programs, +0 DOM. Evicted and rebuilt worlds checked by screenshot (chapters 1 → 2 → 3 → 4 → 1). |

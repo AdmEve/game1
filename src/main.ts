@@ -17,7 +17,7 @@ import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { addInstanceRoot, attachInstancer, instanceStats, removeInstanceRoot, syncInstances } from './render/instancer';
 import { setPaintLift, setSnow } from './render/cars.js';
 import { sky } from './render/world';
-import { Session, worldCached, worldSteps, worldTextures } from './play/session';
+import { Session, worldCacheInfo, worldCached, worldSteps, worldTextures } from './play/session';
 import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
@@ -470,6 +470,7 @@ function disposeSession() {
   // The world is kept for the next level of the same chapter; everything else of the session is freed.
   session.group.remove(session.worldGroup);
   disposeTree(session.group);
+  for (const o of session.retired) disposeTree(o);
   session = null;
 }
 
@@ -1286,7 +1287,7 @@ async function boot() {
   // Test hooks for headless screenshots.
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
-    swooping: () => swooping, pointAt, errors,
+    swooping: () => swooping, pointAt, errors, worldCacheInfo,
     /** Every card the game shows, for layout checks (scripts/cardfit.cjs). */
     cards: {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,

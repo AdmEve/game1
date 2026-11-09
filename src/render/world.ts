@@ -1112,7 +1112,7 @@ export function* buildWorldSteps(w: number, h: number, bays: number, seed = 1, o
   }
   yield;
   // Everything here is static: merge it into one mesh per material to keep draw calls low.
-  const baked = bake(g);
+  const baked = bake(g, { keep: false }); // a world is freed when it leaves the cache (see session.ts)
   baked.traverse((m) => { (m as THREE.Mesh).receiveShadow = true; });
   yield;
   // Urban ground and the city out to the mountains (instanced: kept out of the bake).
