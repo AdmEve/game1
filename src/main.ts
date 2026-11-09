@@ -495,6 +495,7 @@ function disposeSession() {
   removeInstanceRoot(session.group);
   scene.remove(session.group);
   // The world is kept for the next level of the same chapter; everything else of the session is freed.
+  session.detach();
   session.group.remove(session.worldGroup);
   disposeTree(session.group);
   for (const o of session.retired) disposeTree(o);
@@ -620,9 +621,10 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     queueLeft: (q, total) => hud.setQueue(q, total),
     toast: (t) => hud.toast(t),
     canPlay: () => !modalOpen,
-    won: () => showWin(),
+    // A result decided while the pause card is up replaces it (it was opened with cars still on the move).
+    won: () => { pauseClose?.(); showWin(); },
     cheer: breathe,
-    lost: (why) => showLose(why),
+    lost: (why) => { pauseClose?.(); showLose(why); },
     limits: (t, m) => hud.setLimits(t, m),
     float: floatText,
     parity: (p, left) => hud.setParity(p, left),
@@ -993,6 +995,8 @@ function goHome() { void goLevel(undefined, undefined, false, null, showHome); }
  * The pause card: resume, restart, levels and home, then the settings. Opened by the gear, Android's back
  * button during play, and on coming back to a level in progress from another app.
  */
+/** Closes the pause card while it is open. */
+let pauseClose: (() => void) | null = null;
 function showSettings() {
   modalOpen = true;
   craneMode = false; hud.active(null);
@@ -1067,7 +1071,9 @@ function showSettings() {
   }
   qr.append(seg); c.append(qr);
   let needsRestart = false;
-  const close = modal(c, 'pop pause-card');
+  const closeCard = modal(c, 'pop pause-card');
+  const close = () => { if (pauseClose === close) pauseClose = null; closeCard(); };
+  pauseClose = close;
   // Script errors seen on this phone, for testers to send.
   const errs = errors();
   if (errs.length) {
@@ -1228,7 +1234,8 @@ async function boot() {
   }
   hud = new Hud(document.body);
   hud.onBooster = useBooster;
-  hud.onSettings = showSettings;
+  // Like back: once the level's outcome is decided (its finale is playing), the pause card can't open over it.
+  hud.onSettings = () => { if (session?.s.over && !modalOpen) return; showSettings(); };
   hud.onCoins = () => { modalOpen = true; showShop(() => { modalOpen = false; }, () => hud.refresh()); };
   performance.mark('b0');
   performance.measure('before-boot', { start: 0, end: 'b0' });

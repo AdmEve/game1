@@ -8,6 +8,7 @@
  * One `Weather` lives in the session's group; the game calls `update` every frame.
  */
 import * as THREE from 'three';
+import { keepTex } from './dispose';
 import { fbm } from './surfaces';
 import { profile } from './profile';
 /** Phones get fewer particles. */
@@ -49,7 +50,7 @@ function dot(): THREE.Texture {
   const g = c.getContext('2d')!, gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
-  return (dotTex = new THREE.CanvasTexture(c));
+  return (dotTex = keepTex(new THREE.CanvasTexture(c)));
 }
 let fogTex: THREE.Texture | null = null;
 /** Soft, tileable billows for fog banks. */
@@ -60,7 +61,7 @@ function fogBillows(): THREE.Texture {
   for (let i = 0; i < n.length; i++) { const a = Math.max(0, Math.min(1, (n[i] - 0.38) * 2.4)); img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = 255; img.data[i * 4 + 3] = a * a * 255; }
   g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return (fogTex = t);
+  return (fogTex = keepTex(t));
 }
 let leafTex: THREE.Texture | null = null;
 function leafSprite(): THREE.Texture {
@@ -70,7 +71,7 @@ function leafSprite(): THREE.Texture {
   g.fillStyle = '#fff'; g.beginPath(); g.moveTo(4, 32); g.quadraticCurveTo(32, 2, 60, 32); g.quadraticCurveTo(32, 62, 4, 32); g.fill();
   g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 2; g.beginPath(); g.moveTo(6, 32); g.lineTo(58, 32); g.stroke();
   for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(14 + k * 11, 32); g.lineTo(20 + k * 11, 22); g.moveTo(14 + k * 11, 32); g.lineTo(20 + k * 11, 42); g.stroke(); }
-  return (leafTex = new THREE.CanvasTexture(c));
+  return (leafTex = keepTex(new THREE.CanvasTexture(c)));
 }
 
 export class Weather {
@@ -224,7 +225,7 @@ export class Weather {
     const { x0, x1, z0, z1 } = this.box;
     // A faint veil over everything, thicker banks only beyond the street so the lot stays readable.
     for (let l = profile.lite ? 1 : 0; l < (profile.lite ? Math.min(2, layers) : layers); l++) {
-      const tex = fogBillows().clone(); tex.needsUpdate = true; tex.repeat.set(2.2 + l * 0.6, 2 + l * 0.5);
+      const tex = fogBillows().clone(); tex.needsUpdate = true; tex.userData.keep = false; tex.repeat.set(2.2 + l * 0.6, 2 + l * 0.5);
       const full = l === 0, w = x1 - x0 + 40, d = full ? z1 - z0 + 30 : 34;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: full ? opacity * 0.2 : opacity * (1 - l * 0.12), depthWrite: false, fog: true }));
@@ -321,7 +322,7 @@ function puddleRoughness(): THREE.Texture {
     img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v * 255; img.data[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  wetRough = new THREE.CanvasTexture(c); wetRough.wrapS = wetRough.wrapT = THREE.RepeatWrapping; wetRough.colorSpace = THREE.NoColorSpace;
+  wetRough = keepTex(new THREE.CanvasTexture(c)); wetRough.wrapS = wetRough.wrapT = THREE.RepeatWrapping; wetRough.colorSpace = THREE.NoColorSpace;
   return wetRough;
 }
 export function wetten(root: THREE.Object3D) {
@@ -337,7 +338,7 @@ export function wetten(root: THREE.Object3D) {
     if (m.roughnessMap) {
       // PBR ground: puddles in the low spots, damp elsewhere; the surface darkens as it soaks.
       const rep = m.roughnessMap.repeat.clone();
-      const r = puddleRoughness().clone(); r.needsUpdate = true; r.repeat.copy(rep).multiplyScalar(0.35);
+      const r = puddleRoughness().clone(); r.needsUpdate = true; r.userData.keep = false; r.repeat.copy(rep).multiplyScalar(0.35);
       m.roughnessMap = r; m.roughness = 1;
       m.color.multiplyScalar(0.62); m.envMapIntensity = 1.7;
       if (m.normalScale) m.normalScale.multiplyScalar(0.6);

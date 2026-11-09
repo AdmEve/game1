@@ -324,3 +324,11 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   level's starting layout (a clean top-down puzzle diagram that never reveals covered cars), "solved in N taps, can
   you?", and the Bazaar link, through the phone's share sheet (Telegram, WhatsApp…). 140 KB JPEG. Checked for seven
   kinds of level by eye (`scripts/sharecard.cjs`); the button shows only on those wins; win cards still fit.
+- Bug fixed: a level's result could land on the next level. In the few seconds between the last tap and the win
+  card (or a loss and its card), the pause gear still worked, so Restart/Levels/Home started another level and the old
+  card then appeared over it, crediting coins and a star to the wrong attempt and freezing the new level. Now a level
+  that has been left can't report back, the gear waits like back does, and a result closes the pause card rather than
+  stacking on it (`scripts/staleresult.cjs`: 6/6, all six failed before).
+- Shared textures (road paint, city windows, weather particles) were freed at the end of every level and uploaded
+  again at the start of the next: the disposer ignored the "keep" flag on textures. Fixed, and checked across ten
+  mechanics with `scripts/reuse.cjs` (nothing freed is still in use at any level start).

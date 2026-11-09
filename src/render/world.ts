@@ -3,6 +3,7 @@
  * sidewalk with its queue, and the city behind. Also owns the coordinate helpers the game uses.
  */
 import * as THREE from 'three';
+import { keepTex } from './dispose';
 import { shadowProxy } from './surfaces';
 import { asphalt, bark, bricks as brickSurface, canopy, cobbles, deck, foliageMat, grass as grassSurface, limb, paving as pavingSurface, plaza, surfaceMat, vnoise, wornPaint } from './surfaces';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -89,11 +90,11 @@ export interface WorldOpts { /** Scenery seed shared by a chapter's levels. */ w
 /** A soft pool of light on the ground (night scenes): an additive radial gradient. */
 let poolTex: THREE.Texture | null = null;
 function lightPool(r: number, color = 0xffd9a0, opacity = 0.55): THREE.Mesh {
-  poolTex ??= canvasTex(128, 128, (g) => {
+  poolTex ??= keepTex(canvasTex(128, 128, (g) => {
     const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
     gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
-  });
+  }));
   const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: poolTex, color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false }));
   m.rotation.x = -Math.PI / 2;
   return m;
@@ -236,6 +237,7 @@ function isogamTex() {
     for (let i = 0; i < 900; i++) { c.globalAlpha = 0.1; c.fillStyle = Math.random() < 0.5 ? '#000' : '#fff'; c.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
     c.globalAlpha = 1;
   }, 1);
+  keepTex(isogam);
   return isogam;
 }
 
@@ -767,7 +769,7 @@ function cityTextures() {
   }
   for (let f = 0; f < floors; f++) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, f * fh, W, 3); }
   const mk = (c: HTMLCanvasElement) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
-  return (cityTex = { wall: mk(wall), lit: mk(lit) });
+  return (cityTex = { wall: keepTex(mk(wall)), lit: keepTex(mk(lit)) });
 }
 function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][], sight?: THREE.Vector3): THREE.InstancedMesh {
   const { wall, lit } = cityTextures(), night = !!opts.night;

@@ -180,7 +180,19 @@ export class Session {
   private colorblind: boolean;
   private symbols = new Map<number, THREE.Sprite>();
 
-  constructor(readonly level: Level, readonly hooks: SessionHooks, seed = 1, worldOpts: WorldOpts = {}) {
+  /**
+   * The level's callbacks into the game, silenced once the level is torn down: a win or loss decided just before
+   * the player left (the finale runs for a few seconds) must not land on the next level (scripts/staleresult.cjs).
+   */
+  readonly hooks: SessionHooks;
+  private detached = false;
+  /** Called when the level is left: nothing still in flight may report back after this. */
+  detach(): void { this.detached = true; }
+
+  constructor(readonly level: Level, hooks: SessionHooks, seed = 1, worldOpts: WorldOpts = {}) {
+    const live = {} as Record<string, (...a: unknown[]) => unknown>;
+    for (const [k, f] of Object.entries(hooks)) live[k] = (...a: unknown[]) => (this.detached ? undefined : (f as (...a: unknown[]) => unknown)(...a));
+    this.hooks = live as unknown as SessionHooks;
     this.s = newState(level);
     this.colorblind = !!worldOpts.colorblind;
     performance.mark('w0');

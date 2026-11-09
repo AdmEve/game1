@@ -99,6 +99,23 @@ const LEVELS = (process.env.LEVELS ?? '1,31,91').split(',').filter(Boolean).map(
     if (OUT) { require('fs').writeFileSync(`${OUT}/ctx_garage_before.png`, a); require('fs').writeFileSync(`${OUT}/ctx_garage_after.png`, c); }
     check('garage after a context loss', await diff(a, c, 0, 1), 6);
   } else { fails++; console.log('FAIL garage view not found'); }
+  // The agency yard: the same small renderer, its own sky reflections. It draws one frame when opened (in this
+  // mode), so compare a first opening with one after the loss.
+  const openAgency = async () => {
+    await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+    await p.evaluate(async () => { document.querySelectorAll('.modal-back').forEach((m) => m.remove()); window.__rb.cards.agency(); await new Promise((r) => setTimeout(r, 1500)); });
+    const el = await p.$('.agency .stage canvas');
+    return el ? p.screenshot({ clip: await el.boundingBox() }) : null;
+  };
+  const ya = await openAgency();
+  if (!ya) { fails++; console.log('FAIL agency view not found'); }
+  else {
+    const why = await loseAndRestore('.agency .stage canvas');
+    if (why) { fails++; console.log(`FAIL agency: ${why}`); }
+    const yc = await openAgency();
+    if (OUT) { require('fs').writeFileSync(`${OUT}/ctx_agency_before.png`, ya); require('fs').writeFileSync(`${OUT}/ctx_agency_after.png`, yc); }
+    check('agency yard after a context loss', await diff(ya, yc, 0, 1), 6);
+  }
   const logged = await p.evaluate(() => window.__rb.errors?.() ?? []);
   if (errors.length || logged.length) { fails++; console.log('errors:', [...new Set(errors)].slice(0, 5), logged.slice(0, 5)); }
   // A context that never comes back: the game reloads from the save within a few seconds (instead of a dead screen).

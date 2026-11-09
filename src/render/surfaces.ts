@@ -4,6 +4,7 @@
  * instead of reading as flat color. Every texture is painted once and shared.
  */
 import * as THREE from 'three';
+import { keepTex } from './dispose';
 import { profile } from './profile';
 
 // ───── Tileable value noise ─────
@@ -169,7 +170,7 @@ export function wornPaint(): THREE.Texture {
   const c = canvas(S), g = c.getContext('2d')!, img = g.createImageData(S, S);
   for (let i = 0; i < n.length; i++) { const a = n[i] * 0.8 + fine[i] * 0.4 > 0.42 ? 235 : 70; img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = a; img.data[i * 4 + 3] = 255; }
   g.putImageData(img, 0, 0);
-  return (paintMask = tex(c, false));
+  return (paintMask = keepTex(tex(c, false)));
 }
 
 // ───── Foliage ─────
