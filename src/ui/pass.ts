@@ -69,7 +69,10 @@ export function showPass(onChange: () => void, onClose: () => void) {
     const at = stationOf(p.punches), into = p.punches % PUNCHES_PER_STATION;
     const days = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1;
     c.innerHTML = `<div class="ticket"><div class="tk-logo">${emo('🚇', 'emo')} مترو تهران</div><b>کارت بلیت ماه</b><small>خط یک، ${fa(days)} روز تا آخر ماه</small>
-      <div class="tk-punch">${Array.from({ length: PUNCHES_PER_STATION }, (_, k) => `<i class="${k < into ? 'on' : ''}"></i>`).join('')}<span>تا ایستگاه بعد</span></div></div>`;
+      ${at >= STATIONS.length
+    // The whole line ridden: no next station to punch towards (it used to still say «تا ایستگاه بعد»).
+    ? `<div class="tk-punch end">${emo('🏁', 'emo xs')}<span>آخر خط! تا ${STATIONS[STATIONS.length - 1]} رفتی؛ کارت ماه بعد دوباره از ${STATIONS[0]} شروع می‌شه.</span></div></div>`
+    : `<div class="tk-punch">${Array.from({ length: PUNCHES_PER_STATION }, (_, k) => `<i class="${k < into ? 'on' : ''}"></i>`).join('')}<span>تا ایستگاه بعد</span></div></div>`}`;
     const line = h('div', 'mline');
     STATIONS.forEach((name, i) => {
       const reached = i < at;

@@ -151,6 +151,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 /* Beside the lives pill (pinned to the chapter card's bottom-left), like the streak chip. */
 .chapter .finale-note { margin-left: 104px; text-align: right; min-height: 30px; }
 .finale .next { color: var(--muted); font-size: 14px; }
+.tk-punch.end span { line-height: 1.6; font-weight: 700; }
 @media (max-height: 660px) { .finale-note small { display: none; } }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }

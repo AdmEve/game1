@@ -401,3 +401,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Finishing the game: after the 240th level the game used to offer a nonexistent level 241 and replay the final boss.
   Now there's a one-off «تبریک! راه‌بندون باز شد» card (with Mr. Ajool conceding), home says all 240 levels are won,
   and Play opens the level list to replay any level.
+- Checked every "all done" state: the fully renovated agency and the fully restored garage were already handled; the
+  metro card at the end of the line still pointed to a "next station" and now says the line is finished and that next
+  month's card starts again at Tajrish.
