@@ -1420,6 +1420,13 @@ async function boot() {
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.
   window.addEventListener('pointerdown', () => startMusic(), { once: true });
+  // Inside the app media may play before a touch (Capacitor's WebView setting), so the music can come in with the
+  // level's opening camera move: a new player now starts in level 1, where the first touch is already a move. Only if
+  // the audio really runs; otherwise the first touch starts it, as in a browser.
+  if (Capacitor.isNativePlatform()) {
+    const o = sfx.audioOut();
+    o?.c.resume().then(() => { if (o.c.state === 'running') startMusic(); }).catch(() => {});
+  }
   // Reminders wait only while the game is away: scheduled on leaving, cleared on coming back.
   save.opens = [...save.opens, new Date().getHours()].slice(-9); persist();
   void syncReminders(false, []);
