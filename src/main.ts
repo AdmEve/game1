@@ -10,7 +10,7 @@ import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
 import type { Kind, Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
-import { skyEnv } from './render/env.js';
+import { onGpuRestored, skyEnv } from './render/env.js';
 import { profile } from './render/profile';
 import { Post, DEFAULT_GRADE, type Grade } from './render/post';
 import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
@@ -117,6 +117,23 @@ function setTier(t: number) {
 }
 function applyQuality(q: typeof save.settings.quality) { setTier(q === 'balanced' ? 1 : q === 'low' ? 0 : 2); }
 
+// A lost GPU context (Android drops it when the GPU process restarts or memory runs short, often while the app sits
+// in the background) comes back with everything drawn once gone: the sky backdrop and reflections, and the shadow
+// map phones draw once per level. Without this the level returned nearly black (scripts/ctxloss.cjs).
+onGpuRestored(renderer, () => { envFor(envOver); renderer.shadowMap.needsUpdate = true; });
+// If it never comes back (it can't always), start again from the save rather than leave a dead screen.
+renderer.domElement.addEventListener('webglcontextlost', () => {
+  let seen = 0;
+  const check = () => {
+    if (!renderer.getContext().isContextLost()) return;
+    seen = document.visibilityState === 'visible' ? seen + 1 : 0;
+    if (seen >= 6) { persist(); location.reload(); } else setTimeout(check, 1000);
+  };
+  setTimeout(check, 1000);
+});
+/** Wait for the shaders to compile, but not forever: with the context lost, the wait would hold the veil up. */
+const compiled = () => Promise.race([renderer.compileAsync(scene, camera).then(() => {}, () => {}), new Promise<void>((r) => setTimeout(r, 8000))]);
+
 const scene = new THREE.Scene();
 // Cars, arrows and passengers are drawn instanced: one draw call per model and material (render/instancer.ts).
 attachInstancer(scene);
@@ -151,6 +168,7 @@ const LIGHTS: Record<Light, { sky: [number, string][]; fog: number; hemi: [numbe
 };
 let sunOffset = new THREE.Vector3(-9, 22, 11);
 let envFor: (over?: Partial<SkyOpts>) => void = () => {};
+let envOver: Partial<SkyOpts> | undefined; // the sky the reflections show now (weather can overcast it)
 let grade: Grade = DEFAULT_GRADE;
 /** How much car paint lifts its own colour in each chapter's light (measured: scripts/colorsep.cjs). */
 const PAINT_LIFT: Record<Light, number> = { day: 0, spring: 0, bazaar: 0.02, sunset: 0.06, night: 0.05, snow: 0.04, dusk: 0.08, autumn: 0.16 };
@@ -165,6 +183,7 @@ function applyLight(light: Light) {
   // Image-based light from a real sky with the sun where the shadows say it is.
   const sd = new THREE.Vector3(...L.sun[2]).normalize();
   envFor = (over?: Partial<SkyOpts>) => {
+    envOver = over;
     const a = { ...L.air, ...over };
     const o = { elevation: a.night ? -6 : Math.round(THREE.MathUtils.radToDeg(Math.asin(sd.y))), azimuth: Math.round(THREE.MathUtils.radToDeg(Math.atan2(sd.x, sd.z))), turbidity: a.turbidity, rayleigh: a.rayleigh, mie: a.mie, night: a.night, ground: a.ground, glow: a.glow, glowK: over?.turbidity ? 0 : a.glowK };
     scene.environment = skyEnv(renderer, o);
@@ -558,7 +577,7 @@ function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | nul
       startLevel(pick, custom, false, ev);
       if (heavy) {
         syncInstances();
-        await renderer.compileAsync(scene, camera).catch(() => {});
+        await compiled();
         // The new chapter's music loop starts rendering now (off the main thread), not in the middle of play.
         void prepareMusic();
       }
@@ -1205,7 +1224,7 @@ async function boot() {
   syncInstances();
   const fxWarm = new THREE.Group(); fxWarm.add(...fxWarmObjects());
   scene.add(fxWarm);
-  await renderer.compileAsync(scene, camera).catch(() => {});
+  await compiled();
   scene.remove(fxWarm);
   performance.measure('compile', 'b2c');
   await progress();

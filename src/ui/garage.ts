@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
 import { CARS, buildBenzBus, buildCar, buildJeep, buildVanet } from '../render/cars.js';
-import { outdoorEnv } from '../render/env.js';
+import { onGpuRestored, outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { button, fa, h, modal, asBack } from './hud';
@@ -39,6 +39,7 @@ function turntable(renderer: THREE.WebGLRenderer, W: number, H: number) {
   if (!table) {
     const scene = new THREE.Scene();
     scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.85;
+    onGpuRestored(renderer, () => { scene.environment = outdoorEnv(renderer); }); // see render/env.js
     scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 0.8));
     const sun = new THREE.DirectionalLight(0xfff2dc, 2.2); sun.position.set(4, 8, 6); scene.add(sun);
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.3, 0.12, 48), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.3 }));

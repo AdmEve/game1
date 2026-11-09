@@ -1,7 +1,41 @@
 // Outdoor studio environment for reflections: sky dome, bright horizon, warm ground, a few soft boxes.
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
+
+// Reflection maps are drawn once into render targets, so a lost WebGL context (Android drops it when the GPU process
+// restarts or memory runs short) takes them with it: three.js re-uploads geometry and textures by itself, not what
+// was rendered on the GPU. Maps are cached per renderer; when its context comes back the cache is dropped and each
+// owner's hook builds its maps again (scripts/ctxloss.cjs).
+const caches = new WeakMap(), hooks = new WeakMap();
+function cacheOf(renderer) {
+  let c = caches.get(renderer);
+  if (!c) {
+    caches.set(renderer, (c = new Map()));
+    // Registered after three.js's own listener, so its state is rebuilt by the time the hooks draw.
+    renderer.domElement.addEventListener('webglcontextrestored', () => {
+      c.clear(); // the old maps died with the old context (disposing them now would only make GL warnings)
+      for (const f of hooks.get(renderer) ?? []) f();
+    });
+  }
+  return c;
+}
+/** Run `f` each time `renderer`'s lost context is restored: rebuild reflection maps and anything drawn once. */
+export function onGpuRestored(renderer, f) {
+  cacheOf(renderer);
+  if (!hooks.has(renderer)) hooks.set(renderer, new Set());
+  hooks.get(renderer).add(f);
+}
+function bakeEnv(renderer, s, args) {
+  const pm = new THREE.PMREMGenerator(renderer);
+  const tex = pm.fromScene(s, ...args).texture;
+  pm.dispose();
+  s.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
+  return tex;
+}
+
 export function outdoorEnv(renderer, { sky = 0x6aa8e8, horizon = 0xf4f1ea, ground = 0x6b665e, sun = true } = {}) {
+  const cache = cacheOf(renderer), key = ['outdoor', sky, horizon, ground, sun].join();
+  if (cache.has(key)) return cache.get(key);
   const s = new THREE.Scene();
   const geo = new THREE.SphereGeometry(50, 64, 32);
   const cols = [], p = geo.attributes.position, c1 = new THREE.Color(sky), c2 = new THREE.Color(horizon), c3 = new THREE.Color(ground), t = new THREE.Color();
@@ -17,16 +51,16 @@ export function outdoorEnv(renderer, { sky = 0x6aa8e8, horizon = 0xf4f1ea, groun
   box(14, 30, new THREE.Vector3(-40, 12, 0), 1.4);
   box(14, 30, new THREE.Vector3(40, 12, -10), 1.2);
   if (sun) { const m = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.95, 0.85).multiplyScalar(30) })); m.position.set(20, 30, 20); s.add(m); }
-  const pm = new THREE.PMREMGenerator(renderer);
-  return pm.fromScene(s, 0.02).texture;
+  const tex = bakeEnv(renderer, s, [0.02]);
+  cache.set(key, tex);
+  return tex;
 }
 
 // Physically based sky (Preetham) with a city around the horizon and a dark ground, baked into a PMREM
 // cube: cars and glass reflect a real sky gradient, a hot sun and a skyline, like photos of real streets.
-const skyCache = new Map();
 export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4, rayleigh = 1.4, mie = 0.004, ground = 0x2a2a28, city = 0x3a3d42, night = false, bare = false, glow = 0, glowK = 0 } = {}) {
-  const key = [elevation, azimuth, turbidity, rayleigh, mie, ground, city, night, bare, glow, glowK].join();
-  if (skyCache.has(key)) return skyCache.get(key);
+  const cache = cacheOf(renderer), key = ['sky', elevation, azimuth, turbidity, rayleigh, mie, ground, city, night, bare, glow, glowK].join();
+  if (cache.has(key)) return cache.get(key);
   const s = new THREE.Scene();
   const sky = new Sky(); sky.scale.setScalar(10);
   const u = sky.material.uniforms;
@@ -63,10 +97,7 @@ export function skyEnv(renderer, { elevation = 50, azimuth = 140, turbidity = 4,
     }
   }
   }
-  const pm = new THREE.PMREMGenerator(renderer);
-  const tex = pm.fromScene(s, 0.01, 0.1, 30).texture;
-  pm.dispose();
-  s.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
-  skyCache.set(key, tex);
+  const tex = bakeEnv(renderer, s, [0.01, 0.1, 30]);
+  cache.set(key, tex);
   return tex;
 }

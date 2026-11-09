@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
 import { PHASE1, RENOVATIONS, buildAgency } from '../render/agency';
-import { outdoorEnv } from '../render/env.js';
+import { onGpuRestored, outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { button, fa, h, modal, asBack } from './hud';
@@ -24,6 +24,7 @@ function yard(renderer: THREE.WebGLRenderer, Wd: number, Ht: number) {
     gr.addColorStop(0, '#4b93dd'); gr.addColorStop(0.6, '#a9d4f5'); gr.addColorStop(1, '#f6e7cf'); sg.fillStyle = gr; sg.fillRect(0, 0, 2, 256);
     const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace; scene.background = skyTex;
     scene.environment = outdoorEnv(renderer); scene.environmentIntensity = 0.7;
+    onGpuRestored(renderer, () => { scene.environment = outdoorEnv(renderer); }); // see render/env.js
     scene.add(new THREE.HemisphereLight(0xe3f0ff, 0x6b5a45, 0.8));
     const sun = new THREE.DirectionalLight(0xfff0d8, 2.6); sun.position.set(-8, 14, 12); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); sun.shadow.bias = -0.0005;

@@ -306,3 +306,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   removed during a level (badges with canvas textures, covers, crane parts, departed cars, boarded passengers) are freed
   with the level. Now geometries plateau at ~160, textures, shader programs and DOM stay flat, heap 35–49 MB with no trend.
   Rebuilt worlds draw correctly after eviction (screenshots across four chapters and back).
+- GPU context loss (`scripts/ctxloss.cjs`): Android WebViews drop the WebGL context when the GPU process restarts or
+  memory runs short, often after the app sat in the background. The game came back nearly black (no sky, no
+  reflections, no sunlight: the sky maps and the phone's once-per-level shadow map are drawn once on the GPU and were
+  lost). They are now rebuilt on restore, in play and in the garage/agency view: the frame after a restore matches
+  the one before (mean difference 0.1–0.4 of 255, was 111). A context that never returns reloads the game from the
+  save after 6 s on screen. Shader-compile waits are capped so a loss mid-level-change can't leave the veil up.
