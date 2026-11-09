@@ -4,11 +4,13 @@
 //   node scripts/hudfit.cjs
 const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:5173/';
+// Screen sizes as WxH,WxH (default: 320×568, as Android's "display size: Large" gives; a 360×640 phone; a 412×915 one).
+const SIZES = (process.argv[2] || '320x568,360x640,412x915').split(',').map((s) => s.split('x').map(Number));
 const SEEN = ['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'officer', 'cart', 'wedding', 'granny', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'];
 (async () => {
   const b = await chromium.launch();
   let problems = 0;
-  for (const [W, H] of [[360, 640], [412, 915]]) for (const big of [false, true]) {
+  for (const [W, H] of SIZES) for (const big of [false, true]) {
     const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1, userAgent: 'Mozilla/5.0 (Linux; Android 12) Mobile' });
     await p.goto(URL + '?play&shot', { waitUntil: 'load' });
     await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });

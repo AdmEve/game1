@@ -232,7 +232,7 @@ body[data-light='dusk'] .tint { opacity: 1; background: linear-gradient(180deg, 
 /* Level select */
 .card.levels-card { max-height: 86vh; overflow-y: auto; }
 .levels h3 { text-align: right; margin: 12px 4px 6px; color: #334155; font-size: 16px; }
-.lgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.lgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .lv { aspect-ratio: 1; border-radius: 12px; font-weight: 900; font-size: 15px; background: #e2e8f0; color: #475569; box-shadow: 0 3px 0 #94a3b8; }
 .lv.done { background: #bbf7d0; color: #14532d; box-shadow: 0 3px 0 #22c55e; }
 .lv.now { background: #fde68a; color: #78350f; box-shadow: 0 3px 0 #f59e0b; }
@@ -256,7 +256,7 @@ body[data-light='dusk'] .tint { opacity: 1; background: linear-gradient(180deg, 
 .people .pbar i { display: block; height: 100%; background: linear-gradient(90deg, #86efac, #22c55e); border-radius: 4px; transition: width .3s; }
 
 /* «افتخارات» */
-.home-row.with-ach { grid-template-columns: 1fr 1fr 52px 52px; gap: 7px; }
+.home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 52px 52px; gap: 7px; }
 .home-row.with-ach .btn { font-size: 15.5px; white-space: nowrap; padding-inline: 4px; }
 .home-row .btn.ach-btn { position: relative; padding: 0; display: grid; place-items: center; border-radius: 18px;
   background: linear-gradient(180deg, #fde68a, #f59e0b); box-shadow: 0 4px 0 #b45309, 0 8px 16px rgba(0,0,0,.3); }

@@ -150,7 +150,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .btn.agency-btn .sb { background: rgba(242, 177, 36, .12); color: var(--accent-hi); border: 1px solid rgba(242, 177, 36, .3); border-radius: 10px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; }
 .btn.agency-btn .sb .ico { width: 14px; height: 14px; }
 .btn.rush-btn.done { opacity: .6; }
-.home-row.with-ach { grid-template-columns: 1fr 1fr 50px 50px; gap: 8px; }
+.home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 50px 50px; gap: 8px; }
 .home-row .btn.ach-btn, .home-row .btn.pass-btn { justify-content: center; padding: 0; background: var(--glass); box-shadow: var(--shadow); }
 .home-row .btn.ach-btn .ico { width: 24px; height: 24px; color: var(--text); }
 .ach-btn .badge { background: var(--accent); color: var(--accent-ink); box-shadow: none; animation: none; font-weight: 800; }
@@ -274,7 +274,7 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
   .home-row .btn small { display: none; }
 }
 @media (max-width: 380px) {
-  .home-row.with-ach { grid-template-columns: 1fr 1fr 46px 46px; gap: 6px; }
+  .home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px 46px; gap: 6px; }
   .home-row.with-ach .btn { font-size: 14px; }
   .home-row .btn small { font-size: 11px; }
   .ch-map i { width: 24px; }
@@ -412,6 +412,29 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 /* Larger text: the home row (two labels and two icon buttons in a fixed grid) keeps its size and lets labels wrap,
    so it can't push past the screen edge on a 360-wide phone. */
 .big-text .home-row .btn { zoom: 1; white-space: normal; }
+/* Small screens (Android's "display size" at Large, small phones: 320 CSS px wide, under 600 tall). The home row and
+   the level grid size to the width they have; the win card tightens; beside Share, Home keeps just its icon so
+   Double stays on one line (BEST_IN_MARKET_PLAN H5, scripts/cardfit.cjs 320x568). */
+@media (max-width: 340px) {
+  .home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px 42px; gap: 5px; }
+  .home-row.with-ach .btn { white-space: normal; font-size: 13.5px; gap: 6px; padding-left: 6px; padding-right: 6px; }
+  .home-row .btn .ico { width: 18px; height: 18px; }
+  .lgrid { gap: 4px; }
+  .lv { font-size: 13px; }
+  .win-row.with-share .btn.home-link .lbl { display: none; }
+}
+@media (max-height: 600px) {
+  /* The band between the lot and the booster bar is ~67 px here: a two-line note must fit in it (scripts/hudfit.cjs). */
+  .hud .toast { font-size: 12.5px; line-height: 1.4; padding-top: 6px; padding-bottom: 6px; }
+  .big-text .hud .toast { font-size: 13.5px; }
+  .result .burst { margin-top: -46px; }
+  .result .burst .emo.huge, .result .burst .ico { width: 56px; height: 56px; }
+  .result h2 { font-size: 20px; margin: 0 0 4px; }
+  .result .streak-note, .result .chest-note, .result .piggy-note { margin-top: 4px; margin-bottom: 4px; }
+  .result .beaten { margin-top: 6px; font-size: 13px; }
+  .result .btn.big { padding-top: 10px; padding-bottom: 10px; }
+  .win-row { margin-top: 6px; }
+}
 /* Larger text on positioned HUD pieces: a bigger font, not zoom (zoom also scales their left/top offsets, which pushed
    the centred toast off the right edge and the pills down). */
 .big-text .toast, .big-text .note, .big-text .people, .big-text .limit, .big-text .camsign, .big-text .bst .nm { zoom: 1; }

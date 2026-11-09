@@ -1,10 +1,10 @@
 // Card layout audit: opens every card the game can show at small and large phone sizes and checks that it fits the
 // screen, that every button can be seen without scrolling (cards built to scroll only need to fit as a whole),
 // and that nothing overflows sideways.
-//   node scripts/cardfit.cjs [360x640,412x915]      BIG=1 with the larger-text setting, ONLY=garage,shop for a subset
+//   node scripts/cardfit.cjs [320x568,360x640,412x915]      BIG=1 with the larger-text setting, ONLY=garage,shop for a subset
 const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:5173/';
-const SIZES = (process.argv[2] || '360x640,412x915').split(',').map((s) => s.split('x').map(Number));
+const SIZES = (process.argv[2] || '320x568,360x640,412x915').split(',').map((s) => s.split('x').map(Number));
 const SEEN = ['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'officer', 'cart', 'wedding', 'granny', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'];
 // [name, setup+open (runs in the page; may be async)]
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;

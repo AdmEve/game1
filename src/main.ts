@@ -892,7 +892,7 @@ function showWin() {
   }
   c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   // Home: spend the stars and keys (agency, garage) before going on.
-  row.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
+  row.append(asBack(button(`${icon('home')} <span class="lbl">خونه</span>`, 'ghost home-link', () => { void next(true); })));
   // Hard levels and chapter ends are worth showing off: the puzzle goes to friends as a picture (ui/sharecard.ts).
   if (!replay && lvl && (lvl.tag || n + 1 === chapterOf(n).to)) {
     const taps = session?.taps ?? 0;

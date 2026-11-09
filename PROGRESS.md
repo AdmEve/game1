@@ -342,3 +342,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   right now; it follows tunnels. Quick taps never show it; sliding off cancels the tap as before; covered cars stay
   secret. Useful on dense boards and tap-budget levels, where a blocked tap costs a tap. Level 4's tip teaches it.
   Unit-tested route logic (8 cases) and `scripts/holdpreview.cjs` with real pointer events.
+- Small screens (Android "display size: Large", small phones, 320×568 CSS px): the home row and level grid ran off the
+  side, a boss win card hid its buttons below the screen, and level-start notes covered the bottom row of cars. All
+  fixed; every card fits at 320×568, 360×640 and 412×915 with normal and larger text (132/132), and the HUD audit passes
+  at all three sizes (18/18). Both audits now include 320×568 by default.
