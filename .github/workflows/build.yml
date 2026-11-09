@@ -42,6 +42,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/oldwebview.cjs
           # Hold to see the way out: real pointer events, quick taps never show it (scripts/holdpreview.cjs).
           URL=http://127.0.0.1:4173/ node scripts/holdpreview.cjs
+          # Helps open one at a time on levels 6, 9 and 12, as a new player meets them (scripts/helpsopen.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/helpsopen.cjs
 
       - uses: actions/upload-artifact@v4
         if: failure()
