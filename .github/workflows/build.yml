@@ -46,6 +46,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/helpsopen.cjs
           # Past the ramp, hints come only when asked (scripts/hintoffer.cjs).
           URL=http://127.0.0.1:4173/ node scripts/hintoffer.cjs
+          # Leaving a level in play costs what losing it costs, and asks first (scripts/quitcost.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/quitcost.cjs
           # Screen-reader names and structure on the main screens (axe-core, WCAG 2 A/AA: scripts/a11y.cjs).
           URL=http://127.0.0.1:4173/ node scripts/a11y.cjs
 

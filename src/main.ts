@@ -801,16 +801,30 @@ let newLevelRun = false;
  * Giving up a level that has been played (restart, home): it ends the streak, so with a streak at stake ask
  * first. Resolves true to go ahead.
  */
+/**
+ * Leaving a level in play (pause → restart, home or another level), once a move is made. On a Journey level that
+ * costs lives (13 on) it costs one, as starting over from the lose card does, or quitting would dodge it; a new
+ * level's win streak burns too. Asks first, saying what goes; staying is the default (and back).
+ */
 function giveUp(): Promise<boolean> {
-  const playing = newLevelRun && !!session && session.taps > 0 && !session.s.over;
-  if (!playing || save.streak <= 0) { if (playing) { save.streak = 0; persist(); } return Promise.resolve(true); }
+  const playing = !!session && session.taps > 0 && !session.s.over;
+  const life = playing && !rush && current >= FREE_LEVELS;
+  const streak = playing && newLevelRun && save.streak > 0;
+  if (!life && !streak) return Promise.resolve(true);
   return new Promise((done) => {
     modalOpen = true;
     const c = h('div', 'confirm');
-    c.innerHTML = `<div class="burst">${emo('🔥', 'emo huge')}</div><h2>پشت‌سرهمت می‌سوزه!</h2><p>${fa(save.streak)} برد پشت‌سرهم داری. اگه این مرحله رو ول کنی، از صفر شروع می‌شه.</p>`;
+    const what = life && streak ? `یه جون و ${fa(save.streak)} برد پشت‌سرهمت از دست می‌ره.` : life ? 'یه جون از دست می‌ره، مثل وقتی که می‌بازی.'
+      : `${fa(save.streak)} برد پشت‌سرهم داری. اگه این مرحله رو ول کنی، از صفر شروع می‌شه.`;
+    c.innerHTML = `<div class="burst">${emo(life ? '💔' : '🔥', 'emo huge')}</div><h2>${life ? 'ول می‌کنی؟' : 'پشت‌سرهمت می‌سوزه!'}</h2><p>${what}</p>`;
     const close = modal(c, 'pop');
-    c.append(asBack(button('ادامه می‌دم', 'primary big', () => { close(); modalOpen = false; done(false); })));
-    c.append(button('ول کن', 'ghost', () => { close(); save.streak = nextStreak(save.streak, 'gaveUp', true); persist(); done(true); }));
+    c.append(asBack(button('ادامه می‌دم', 'primary big', () => { close(); done(false); })));
+    c.append(button(life ? `ول کن <small class="life-cost">${emo('💔', 'emo xs')} یه جون</small>` : 'ول کن', 'ghost', () => {
+      close();
+      if (streak) save.streak = nextStreak(save.streak, 'gaveUp', true);
+      if (life) loseLife();
+      persist(); done(true);
+    }));
   });
 }
 
@@ -1087,7 +1101,13 @@ function showSettings() {
   const resume = asBack(button(`${icon('play')} ادامه`, 'primary big', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
   nav.append(resume);
   const row2 = h('div', 'pause-row');
-  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', async () => { close(); if (await giveUp()) void goLevel(current, rush ?? undefined, true, event); else modalOpen = false; }));
+  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', async () => {
+    close();
+    if (!(await giveUp())) { modalOpen = false; return; }
+    // The life it cost may have been the last one.
+    if (!rush && current >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
+    void goLevel(current, rush ?? undefined, true, event);
+  }));
   row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
   row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', async () => { close(); if (await giveUp()) goHome(); else modalOpen = false; }));
   nav.append(row2);
@@ -1211,6 +1231,8 @@ function showLevels() {
       const tag = levels[i].tag;
       const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
       if (open) b.onclick = async () => {
+        // Picked from the pause card in the middle of a level: leaving it is a give-up (the card stays on a no).
+        if (!(await giveUp())) return;
         if (i >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
         close(); void goLevel(i);
       };

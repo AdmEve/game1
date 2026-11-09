@@ -379,3 +379,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Hard levels feel like an event: the plate turns into a yellow taxi plate (bosses get the red government plate), and a
   «مرحله‌ی سخت!» ribbon opens across the board naming the extra reward (a key and more coins). The lose card's
   «از اول» now says it costs a life when it does, so paying to continue is an informed choice.
+- Quitting a level now costs what losing it costs: from level 13, leaving through the pause menu after a move asks
+  «ول می‌کنی؟» and takes a life (before, quitting just before a loss dodged it). Before the first move, on the first
+  twelve levels, in the daily rush and in events, leaving stays free. Checked in CI by `scripts/quitcost.cjs`.
