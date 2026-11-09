@@ -1521,6 +1521,8 @@ async function boot() {
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,
+    /** The touch handling's state, for a test that fails (scripts/holdpreview.cjs). */
+    input: () => ({ modalOpen, down: down ? { ...down } : null, craneMode, swooping, veil: veil.classList.contains('on') }),
     /** Pretend the player has looked at the board for `ms` without a move (the hint offer's idle clock). */
     idleFor: (ms: number) => { const t = performance.now() - ms; if (session) session.lastInput = t; inViewSince = t; },
     /** Render the level-start camera move at progress k (0 = the landmark shot). */

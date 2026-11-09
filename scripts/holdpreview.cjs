@@ -28,6 +28,9 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     rb.save.level = n; await rb.goLevel(n, undefined, false);
     document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     for (let k = 0; k < 40 && rb.swooping(); k++) await new Promise((r) => setTimeout(r, 100));
+    // Let the new level's first frames render before any press: under software GL (CI has no GPU) they can hold the
+    // page for seconds, and a press made meanwhile has its 150 ms preview timer run that much later (run 237: 17 s).
+    for (let k = 0; k < 3; k++) await new Promise((r) => requestAnimationFrame(() => r()));
     document.querySelectorAll('.hud .toast, .hand, .spot, .mark').forEach((e) => (e.style.visibility = 'hidden'));
     const s = rb.session(), cars = s.s.inLot.map((_, i) => i).filter((i) => s.s.inLot[i]);
     const r = (i) => rb.route(i);
@@ -43,16 +46,21 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   // instead of being read at a fixed moment; a car that must show nothing (covered) simply waits the 3 s out.
   // The press waits until the car is really under its computed point (the level-start camera may still be settling
   // on a slow machine, so the point found a moment ago can be off the car).
-  const hold = async (i, ms = 450) => {
+  // Press and hold. The press waits until the car is really under its computed point (the camera may still be
+  // settling); then the route gets up to 15 s to appear, counted after the page has rendered two frames, so a page
+  // frozen by software rendering can't make a late timer look like a missing route. A car that must show nothing
+  // (`expect` false) is read after the hold and two frames.
+  const hold = async (i, ms = 450, expect = true) => {
     const [x, y] = await p.waitForFunction((i) => { const [x, y] = window.__screen(i); return window.__rb.pick(x, y) === i ? [x, y] : false; }, i, { timeout: 5000, polling: 100 })
       .then((h) => h.jsonValue()).catch(() => p.evaluate((i) => window.__screen(i), i));
     await p.evaluate(([x, y]) => window.__ptr('pointerdown', x, y), [x, y]);
     await p.waitForTimeout(ms);
-    await p.waitForFunction(() => window.__lane().length > 0, null, { timeout: 3000, polling: 50 }).catch(() => {});
+    await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+    if (expect) await p.waitForFunction(() => window.__lane().length > 0, null, { timeout: 15000, polling: 50 }).catch(() => {});
     return [x, y];
   };
   // What the game saw, for a report that fails.
-  const why = (i) => p.evaluate((i) => { const rb = window.__rb, [x, y] = window.__screen(i); return `car ${i} at ${Math.round(x)},${Math.round(y)} picks ${rb.pick(x, y)}, cards ${document.querySelectorAll('.modal-back:not(.out)').length}, veil ${document.querySelector('.veil')?.classList.contains('on')}`; }, i);
+  const why = (i) => p.evaluate((i) => { const rb = window.__rb, [x, y] = window.__screen(i); return `car ${i} at ${Math.round(x)},${Math.round(y)} picks ${rb.pick(x, y)}, cards ${document.querySelectorAll('.modal-back:not(.out)').length}, input ${JSON.stringify(rb.input?.())}`; }, i);
   const lane = () => p.evaluate(() => window.__lane());
   const shot = (name) => out ? p.screenshot({ path: `${out}/hold-${name}.png`, timeout: 120000 }) : null;
 
@@ -75,10 +83,12 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     }), c.free);
     report(during.every((n) => n === 0), `quick tap (90 ms): route never shows (${during.join(',')})`);
     c = await level(59);
-    // Held on a free car: a clear route.
+    // Held on a free car: a clear route. (Every call the game makes to show a route is logged, for a report that fails.)
+    await p.evaluate(() => { const s = window.__rb.session(), orig = s.preview.bind(s); window.__pv = []; s.preview = (i) => { window.__pv.push({ i, t: Math.round(performance.now()), ended: s.ended, inLot: i >= 0 ? s.s.inLot[i] : null, shown: i >= 0 ? s.s.revealed[i] : null }); return orig(i); }; });
+    const t0 = await p.evaluate(() => Math.round(performance.now()));
     const [hx, hy] = await hold(c.free);
     let k = await lane();
-    report(k.length >= 2 && k.every((x) => x === 'go'), `held on a free car: clear route (${k.join(',')})${k.length ? '' : ' — ' + (await why(c.free))}`);
+    report(k.length >= 2 && k.every((x) => x === 'go'), `held on a free car: clear route (${k.join(',')})${k.length ? '' : ' — ' + (await why(c.free)) + `, pressed at ${t0}, calls ${JSON.stringify(await p.evaluate(() => window.__pv))}, now ${await p.evaluate(() => Math.round(performance.now()))}`}`);
     await shot('free');
     // Sliding off: hidden, and the tap is cancelled.
     await p.evaluate(([x, y]) => window.__ptr('pointermove', x + 40, y), [hx, hy]);
@@ -113,7 +123,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   const coverLevel = await p.evaluate(() => window.__rb.levels.findIndex((l) => l.vehicles.some((v) => v.covered)));
   c = await level(coverLevel);
   if (c.covered !== undefined) {
-    const [cx, cy] = await hold(c.covered);
+    const [cx, cy] = await hold(c.covered, 450, false);
     const k = await lane();
     report(k.length === 0, `held on a covered car: nothing shown (${k.length})`);
     await p.evaluate(([x, y]) => window.__ptr('pointermove', x + 40, y), [cx, cy]);
