@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>راه‌بندون</title>
+<!--
+  Shown by Capacitor instead of the game when the phone's Android System WebView is older than the game needs
+  (android.minWebViewVersion in capacitor.config.json). It must run on very old WebViews: plain ES5, and no CSS
+  newer than flexbox (no gap, inset, :has or custom properties).
+-->
+<style>
+  @font-face { font-family: VazirSplash; src: url('fonts/Vazirmatn-Black.woff2') format('woff2'); font-weight: 900; }
+  html { background: #0a1220; }
+  html, body { margin: 0; padding: 0; }
+  body { min-height: 100vh; background: #101c30; background: radial-gradient(120% 80% at 50% 30%, #1d3354 0%, #101c30 55%, #0a1220 100%);
+    color: #fff; font-family: sans-serif; text-align: center; -webkit-text-size-adjust: 100%; }
+  .wrap { max-width: 400px; margin: 0 auto; padding: 18px 20px 24px; }
+  .hero { display: block; width: 40%; max-width: 170px; margin: 0 auto; }
+  .logo { font-family: VazirSplash, sans-serif; font-weight: 900; font-size: 40px; line-height: 1.2; margin: 2px 0 0; }
+  .tag { font: bold 11px/1.6 sans-serif; letter-spacing: .45em; color: #f2b124; direction: ltr; margin: 0 0 14px; }
+  .box { text-align: right; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .12); border-radius: 18px; padding: 18px 18px 16px; }
+  h1 { font-family: VazirSplash, sans-serif; font-size: 19px; color: #f2b124; margin: 0 0 8px; line-height: 1.6; }
+  p { font-size: 15px; line-height: 1.8; margin: 0 0 10px; color: #e2e8f0; }
+  .ver { direction: ltr; unicode-bidi: embed; font-family: monospace; font-size: 13px; color: #94a3b8; }
+  .btn { display: block; margin: 10px 0 0; padding: 13px 10px; border-radius: 14px; font-family: VazirSplash, sans-serif; font-size: 16px;
+    text-decoration: none; text-align: center; }
+  .gold { color: #1a1206; background: #f2b124; background: linear-gradient(180deg, #ffd36b, #f2b124); box-shadow: 0 4px 0 #b9811a; }
+  .ghost { color: #fff; border: 1px solid rgba(255, 255, 255, .25); }
+  .after { font-size: 13px; color: #94a3b8; margin: 14px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="hero" src="hero-taxi.webp" alt="" />
+  <div class="logo">راه‌بندون</div>
+  <div class="tag">TEHRAN · GRIDLOCK</div>
+  <div class="box">
+    <h1 id="title">اول یه به‌روزرسانی کوچیک لازمه</h1>
+    <p id="body">برنامه‌ی <b dir="ltr">Android System WebView</b> روی این گوشی قدیمیه و راه‌بندون باهاش اجرا نمی‌شه. به‌روزش کن (رایگانه) و بازی رو دوباره باز کن.</p>
+    <p class="ver" id="ver"></p>
+    <div id="update">
+      <a class="btn gold" href="bazaar://details?id=com.google.android.webview">به‌روزرسانی از کافه‌بازار</a>
+      <a class="btn ghost" href="market://details?id=com.google.android.webview">به‌روزرسانی از گوگل‌پلی</a>
+      <p class="after">اگه <bdi>Android System WebView</bdi> پیدا نشد، <bdi>Chrome</bdi> رو به‌روز کن.</p>
+    </div>
+    <a class="btn gold" id="retry" href="index.html" style="display:none">دوباره امتحان کن</a>
+  </div>
+</div>
+<script>
+  // ES5 only: this page runs where the game can't.
+  (function () {
+    var m = /(?:Chrome|Chromium)\/(\d+)/.exec(navigator.userAgent), v = m ? +m[1] : 0;
+    var $ = function (id) { return document.getElementById(id); };
+    // Capacitor also opens this page if the game's own page failed to load: on a WebView that is new enough,
+    // that is what happened, so offer a retry instead of an update.
+    if (v >= 84) {
+      $('title').innerHTML = 'بازی درست باز نشد';
+      $('body').innerHTML = 'یه مشکلی موقع باز شدن بازی پیش اومد. پیشرفتت سر جاشه.';
+      $('update').style.display = 'none'; $('retry').style.display = 'block';
+      return;
+    }
+    if (m) $('ver').appendChild(document.createTextNode('WebView ' + v + ' (84+ needed)'));
+  })();
+</script>
+</body>
+</html>

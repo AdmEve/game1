@@ -332,3 +332,8 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Shared textures (road paint, city windows, weather particles) were freed at the end of every level and uploaded
   again at the start of the next: the disposer ignored the "keep" flag on textures. Fixed, and checked across ten
   mechanics with `scripts/reuse.cjs` (nothing freed is still in use at any level start).
+- Older phones: the game needed a 2022 WebView (Chrome 99 to start, 105 for the home screen's layout); many players in
+  Iran keep updates off. It now runs and lays out the same on WebView 84+ (a polyfill, and CSS without `:has()` or
+  `inset`), checked by screenshots before/after and by `scripts/oldwebview.cjs` in CI. Below 84, the app shows its own
+  page explaining how to update Android System WebView (Bazaar or Google Play links) instead of a frozen splash, and a
+  failure on an old WebView now says to update it rather than to restart the phone.

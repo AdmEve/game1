@@ -1,5 +1,7 @@
 // First, so a failure in any module below still ends on a message instead of a frozen splash.
 import { mainLoaded, showFatal } from './ui/fatal';
+// Then what older WebViews lack, before any module draws with it.
+import './polyfills';
 import './fonts.css';
 import './style.css';
 import './theme.css';
@@ -1195,6 +1197,7 @@ function showHome() {
   rowEl.append(button(`${icon('trophy')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
     close(); showAchievements(() => showHome(), () => hud.refresh());
   }));
+  rowEl.classList.add('with-ach');
   c.querySelector('.chapter')!.append(livesPill());
   if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم<small>${helpsText(save.streak)} مجانی</small>`));
   c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {

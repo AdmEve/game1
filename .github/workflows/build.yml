@@ -38,6 +38,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/smoke.cjs
           # Without WebGL, or failing while loading, it must say so on the splash with a retry (scripts/fatal.cjs).
           URL=http://127.0.0.1:4173/ node scripts/fatal.cjs
+          # Older WebViews (Chrome 84+): no roundRect, CSS without :has()/inset, the update page (scripts/oldwebview.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/oldwebview.cjs
 
       - uses: actions/upload-artifact@v4
         if: failure()

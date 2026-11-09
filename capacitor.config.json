@@ -3,7 +3,9 @@
   "appName": "راه‌بندون",
   "webDir": "dist",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "minWebViewVersion": 84,
+    "errorPath": "webview-update.html"
   },
   "plugins": {
     "SystemBars": {

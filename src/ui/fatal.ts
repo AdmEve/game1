@@ -47,18 +47,26 @@ let loaded = false;
 export function mainLoaded(): void { loaded = true; }
 addEventListener('error', (e) => { if (!loaded) showFatal('boot', String(e.error?.message ?? e.message)); });
 
+/** The WebView's Chrome version (0 if not Chrome-based). */
+const chrome = +(/(?:Chrome|Chromium)\/(\d+)/.exec(navigator.userAgent)?.[1] ?? 0);
+const faDigits = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
+
 let shown = false;
 /** Replace the splash's loading bar with what went wrong and a retry. `detail` is a short code for support. */
 export function showFatal(kind: Fatal, detail = ''): void {
   if (shown) return;
   shown = true;
+  // A failure on an old WebView is most likely the WebView's: say to update it rather than just to restart.
+  if (kind === 'boot' && chrome > 0 && chrome < 110) detail = `WebView ${chrome} · ${detail}`;
   SplashScreen.hide().catch(() => {});
   let host = document.getElementById('splash');
   if (!host) { host = document.createElement('div'); host.id = 'splash'; document.body.append(host); }
   host.classList.remove('gone');
   host.classList.add('fatal');
   const style = document.createElement('style'); style.textContent = CSS; document.head.append(style);
-  const t = TEXT[kind];
+  const t = kind === 'boot' && chrome > 0 && chrome < 110
+    ? { ...TEXT.boot, steps: [`برنامه‌ی <bdi>Android System WebView</bdi> گوشیت قدیمیه (نسخه‌ی ${faDigits(chrome)}). از بازار یا گوگل‌پلی به‌روزش کن (یا <bdi>Chrome</bdi> رو).`, 'بعد بازی رو دوباره باز کن.'] }
+    : TEXT[kind];
   const box = document.createElement('div'); box.className = 'fatal-box'; box.dir = 'rtl'; box.setAttribute('role', 'alert');
   const h = document.createElement('h2'); h.textContent = t.title;
   const p = document.createElement('p'); p.textContent = t.body;

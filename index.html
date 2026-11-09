@@ -22,7 +22,7 @@
          transform/opacity only: it keeps moving on the compositor while the game builds its world. */
       /* The logo's weight is preloaded here, so the very first paint already shows it (no font swap). */
       @font-face { font-family: VazirSplash; src: url('/fonts/Vazirmatn-Black.woff2') format('woff2'); font-weight: 900; font-display: block; }
-      #splash { position: fixed; inset: 0; z-index: 99; color: #fff; font-family: VazirSplash, Vazirmatn, system-ui, sans-serif; overflow: hidden;
+      #splash { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99; color: #fff; font-family: VazirSplash, Vazirmatn, system-ui, sans-serif; overflow: hidden;
         background: radial-gradient(120% 80% at 50% 40%, #1d3354 0%, #101c30 55%, #0a1220 100%);
         transition: opacity .6s cubic-bezier(.4, 0, .2, 1), transform .6s cubic-bezier(.4, 0, .2, 1); }
       #splash.gone { opacity: 0; transform: scale(1.04); pointer-events: none; }
@@ -36,7 +36,7 @@
         letter-spacing: -.5px; text-shadow: 0 6px 24px rgba(0,0,0,.45); }
       #splash .logo small { display: block; font: 700 min(3.1vw, 1.8vh)/1.6 system-ui, sans-serif; letter-spacing: .5em; color: #f2b124; opacity: .9; margin-top: .6vh; }
       #splash .bar { position: absolute; left: 50%; top: 74%; width: 44vw; max-width: 200px; height: 4px; transform: translateX(-50%); border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
-      #splash .bar i { position: absolute; inset: 0; background: linear-gradient(90deg, #f2b124, #ffd36b); border-radius: 4px;
+      #splash .bar i { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(90deg, #f2b124, #ffd36b); border-radius: 4px;
         transform-origin: right center; transform: scaleX(.04); transition: transform .35s cubic-bezier(.2,.8,.2,1); will-change: transform; }
       #splash .tip { position: absolute; left: 0; right: 0; top: 79%; text-align: center; font-size: min(3.6vw, 2.1vh); font-weight: 500; opacity: .6; }
       #splash.native .bar, #splash.native .glow { display: none; }

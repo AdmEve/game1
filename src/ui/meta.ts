@@ -140,7 +140,7 @@ export function showIntro(kind: keyof typeof INTROS): Promise<void> {
   return new Promise((done) => {
     const c = h('div', 'intro');
     c.innerHTML = `<div class="new">جدید!</div><div class="burst">${emo(it.icon, 'emo huge')}</div><h2>${it.title}</h2>
-      <div class="speech">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${it.text}</div></div>`;
+      <div class="speech with-face">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${it.text}</div></div>`;
     const close = modal(c, 'pop');
     c.append(asBack(button('فهمیدم!', 'primary big', () => { close(); done(); })));
   });

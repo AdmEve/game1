@@ -8,5 +8,7 @@ const build = (() => { try { return process.env.GITHUB_SHA?.slice(0, 7) ?? execS
 export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(build) },
-  build: { target: 'es2019', assetsInlineLimit: 0 },
+  // CSS for the oldest WebView the app accepts (capacitor.config.json: minWebViewVersion 84): without this the
+  // minifier folds top/right/bottom/left back into `inset`, which Chrome only reads from 87.
+  build: { target: 'es2019', cssTarget: 'chrome84', assetsInlineLimit: 0 },
 });

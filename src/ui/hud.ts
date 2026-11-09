@@ -61,14 +61,22 @@ export class Hud {
   /** «طرح زوج و فرد» sign: which plates may leave and how many exits until it switches. */
   setParity(p: 0 | 1 | null, left: number) {
     this.camSign.classList.toggle('hidden', p === null);
+    this.stack();
     if (p === null) return;
     const dots = Array.from({ length: Math.max(0, left) }, () => '<i></i>').join('');
     this.camSign.className = 'camsign ' + (p ? 'odd' : 'even');
     this.camSign.innerHTML = `${icon('camera')}<span>طرح <b>${p ? 'فرد' : 'زوج'}</b></span><span class="dots">${dots}</span>`;
+    this.stack();
+  }
+  /** Which rows are showing, so the signs and toasts below them can make room (theme.css). */
+  private stack() {
+    this.root.classList.toggle('has-limit', !this.limit.classList.contains('hidden'));
+    this.root.classList.toggle('has-sign', !this.camSign.classList.contains('hidden') || !this.copSign.classList.contains('hidden'));
   }
   /** «پلیس راهور» sign: which direction may go. */
   setOfficer(axis: 'v' | 'h' | null) {
     this.copSign.classList.toggle('hidden', axis === null);
+    this.stack();
     if (!axis) return;
     this.copSign.innerHTML = `${icon('shield')}<span>نوبت <b>${axis === 'v' ? 'عمودی‌ها ↕' : 'افقی‌ها ↔'}</b></span>`;
     this.copSign.classList.remove('pulse'); void this.copSign.offsetWidth; this.copSign.classList.add('pulse');
@@ -84,6 +92,7 @@ export class Hud {
   /** Hard-mode counters: seconds left and/or taps left (null hides that part). */
   setLimits(time: number | null, moves: number | null) {
     this.limit.classList.toggle('hidden', time === null && moves === null);
+    this.stack();
     const low = (time !== null && time <= 10) || (moves !== null && moves <= 3);
     this.limit.classList.toggle('low', low);
     const t = time === null ? '' : `<span class="lim">${icon('timer')}<b>${fa(time)}</b></span>`;
@@ -121,6 +130,9 @@ export function modal(content: HTMLElement, cls = ''): () => void {
   const card = h('div', 'card ' + cls);
   card.append(content);
   back.append(card);
+  // The home screen's own layout and the slow camera drift behind it (classes, not :has(), for older WebViews).
+  const home = card.classList.contains('home-card');
+  if (home) { back.classList.add('home-back'); document.body.classList.add('at-home'); }
   document.body.append(back);
   // Commit the start state, then animate in (transform and opacity only: the compositor runs it).
   void back.offsetWidth;
@@ -128,6 +140,7 @@ export function modal(content: HTMLElement, cls = ''): () => void {
   let closed = false;
   return () => {
     if (closed) return; closed = true;
+    if (home) document.body.classList.remove('at-home');
     back.classList.remove('in'); back.classList.add('out');
     setTimeout(() => back.remove(), 200);
   };

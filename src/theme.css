@@ -109,7 +109,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .ver { color: #5d6672; }
 
 /* ───── Home ───── */
-.modal-back:has(.home-card) { background: linear-gradient(180deg, rgba(5, 7, 10, .55) 0%, rgba(5, 7, 10, 0) 22%, rgba(5, 7, 10, 0) 42%, rgba(5, 7, 10, .82) 78%) !important; }
+.modal-back.home-back { background: linear-gradient(180deg, rgba(5, 7, 10, .55) 0%, rgba(5, 7, 10, 0) 22%, rgba(5, 7, 10, 0) 42%, rgba(5, 7, 10, .82) 78%) !important; }
 .card.home-card { background: none; border: 0; box-shadow: none; }
 .logo { margin-bottom: 15vh; padding: 26px 0 18px; background: radial-gradient(closest-side, rgba(5, 7, 10, .5), rgba(5, 7, 10, 0)); }
 .logo .sign { transform: none; background: none; border: 0; box-shadow: none; padding: 0; font-size: 64px; font-weight: 900; letter-spacing: -1px; line-height: 1.1;
@@ -150,7 +150,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .btn.agency-btn .sb { background: rgba(242, 177, 36, .12); color: var(--accent-hi); border: 1px solid rgba(242, 177, 36, .3); border-radius: 10px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; }
 .btn.agency-btn .sb .ico { width: 14px; height: 14px; }
 .btn.rush-btn.done { opacity: .6; }
-.home-row:has(.ach-btn) { grid-template-columns: 1fr 1fr 50px 50px; gap: 8px; }
+.home-row.with-ach { grid-template-columns: 1fr 1fr 50px 50px; gap: 8px; }
 .home-row .btn.ach-btn, .home-row .btn.pass-btn { justify-content: center; padding: 0; background: var(--glass); box-shadow: var(--shadow); }
 .home-row .btn.ach-btn .ico { width: 24px; height: 24px; color: var(--text); }
 .ach-btn .badge { background: var(--accent); color: var(--accent-ink); box-shadow: none; animation: none; font-weight: 800; }
@@ -199,10 +199,10 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
 
 /* Lite profile (no post pass): a static vignette instead. */
-body.lite::after { display: block; content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse 90% 80% at 50% 55%, rgba(0, 0, 0, 0) 58%, rgba(5, 8, 14, .32) 100%); }
+body.lite::after { display: block; content: ''; position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse 90% 80% at 50% 55%, rgba(0, 0, 0, 0) 58%, rgba(5, 8, 14, .32) 100%); }
 
 /* Level / chapter change veil: an opacity-only fade (compositor), with a loading line while a world is built. */
-.veil { position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity .18s cubic-bezier(.4, 0, .2, 1);
+.veil { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity .18s cubic-bezier(.4, 0, .2, 1);
   background: radial-gradient(120% 80% at 50% 40%, #1d3354 0%, #101c30 55%, #0a1220 100%); will-change: opacity; }
 .veil.on { opacity: 1; pointer-events: auto; transition-duration: .18s; }
 .veil:not(.on) { transition-duration: .32s; }
@@ -215,8 +215,8 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 /* ───── Motion: one language for every card. In: rise and fade from 94% (280 ms, decelerating). Out: faster (160 ms).
    Only transform and opacity animate, so the compositor runs it even while the game is busy. */
 .modal-back { background: none !important; transition: none; }
-.modal-back::before { content: ''; position: absolute; inset: 0; background: rgba(5, 7, 10, .55); opacity: 0; transition: opacity .28s cubic-bezier(.16, 1, .3, 1); will-change: opacity; }
-.modal-back:has(.home-card)::before { background: linear-gradient(180deg, rgba(10, 20, 40, 0) 30%, rgba(10, 20, 40, .55)); }
+.modal-back::before { content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(5, 7, 10, .55); opacity: 0; transition: opacity .28s cubic-bezier(.16, 1, .3, 1); will-change: opacity; }
+.modal-back.home-back::before { background: linear-gradient(180deg, rgba(10, 20, 40, 0) 30%, rgba(10, 20, 40, .55)); }
 .modal-back.in::before { opacity: 1; }
 .modal-back.out::before { opacity: 0; transition-duration: .16s; transition-timing-function: cubic-bezier(.4, 0, 1, 1); }
 .modal-back > .card { position: relative; transform: translateY(12px) scale(.94); opacity: 0; transition-property: transform, opacity; transition-duration: .28s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); will-change: transform, opacity; }
@@ -237,9 +237,9 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 .toast { top: calc(160px + var(--sat)); transition-property: transform, opacity; transition-duration: .22s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }
 /* With a time/taps counter showing, the plate-camera and officer signs move to their own row beneath it
    (they used to sit on the same row and overlap it), and toasts move down below them. */
-.hud:has(.limit:not(.hidden)) .camsign { top: calc(158px + var(--sat)); }
-.hud:has(.camsign:not(.hidden)) .toast { top: calc(160px + 40px + var(--sat)); }
-.hud:has(.limit:not(.hidden)):has(.camsign:not(.hidden)) .toast { top: calc(200px + 40px + var(--sat)); }
+.hud.has-limit .camsign { top: calc(158px + var(--sat)); }
+.hud.has-sign .toast { top: calc(160px + 40px + var(--sat)); }
+.hud.has-limit.has-sign .toast { top: calc(200px + 40px + var(--sat)); }
 /* Shop boosters: the same line icons as the booster bar, on dark tiles. */
 .shop-card .ic, .shop-card.bst-bay .ic, .shop-card.bst-whistle .ic, .shop-card.bst-crane .ic { background: rgba(255, 255, 255, .06); border: 1px solid var(--line); color: var(--accent); box-shadow: none; }
 .shop-card .ic .ico { width: 28px; height: 28px; }
@@ -247,13 +247,13 @@ body.lite::after { display: block; content: ''; position: fixed; inset: 0; point
 /* Title screen: the 3D view holds still behind the home card, and the compositor slowly pushes in on it (a Ken Burns
    drift that costs no rendering). When play starts it eases back while the camera swoops down. */
 #app canvas { transform-origin: 50% 38%; transition: transform .8s cubic-bezier(.2, .8, .2, 1); }
-body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform 40s cubic-bezier(.3, 0, .7, 1); }
+body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cubic-bezier(.3, 0, .7, 1); }
 
 /* ───── Home screen fits every phone ─────
    The card fills the screen height as a column: the logo takes whatever room is left (centered in it, shrinking
    first), so the play button always sits on screen. Short screens drop the radio line and tighten spacing;
    narrow ones shrink the button row's text. */
-.modal-back:has(.home-card) { place-items: stretch center; padding-top: calc(10px + var(--sat)); padding-bottom: calc(18px + var(--sab)); }
+.modal-back.home-back { place-items: stretch center; padding-top: calc(10px + var(--sat)); padding-bottom: calc(18px + var(--sab)); }
 .card.home-card { width: min(380px, 100%); height: 100%; display: flex; flex-direction: column; }
 .card.home-card > .home { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .home > .logo { margin: auto 0; flex: 0 1 auto; min-height: 0; overflow: hidden; }
@@ -274,8 +274,8 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
   .home-row .btn small { display: none; }
 }
 @media (max-width: 380px) {
-  .home-row:has(.ach-btn) { grid-template-columns: 1fr 1fr 46px 46px; gap: 6px; }
-  .home-row:has(.ach-btn) .btn { font-size: 14px; }
+  .home-row.with-ach { grid-template-columns: 1fr 1fr 46px 46px; gap: 6px; }
+  .home-row.with-ach .btn { font-size: 14px; }
   .home-row .btn small { font-size: 11px; }
   .ch-map i { width: 24px; }
 }
@@ -305,7 +305,7 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 @media (max-height: 700px) { .pause-card .settings .row { padding-top: 8px; padding-bottom: 8px; } .pause-card h2 { margin-top: 0; } }
 
 /* Level 1 spotlight: everything but the suggested car dims (the gradient is set from script). */
-.spot { position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+.spot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 6; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
 .spot.show { opacity: 1; }
 .hand.nudge .emo, .hand.nudge .ico { animation: handno .42s cubic-bezier(.36, .07, .19, .97); }
 @keyframes handno { 20%, 60% { transform: translateX(-9px) rotate(-8deg); } 40%, 80% { transform: translateX(9px) rotate(8deg); } }
@@ -339,7 +339,7 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 .settings .row > span small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
 
 /* Reduced motion: no camera moves (in script), no looping decorations, cards fade instead of scaling, a soft flash. */
-.reduce-motion body:has(.home-card) #app canvas { transform: none !important; transition: none !important; }
+.reduce-motion body.at-home #app canvas { transform: none !important; transition: none !important; }
 .reduce-motion .hand .emo, .reduce-motion .hand .ico, .reduce-motion .hand::before, .reduce-motion .mark i, .reduce-motion .mark span,
 .reduce-motion .burst, .reduce-motion .chest .box, .reduce-motion .day.now, .reduce-motion .btn.claim, .reduce-motion .piggy-row.ready,
 .reduce-motion .rw.can, .reduce-motion .sin.new, .reduce-motion .agency-btn .sb.ready, .reduce-motion .bst.on .ic, .reduce-motion .limit.low,
@@ -420,5 +420,5 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 .big-text .limit { font-size: 17px; }
 .big-text .bst .nm { font-size: 14px; }
 /* Toasts sit in the free band between the lot and the booster bar, never over the cars or the signs at the top. */
-.hud .toast, .hud:has(.camsign:not(.hidden)) .toast, .hud:has(.limit:not(.hidden)):has(.camsign:not(.hidden)) .toast {
+.hud .toast, .hud.has-sign .toast, .hud.has-limit.has-sign .toast {
   top: auto; bottom: calc(106px + var(--sab)); max-width: calc(100vw - 32px); }
