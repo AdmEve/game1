@@ -36,6 +36,7 @@ import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
 import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
+import { showPrivacy } from './ui/privacy';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
@@ -1096,6 +1097,8 @@ function showSettings() {
       try { await navigator.clipboard.writeText(text); note('گزارش کپی شد'); } catch { note('کپی نشد'); }
     }));
   }
+  // The privacy policy (the store listing's text, store/privacy-fa.md).
+  c.append(button(`${icon('shield')} حریم خصوصی`, 'ghost errs privacy-btn', () => showPrivacy()));
   // Version label: three taps show the performance overlay, seven unlock every level (for testers).
   const ver = h('div', 'ver', `نسخه‌ی ${fa(__APP_VERSION__)} · ساخت ${__BUILD__}`);
   let taps = 0;
@@ -1376,7 +1379,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

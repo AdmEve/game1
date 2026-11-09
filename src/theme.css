@@ -409,6 +409,17 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .result .rewards .reward small { flex-basis: 100%; text-align: center; font-size: 11px; line-height: 1.1; }
 .result .rewards .reward .ico, .result .rewards .reward .emo { width: 22px; height: 22px; }
 .card.garage-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+/* The privacy policy: a long, plain read that scrolls inside its card. */
+.card.privacy-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.privacy { text-align: right; }
+.privacy h2 { font-size: 20px; margin: 4px 0 10px; text-align: center; }
+.privacy h3 { font-size: 15px !important; color: var(--accent) !important; margin: 14px 0 4px; letter-spacing: 0; }
+.privacy p, .privacy li { font-size: 13.5px; line-height: 1.9; color: var(--text); margin: 0 0 6px; }
+.privacy ul { margin: 0 0 6px; padding: 0 18px 0 0; }
+.privacy p:nth-of-type(1) { color: var(--muted); font-size: 12px; text-align: center; }
+/* The close button stays in reach at the card's foot, over a fade into the card's own colour. */
+.privacy-foot { position: sticky; bottom: -20px; margin: 4px -20px -20px; padding: 22px 20px 20px; background: linear-gradient(180deg, rgba(16, 19, 24, 0), rgb(16, 19, 24) 38%); }
+.privacy-foot .btn { margin: 0; }
 /* Larger text: the home row (two labels and two icon buttons in a fixed grid) keeps its size and lets labels wrap,
    so it can't push past the screen edge on a 360-wide phone. */
 .big-text .home-row .btn { zoom: 1; white-space: normal; }

@@ -346,3 +346,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   side, a boss win card hid its buttons below the screen, and level-start notes covered the bottom row of cars. All
   fixed; every card fits at 320×568, 360×640 and 412×915 with normal and larger text (132/132), and the HUD audit passes
   at all three sizes (18/18). Both audits now include 320×568 by default.
+- Store readiness: a Persian privacy policy (`store/privacy-fa.md`, accurate to what the app does: no servers of ours,
+  Tapsell Plus ads, Bazaar purchases, local reminders, opt-in sharing), shown in the game too (Settings → حریم خصوصی)
+  from the same file. The store listing text now covers hold-to-see, sharing wins and the accessibility options.
