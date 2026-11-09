@@ -1,3 +1,5 @@
+// First, so a failure in any module below still ends on a message instead of a frozen splash.
+import { mainLoaded, showFatal } from './ui/fatal';
 import './fonts.css';
 import './style.css';
 import './theme.css';
@@ -68,7 +70,11 @@ const debug = new URLSearchParams(location.search);
 
 // ───── Renderer and scene ─────
 const app = document.getElementById('app')!;
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: debug.has('shot') });
+// No WebGL (a blocklisted GPU driver, an old System WebView): say so on the splash instead of loading forever.
+const renderer = (() => {
+  try { return new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: debug.has('shot') }); }
+  catch (e) { showFatal('webgl', String((e as Error)?.message ?? e)); throw e; }
+})();
 /** Phones (the APK or a mobile browser) get a lighter setup: fewer pixels, cheaper shadows, no live blur. */
 const mobile = Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 : mobile ? 1.25 : 2));
@@ -1325,4 +1331,9 @@ async function boot() {
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }
   document.title = 'ready';
 }
-void boot();
+mainLoaded();
+boot().catch((e: unknown) => {
+  // A failure before the game is on screen would leave the splash up forever: say so, with a retry.
+  if (document.getElementById('splash') && document.title !== 'ready') showFatal('boot', String((e as Error)?.message ?? e));
+  throw e; // still reaches the error log
+});

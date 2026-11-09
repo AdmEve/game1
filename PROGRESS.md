@@ -312,3 +312,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   lost). They are now rebuilt on restore, in play and in the garage/agency view: the frame after a restore matches
   the one before (mean difference 0.1–0.4 of 255, was 111). A context that never returns reloads the game from the
   save after 6 s on screen. Shader-compile waits are capped so a loss mid-level-change can't leave the veil up.
+- Can't-start message (`scripts/fatal.cjs`, in CI): with WebGL unavailable (blocklisted GPU driver, old System
+  WebView) the game sat on the splash forever. Now the splash says what's wrong and what to do (update Android System
+  WebView and Chrome, restart the phone), with a retry; a failure while loading gets its own message ("progress is
+  safe"). Checked at 360×640 and 412×915; the retry reloads.
