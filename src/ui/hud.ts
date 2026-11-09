@@ -41,6 +41,8 @@ export class Hud {
   constructor(parent: HTMLElement) {
     const top = h('div', 'topbar');
     const gear = h('button', 'iconbtn gear', icon('settings'));
+    // Icon-only controls carry a name for screen readers (scripts/a11y.cjs).
+    gear.setAttribute('aria-label', 'مکث و تنظیمات');
     gear.onclick = () => { click(); this.onSettings(); };
     this.coins.onclick = () => { click(); this.onCoins(); };
     top.append(gear, this.plate, this.coins);
@@ -106,6 +108,7 @@ export class Hud {
   }
   refresh() {
     this.coins.innerHTML = `${icon('coin', 'ico coin')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
+    this.coins.setAttribute('aria-label', `${faNum(save.coins)} سکه، خرید از دکه`);
     // Helps open one at a time (game/helps.ts): no bar before the first, then the rest wait dimmed with their level.
     this.bar.classList.toggle('none', !anyHelpOpen(save.level));
     for (const b of BOOSTERS) {

@@ -362,3 +362,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Hints on request: past the first eight levels the game no longer shows the answer after 10 s of thinking. After
   20 s a small «راهنما؟» chip offers a hint; tapping it shows the hand on the next move. The first eight levels keep
   the automatic hand for beginners. Checked by `scripts/hintoffer.cjs` (in CI).
+- Screen readers: every control on the main screens now says what it is (the gear, metro card, trophies, coins, garage
+  arrows; settings switches read as on/off). axe-core audit (WCAG 2 A/AA) of eight screens clean, in CI (`scripts/a11y.cjs`).

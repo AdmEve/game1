@@ -65,6 +65,7 @@ export function showGarage(onClose: () => void) {
   const nav = h('div', 'gnav');
   const prev = button('›', 'ghost round', () => { i = (i + CLASSICS.length - 1) % CLASSICS.length; show(); });
   const next = button('‹', 'ghost round', () => { i = (i + 1) % CLASSICS.length; show(); });
+  prev.setAttribute('aria-label', 'ماشین قبلی'); next.setAttribute('aria-label', 'ماشین بعدی');
   const action = h('div', 'gaction');
   nav.append(prev, info, next);
   c.append(stage, nav, action);

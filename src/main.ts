@@ -1085,6 +1085,7 @@ function showSettings() {
   const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText', apply?: () => void) => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
+    t.setAttribute('role', 'switch'); // read as on/off, not as a checkbox
     t.onchange = () => {
       save.settings[key] = t.checked; persist();
       if (key === 'colorblind') needsRestart = true;
@@ -1246,13 +1247,17 @@ function showHome() {
   });
   rowEl.append(rushBtn);
   const tickets = passReady();
-  rowEl.append(button(`${icon('ticket')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
+  const passBtn = button(`${icon('ticket')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
     close(); showPass(() => hud.refresh(), () => showHome());
-  }));
+  });
+  passBtn.setAttribute('aria-label', tickets ? `کارت بلیت، ${fa(tickets)} جایزه آماده` : 'کارت بلیت');
+  rowEl.append(passBtn);
   const waiting = claimable();
-  rowEl.append(button(`${icon('trophy')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
+  const achBtn = button(`${icon('trophy')}${waiting ? `<i class="badge">${fa(waiting)}</i>` : ''}`, 'ach-btn', () => {
     close(); showAchievements(() => showHome(), () => hud.refresh());
-  }));
+  });
+  achBtn.setAttribute('aria-label', waiting ? `افتخارات، ${fa(waiting)} جایزه آماده` : 'افتخارات');
+  rowEl.append(achBtn);
   rowEl.classList.add('with-ach');
   c.querySelector('.chapter')!.append(livesPill());
   if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>${helpsText(save.streak)} مجانی</small>` : ''}`));
