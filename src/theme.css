@@ -385,6 +385,11 @@ body:has(.home-card) #app canvas { transform: scale(1.08); transition: transform
 /* Win card actions: next level full width, then doubling and home side by side. */
 .win-row { display: flex; gap: 8px; margin-top: 8px; }
 .win-row .btn { flex: 1 1 0; margin: 0; min-width: 0; font-size: 15px; padding-left: 6px; padding-right: 6px; }
+/* Share a win: a fixed square beside the row's other buttons. */
+.win-row .btn.share { flex: 0 0 52px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.win-row .btn.share .ico { width: 22px; height: 22px; }
+/* With the share square in the row, Home takes only what its label needs so Double keeps one line. */
+.win-row.with-share .btn.home-link { flex: 0 0 auto; width: auto; padding-left: 14px; padding-right: 14px; }
 
 /* A card taller than the screen scrolls with its backdrop (auto margins centre it without cutting off its top). */
 .modal-back { display: flex; overflow-y: auto; overscroll-behavior: contain; }

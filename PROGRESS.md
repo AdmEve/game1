@@ -320,3 +320,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   pixel ratio and frame governor, screen and memory, and the last five cold starts broken down by stage (fonts, car
   models, world build, shader compile, first frame). Headless tests can't measure real start-up, so this is how the
   < 4 s start target gets checked on a real phone.
+- Share a win: on new «سخت» and chapter-final wins and the daily rush, a share button sends friends a picture of the
+  level's starting layout (a clean top-down puzzle diagram that never reveals covered cars), "solved in N taps, can
+  you?", and the Bazaar link, through the phone's share sheet (Telegram, WhatsApp…). 140 KB JPEG. Checked for seven
+  kinds of level by eye (`scripts/sharecard.cjs`); the button shows only on those wins; win cards still fit.

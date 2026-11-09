@@ -33,6 +33,7 @@ import { askNotifications, planReminders, syncReminders } from './notify';
 import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
+import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
@@ -796,7 +797,10 @@ function showRushWin() {
   const close = modal(c, 'pop');
   const pay = payout(c, coins, before);
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
-  c.append(asBack(button('برگرد به خونه', 'primary big', () => { pay.close(); close(); void goLevel(undefined, undefined, false, null, showHome); })));
+  const row = h('div', 'win-row');
+  row.append(asBack(button('برگرد به خونه', 'primary big', () => { pay.close(); close(); void goLevel(undefined, undefined, false, null, showHome); })));
+  if (rush) row.append(shareButton({ level: rush, title: 'چالش ساعت شلوغی', brag: streak > 1 ? `${fa(streak)} روز پشت سر هم ردش کردم!` : 'ساعت شلوغی امروز رو رد کردم!' }));
+  c.append(row);
 }
 
 function showWin() {
@@ -874,7 +878,26 @@ function showWin() {
   c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
   // Home: spend the stars and keys (agency, garage) before going on.
   row.append(asBack(button(`${icon('home')} خونه`, 'ghost home-link', () => { void next(true); })));
+  // Hard levels and chapter ends are worth showing off: the puzzle goes to friends as a picture (ui/sharecard.ts).
+  if (!replay && lvl && (lvl.tag || n + 1 === chapterOf(n).to)) {
+    const taps = session?.taps ?? 0;
+    row.append(shareButton({ level: lvl, title: `مرحله‌ی ${fa(n + 1)} · ${chapterOf(n).name}`, badge: lvl.tag ? 'سخت' : undefined, brag: taps ? `با ${fa(taps)} حرکت ردش کردم!` : 'ردش کردم!' }));
+    row.classList.add('with-share');
+  }
   c.append(row);
+}
+
+/** A small share button for a win card: sends the level as a picture with the Bazaar link. */
+function shareButton(info: ShareWin): HTMLElement {
+  const b = button(icon('share'), 'ghost share', async () => {
+    if (b.hasAttribute('disabled')) return;
+    b.setAttribute('disabled', '');
+    const r = await shareWin(info);
+    b.removeAttribute('disabled');
+    if (r === 'saved') note('عکسش ذخیره شد'); else if (r === 'failed') note('فرستادن نشد');
+  });
+  b.setAttribute('aria-label', 'فرستادن برای دوستات');
+  return b;
 }
 
 /** Ask happy players (right after a win) to rate the game on Bazaar; unhappy ones are not sent there. */
@@ -1323,6 +1346,8 @@ async function boot() {
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
     swooping: () => swooping, pointAt, errors, worldCacheInfo,
+    /** The share-a-win image for level n (scripts/sharecard.cjs). */
+    shareCard: async (n: number, brag = 'با ۱۲ حرکت ردش کردم!') => { await document.fonts.load('900 112px Vazirmatn'); return drawShareCard({ level: levels[n], title: `مرحله‌ی ${fa(n + 1)} · ${chapterOf(n).name}`, badge: levels[n].tag ? 'سخت' : undefined, brag }).toDataURL('image/png'); },
     /** Every card the game shows, for layout checks (scripts/cardfit.cjs). */
     cards: {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
