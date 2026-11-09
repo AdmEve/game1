@@ -387,3 +387,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Home screen fix: on 360-wide phones (the most common size) «ساعت شلوغی» ran past its button under the metro-card
   button; it now wraps neatly, and the medal badge's number is centred. The card audit now catches any label that
   spills out of its button, on every card at three screen sizes.
+- Store banner: `store/feature-1024x500.jpg`, the 1024×500 feature graphic Bazaar and Myket use for featured apps,
+  made from the game itself (Milad at dusk, real play on a phone, the yellow taxi, the logo). The listing text now
+  names all ten mechanics, the hard and boss levels, and the Nowruz event.
