@@ -390,3 +390,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Store banner: `store/feature-1024x500.jpg`, the 1024×500 feature graphic Bazaar and Myket use for featured apps,
   made from the game itself (Milad at dusk, real play on a phone, the yellow taxi, the logo). The listing text now
   names all ten mechanics, the hard and boss levels, and the Nowruz event.
+- The city behind each level looks like Tehran from above now: rooftops carry water tanks, evaporative coolers and
+  satellite dishes (they were flat grey boxes). Seen in every level's opening camera move; costs 3 draw calls.

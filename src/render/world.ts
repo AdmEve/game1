@@ -771,7 +771,7 @@ function cityTextures() {
   const mk = (c: HTMLCanvasElement) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
   return (cityTex = { wall: keepTex(mk(wall)), lit: keepTex(mk(lit)) });
 }
-function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][], sight?: THREE.Vector3): THREE.InstancedMesh {
+function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number, number, number][], sight?: THREE.Vector3): THREE.Group {
   const { wall, lit } = cityTextures(), night = !!opts.night;
   const mat = new THREE.MeshStandardMaterial({ map: wall, roughness: 0.85, emissive: night ? 0xffffff : 0x000000, emissiveMap: lit, emissiveIntensity: night ? 1.6 : 0 });
   // One floor is 0.62 tall and one window bay about 0.7 wide, wherever the face is.
@@ -784,6 +784,7 @@ function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number
   };
   const tones = [0xe7dcc8, 0xd9cbb3, 0xefe4cf, 0xcfc4b4, 0xb98468, 0xa86c50, 0xdedad2, 0xc9c1b4];
   const items: THREE.Matrix4[] = [], cols: THREE.Color[] = [];
+  const roofs: { x: number; z: number; w: number; d: number; h: number; turn: number }[] = [];
   const zNear = L.walkZ - 13, zFar = L.walkZ - 82;
   for (let z = zNear; z > zFar; z -= 4.2) for (let x = -72; x < 72; x += 4.2) {
     const px = x + (rnd() - 0.5) * 1.4, pz = z + (rnd() - 0.5) * 1.4;
@@ -793,13 +794,54 @@ function cityscape(L: Layout, rnd: () => number, opts: WorldOpts, avoid: [number
     const inFront = !!sight && Math.abs(px - sight.x) < 9 && pz > sight.z;
     const tall = !inFront && rnd() < 0.06, floors = tall ? 14 + Math.floor(rnd() * 12) : inFront ? 3 + Math.floor(rnd() * 3) : 4 + Math.floor(rnd() * 5);
     const w = 2.4 + rnd() * 1.4, d = 2.4 + rnd() * 1.4, h = floors * 0.62;
-    const m = new THREE.Matrix4().compose(new THREE.Vector3(px, h / 2, pz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (rnd() - 0.5) * 0.12), new THREE.Vector3(w, h, d));
+    const turn = (rnd() - 0.5) * 0.12;
+    const m = new THREE.Matrix4().compose(new THREE.Vector3(px, h / 2, pz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), turn), new THREE.Vector3(w, h, d));
     items.push(m); cols.push(new THREE.Color(tones[Math.floor(rnd() * tones.length)]).multiplyScalar(0.9 + rnd() * 0.15));
+    if (!tall && pz > zNear - 40) roofs.push({ x: px, z: pz, w, d, h, turn });
   }
   const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, items.length);
   items.forEach((m, i) => { im.setMatrixAt(i, m); im.setColorAt(i, cols[i]); });
   im.castShadow = false; im.receiveShadow = true;
-  return im;
+  const city = new THREE.Group();
+  city.add(im, ...rooftops(roofs, items.length));
+  return city;
+}
+
+/**
+ * Tehran's rooftop clutter on the near city (the far rows are too small to show it): a water tank lying on its side,
+ * one or two evaporative coolers, now and then a satellite dish. One instanced mesh per kind (three draw calls),
+ * low-poly (~23k triangles in all). Its own seeded draws, so the city and everything built after it stay as they were.
+ */
+function rooftops(roofs: { x: number; z: number; w: number; d: number; h: number; turn: number }[], seed: number): THREE.InstancedMesh[] {
+  let k = (seed * 7919 + 17) % 2147483647 || 1;
+  const r = () => ((k = (k * 16807) % 2147483647) / 2147483647);
+  const tank = new THREE.CylinderGeometry(0.17, 0.17, 0.52, 8).rotateZ(Math.PI / 2);
+  const cooler = new THREE.BoxGeometry(0.42, 0.34, 0.42);
+  const dish = new THREE.CircleGeometry(0.16, 10).rotateX(-0.75);
+  const kinds = [
+    { geo: tank, mat: new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 }), tones: [0xe8eaec, 0xc9ced3, 0x5f92c8, 0xd8d2c2], list: [] as [THREE.Matrix4, number][] },
+    { geo: cooler, mat: new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.25 }), tones: [0xbfc5cc, 0xcfc8b8, 0xa9b0b8], list: [] as [THREE.Matrix4, number][] },
+    { geo: dish, mat: new THREE.MeshStandardMaterial({ roughness: 0.5, side: THREE.DoubleSide }), tones: [0xf1f1ee, 0xe2e2dc], list: [] as [THREE.Matrix4, number][] },
+  ];
+  const up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), at = new THREE.Vector3();
+  const place = (kind: number, b: (typeof roofs)[0], lx: number, y: number, lz: number, spin: number) => {
+    at.set(lx, 0, lz).applyAxisAngle(up, b.turn).add(new THREE.Vector3(b.x, b.h + y, b.z));
+    q.setFromAxisAngle(up, b.turn + spin);
+    kinds[kind].list.push([new THREE.Matrix4().compose(at.clone(), q.clone(), one), kinds[kind].tones[Math.floor(r() * kinds[kind].tones.length)]]);
+  };
+  for (const b of roofs) {
+    const sx = b.w / 2 - 0.35, sz = b.d / 2 - 0.35;
+    if (r() < 0.75) place(0, b, (r() * 2 - 1) * sx, 0.2, (r() * 2 - 1) * sz, (r() < 0.5 ? 0 : Math.PI / 2));
+    for (let n = r() < 0.4 ? 2 : 1; n > 0; n--) if (r() < 0.85) place(1, b, (r() * 2 - 1) * sx, 0.17, (r() * 2 - 1) * sz, (r() - 0.5) * 0.3);
+    if (r() < 0.4) place(2, b, (r() * 2 - 1) * sx, 0.22, (r() * 2 - 1) * sz, (r() - 0.5) * 0.8);
+  }
+  return kinds.filter((x) => x.list.length).map((x) => {
+    const mesh = new THREE.InstancedMesh(x.geo, x.mat, x.list.length);
+    const c = new THREE.Color();
+    x.list.forEach(([m, tone], i) => { mesh.setMatrixAt(i, m); mesh.setColorAt(i, c.setHex(tone)); });
+    mesh.castShadow = false; mesh.receiveShadow = false;
+    return mesh;
+  });
 }
 
 export function buildWorld(w: number, h: number, bays: number, seed = 1, opts: WorldOpts = {}): World {
