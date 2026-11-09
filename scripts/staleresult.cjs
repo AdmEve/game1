@@ -14,7 +14,7 @@ const URL = process.env.URL || 'http://127.0.0.1:4173/';
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 300000 });
   await p.evaluate(() => {
     const rb = window.__rb;
-    rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'ch2'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
+    rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'ch2'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
     window.__start = async (n) => {
       document.querySelectorAll('.modal-back, .wallet-float').forEach((m) => m.remove());
       rb.save.level = n; await rb.goLevel(n, undefined, false);

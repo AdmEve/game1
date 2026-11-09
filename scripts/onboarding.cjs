@@ -35,7 +35,7 @@ const out = process.argv[2];
   });
   console.log('refuse wrong, accept right:', JSON.stringify(r));
   // Mechanic pointer: level 7 introduces covers.
-  await p.evaluate(() => { const rb = window.__rb; rb.save.level = 6; rb.save.seen = { ch1: true }; rb.startLevel(6, undefined, false); });
+  await p.evaluate(() => { const rb = window.__rb; rb.save.level = 6; rb.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, ch1: true }; rb.startLevel(6, undefined, false); });
   await p.waitForTimeout(500);
   const hasIntro = await p.evaluate(() => !!document.querySelector('.modal-back .intro'));
   await p.addStyleTag({ content: '.mark, .mark * { transition: none !important; animation: none !important; }' });

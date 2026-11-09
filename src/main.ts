@@ -37,6 +37,7 @@ import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
 import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
 import { showPrivacy } from './ui/privacy';
+import { HELP_FROM, helpOpen, helpOpening } from './game/helps';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
@@ -45,7 +46,7 @@ import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
 import { nowruzBanner, showNowruzWin } from './ui/nowruz';
 import { fillPiggy } from './ui/piggy';
-import { AJOOL, BOSS_LINES } from './ui/characters';
+import { AJOOL, BOSS_LINES, RAHIM } from './ui/characters';
 import { passReady, punch, showPass } from './ui/pass';
 import { HAFT_SIN, nowruzLevel, yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
@@ -654,7 +655,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   let streakNote = '';
   if (newLevelRun && save.streak > 0) {
     const got: string[] = [];
-    for (const k of streakHelps(save.streak)) {
+    for (const k of openHelps(save.streak)) {
       if (k === 'bay') { if (session.extraBay()) got.push(HELP_NAME.bay); }
       else { hud.free.add(k); got.push(HELP_NAME[k]); }
     }
@@ -708,12 +709,36 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad">${line.taunt}</div>`;
     const close = modal(c, 'pop boss');
     c.append(asBack(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; })));
+  } else if (helpOpening(n) && n === save.level && !save.seen['help-' + helpOpening(n)]) {
+    // A help opens on this level (game/helps.ts): Mash Rahim shows it, then its button pulses.
+    const id = helpOpening(n)!;
+    modalOpen = true;
+    void showHelpCard(id).then(() => { save.seen['help-' + id] = true; persist(); modalOpen = false; hud.refresh(); hud.bump(id); });
   }
+}
+
+/** What each help does, in Mash Rahim's words (the card on the level it opens). */
+const HELP_INTRO: Record<BoosterId, string> = {
+  bay: 'وقتی جاهای ایستگاه داره پر می‌شه، «جای پارک» یه جای اضافه کنارشون باز می‌کنه. بذارش برای وقتی که گیر افتادی!',
+  crane: '«جرثقیل» هر ماشینی رو بلند می‌کنه و می‌ذاره تو ایستگاه، حتی اگه راهش بسته باشه. اول جرثقیل رو بزن، بعد ماشین رو.',
+  whistle: '«سوت پلیس» مسافرهای جلوی صف رو جوری جابه‌جا می‌کنه که ماشین‌هایی که تو ایستگاه منتظرن زودتر پر بشن.',
+};
+function showHelpCard(id: BoosterId): Promise<void> {
+  const def = BOOSTERS.find((b) => b.id === id)!, have = save.boosters[id];
+  return new Promise((done) => {
+    const c = h('div', 'intro help-intro');
+    c.innerHTML = `<div class="new">کمک تازه!</div><div class="burst"><span class="help-tile">${icon(def.icon)}</span></div><h2>${def.name}</h2>
+      <div class="speech with-face">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${HELP_INTRO[id]}</div></div>
+      ${have > 0 ? `<p class="have">${fa(have)} تا داری؛ زیر صفحه پیداش می‌کنی.</p>` : ''}`;
+    const close = modal(c, 'pop');
+    c.append(asBack(button('فهمیدم!', 'primary big', () => { close(); done(); })));
+  });
 }
 
 function useBooster(id: BoosterId) {
   if (!session || modalOpen) return;
   const def = BOOSTERS.find((b) => b.id === id)!;
+  if (!helpOpen(id, save.level)) { hud.toast(`${def.name} از مرحله‌ی ${fa(HELP_FROM[id])} باز می‌شه`); return; }
   const free = hud.free.has(id);
   if (!free && save.boosters[id] <= 0) {
     if (save.coins < def.price) { hud.toast('سکه کافی نداری!'); return; }
@@ -733,7 +758,9 @@ function useBooster(id: BoosterId) {
 
 const HELP_NAME: Record<Help, string> = { bay: 'جای پارک', crane: 'جرثقیل', whistle: 'سوت پلیس' };
 /** The streak's free helps as words: «جای پارک و جرثقیل». */
-const helpsText = (n: number) => streakHelps(n).map((k) => HELP_NAME[k]).join(' و ');
+/** The streak's free helps, only those open at the player's progress (game/helps.ts). */
+const openHelps = (n: number) => streakHelps(n).filter((k) => helpOpen(k, save.level));
+const helpsText = (n: number) => openHelps(n).map((k) => HELP_NAME[k]).join(' و ');
 /** Whether the level being played is the next new Journey level (the one the streak is riding on). */
 let newLevelRun = false;
 /**
@@ -864,7 +891,7 @@ function showWin() {
     : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`;
   const notes = chestLine + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
     + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
-  const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small></div>` : '';
+  const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small>` : ''}</div>` : '';
   const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
     <div class="rewards">${rewards}</div>${streakLine}${notes}${beaten}${ach}`;
@@ -1213,7 +1240,7 @@ function showHome() {
   }));
   rowEl.classList.add('with-ach');
   c.querySelector('.chapter')!.append(livesPill());
-  if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم<small>${helpsText(save.streak)} مجانی</small>`));
+  if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>${helpsText(save.streak)} مجانی</small>` : ''}`));
   c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();

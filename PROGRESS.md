@@ -351,3 +351,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   from the same file. The store listing text now covers hold-to-see, sharing wins and the accessibility options.
 - Store screenshots re-shot with the current look (they still showed the old HUD and render), each caption checked
   against its level (the Tochal shot now really shows the traffic officer). 4.4 MB for all eight (JPEG) instead of 19 MB.
+- Helps one at a time (GDD: first booster at level 6): no help bar on levels 1–5; the parking help opens on level 6,
+  the crane on 9, the whistle on 12, each introduced by Mash Rahim with a «کمک تازه!» card; helps still waiting show
+  locked with their level. Players already further on keep everything. The win streak only gives helps that are open.
+  Checked as a fresh player with `scripts/helpsopen.cjs` (10/10) and unit tests.

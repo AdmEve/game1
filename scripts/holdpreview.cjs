@@ -16,7 +16,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 300000 });
   await p.evaluate(() => {
     const rb = window.__rb;
-    rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
+    rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
     // Where a car is on screen, and what the lane preview shows now.
     window.__screen = (i) => { const q = rb.session().anchor(i).project(rb.camera); return [((q.x + 1) / 2) * innerWidth, ((1 - q.y) / 2) * innerHeight]; };
     window.__lane = () => { const k = []; rb.scene.traverse((o) => { if (o.visible && o.userData.lane) k.push(o.userData.lane); }); return k; };

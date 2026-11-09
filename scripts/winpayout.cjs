@@ -10,7 +10,7 @@ const out = process.argv[2];
   await p.goto('http://127.0.0.1:5173/?play&shot', { waitUntil: 'load' });
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
   await p.evaluate(async () => {
-    const r = window.__rb; r.save.seen = { spot: true }; r.save.level = 0; r.startLevel(0, undefined, false);
+    const r = window.__rb; r.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, spot: true }; r.save.level = 0; r.startLevel(0, undefined, false);
     document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     const s = r.session(); const { solve } = await import('/src/game/solver.ts');
     for (const m of solve(s.level).solution) { s.tap(m); await r.advance(0.7); }

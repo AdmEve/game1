@@ -67,6 +67,15 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .bst .nm { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .2px; }
 .bst .cnt { top: -4px; left: 16px; min-width: 20px; height: 20px; border-radius: 10px; font-size: 12px; font-weight: 800; background: var(--accent); color: var(--accent-ink); border: 2px solid #15181d; box-shadow: none; }
 .bst .cnt.buy { background: #1d2128; color: var(--accent); border: 1px solid var(--line-2); left: 4px; padding: 0 6px; }
+/* Helps open one at a time (game/helps.ts): no bar before the first; the rest wait dimmed with their level. */
+.boosters.none { display: none; }
+.bst.locked .ic, .bst.locked .nm { opacity: .38; }
+.bst .cnt.lock { background: #1d2128; color: var(--muted); border: 1px solid var(--line-2); left: 50%; transform: translateX(-50%); padding: 0 7px; font-size: 10.5px; white-space: nowrap; }
+/* The card on the level a help opens: its icon on a large tile, like the button it lights up. */
+.help-intro .help-tile { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: rgba(242, 177, 36, .14);
+  border: 1px solid rgba(242, 177, 36, .45); box-shadow: 0 0 34px rgba(242, 177, 36, .25); }
+.help-intro .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
+.help-intro .have { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
 .bst .cnt .ico { width: 12px; height: 12px; vertical-align: -1px; }
 .bst.on .ic { outline: none; border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px rgba(242, 177, 36, .18) !important; animation: none; }
 

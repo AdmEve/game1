@@ -11,7 +11,7 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
   let fails = 0; const check = (name, ok, info) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : ' ' + JSON.stringify(info)}`); };
   const careless = await p.evaluate(async () => {
-    const r = window.__rb; r.save.seen = { spot: true }; r.save.level = 2; r.startLevel(2, undefined, false);
+    const r = window.__rb; r.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, spot: true }; r.save.level = 2; r.startLevel(2, undefined, false);
     document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     const s = r.session(), bays0 = s.s.bays.length, toasts = [];
     new MutationObserver(() => toasts.push(document.querySelector('.hud .toast').textContent)).observe(document.querySelector('.hud .toast'), { childList: true, characterData: true, subtree: true });

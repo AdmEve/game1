@@ -15,7 +15,7 @@ const SEQ = (process.env.LEVELS || '1,2,3,4,5,6,30,31,32,33,1,2,3,4,5,6,31,32,33
   for (const L of SEQ) {
     const r = await p.evaluate(async (L) => {
       const rb = window.__rb;
-      rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'ch2'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
+      rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'ch2'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       rb.save.level = L - 1;
       await rb.goLevel(L - 1, undefined, false);

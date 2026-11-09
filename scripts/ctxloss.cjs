@@ -55,7 +55,7 @@ const LEVELS = (process.env.LEVELS ?? '1,31,91').split(',').filter(Boolean).map(
   for (const L of LEVELS) {
     await p.evaluate(async (L) => {
       const rb = window.__rb;
-      rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'ch2', 'ch3', 'ch4', 'ch5'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
+      rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'ch2', 'ch3', 'ch4', 'ch5'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       await rb.goLevel(L - 1, undefined, false);
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());

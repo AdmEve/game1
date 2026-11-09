@@ -1,6 +1,7 @@
 /** The DOM layer over the 3D view: top bar, booster bar, toasts and the modal screens. */
 import { click } from '../audio';
 import { save } from '../save';
+import { HELP_FROM, anyHelpOpen, helpOpen } from '../game/helps';
 import { icon } from './icons';
 
 export const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
@@ -105,10 +106,14 @@ export class Hud {
   }
   refresh() {
     this.coins.innerHTML = `${icon('coin', 'ico coin')}<b>${faNum(save.coins)}</b><i class="plus">+</i>`;
+    // Helps open one at a time (game/helps.ts): no bar before the first, then the rest wait dimmed with their level.
+    this.bar.classList.toggle('none', !anyHelpOpen(save.level));
     for (const b of BOOSTERS) {
-      const n = save.boosters[b.id];
-      this.btns.get(b.id)!.innerHTML = `<span class="ic">${icon(b.icon)}</span><span class="nm">${b.name}</span>` +
-        (this.free.has(b.id) ? '<span class="cnt free">مجانی</span>' : n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${icon('coin', 'ico coin')}${fa(b.price)}</span>`);
+      const n = save.boosters[b.id], open = helpOpen(b.id, save.level), el = this.btns.get(b.id)!;
+      el.classList.toggle('locked', !open);
+      el.innerHTML = `<span class="ic">${icon(open ? b.icon : 'lock')}</span><span class="nm">${b.name}</span>` +
+        (!open ? `<span class="cnt lock">مرحله‌ی ${fa(HELP_FROM[b.id])}</span>`
+          : this.free.has(b.id) ? '<span class="cnt free">مجانی</span>' : n > 0 ? `<span class="cnt">${fa(n)}</span>` : `<span class="cnt buy">${icon('coin', 'ico coin')}${fa(b.price)}</span>`);
     }
   }
   active(id: BoosterId | null) { for (const [k, b] of this.btns) b.classList.toggle('on', k === id); }

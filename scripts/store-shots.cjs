@@ -9,7 +9,7 @@ const out = path.join(root, 'store');
 fs.mkdirSync(out, { recursive: true });
 const URL = process.env.URL || 'http://127.0.0.1:4173/';
 // Every intro, chapter and boss card already seen, so the scene is the board itself.
-const seen = "window.__rb.save.seen={spot:true,cover:true,broken:true,vip:true,oddEven:true,courier:true,officer:true,cart:true,wedding:true,granny:true,tunnel:true,ch6:true,ch7:true,ch8:true,ch2:true,ch3:true,ch4:true,ch5:true}; for (let k = 0; k < 400; k++) window.__rb.save.seen['boss' + k] = true;";
+const seen = "window.__rb.save.seen={'help-bay':true,'help-crane':true,'help-whistle':true,spot:true,cover:true,broken:true,vip:true,oddEven:true,courier:true,officer:true,cart:true,wedding:true,granny:true,tunnel:true,ch6:true,ch7:true,ch8:true,ch2:true,ch3:true,ch4:true,ch5:true}; for (let k = 0; k < 400; k++) window.__rb.save.seen['boss' + k] = true;";
 const shots = [
   { name: '1-gameplay', caption: 'ترافیک تهران، تو دستای تو!', sub: 'ماشین‌ها رو آزاد کن، مسافرها رو برسون', setup: `${seen} window.__rb.save.level=11; window.__rb.startLevel(); (async () => { const s = window.__rb.session(); const sol = window.__rb.solve(s.level); s.tap(sol[0]); await window.__rb.advance(1.4); s.tap(sol[1]); await window.__rb.advance(0.9); s.tap(sol[2]); })()`, ms: 1500 },
   { name: '2-cars', caption: 'ماشین‌های واقعی ایرانی', sub: 'پیکان، پراید، ۴۰۵، سمند، زامیاد و اتوبوس تندرو', setup: `${seen} window.__rb.save.level=29; window.__rb.startLevel();`, ms: 300 },

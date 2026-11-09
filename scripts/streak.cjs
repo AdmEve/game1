@@ -13,9 +13,10 @@ const out = process.argv[2];
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
   let fails = 0; const check = (name, ok, info) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : ' ' + JSON.stringify(info)}`); };
   const st = await p.evaluate(() => {
-    const r = window.__rb; Object.assign(r.save, { level: 4, streak: 2 }); r.save.seen = { spot: true };
-    const bays0 = r.levels[4].bays ?? 5;
-    r.startLevel(4, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
+    // Level 13: every help is open by then (they open one at a time on levels 6, 9 and 12: scripts/helpsopen.cjs).
+    const r = window.__rb; Object.assign(r.save, { level: 12, streak: 2 }); r.save.seen = { spot: true, 'help-bay': true, 'help-crane': true, 'help-whistle': true };
+    const bays0 = r.levels[12].bays ?? 5;
+    r.startLevel(12, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     const s = r.session();
     return { bays0, bays: s.s.bays.length, free: [...document.querySelectorAll('.bst .cnt.free')].map((e) => e.closest('.bst').className), crane: r.save.boosters.crane };
   });
@@ -35,11 +36,11 @@ const out = process.argv[2];
   check('free crane used, inventory untouched', cr.crane === st.crane && cr.inLot === false && cr.freeLeft === 0, cr);
   // Win the level (solver from the current state is not available; restart without the crane and play the solution).
   const win = await p.evaluate(async () => {
-    const r = window.__rb; r.startLevel(4, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
+    const r = window.__rb; r.startLevel(12, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     const s = r.session(); const { solve } = await import('/src/game/solver.ts');
     for (const m of solve(s.level).solution) { s.tap(m); await r.advance(0.7); }
     for (let k = 0; k < 120 && !document.querySelector('.result'); k++) await r.advance(0.5);
-    return { streak: r.save.streak, note: document.querySelector('.result .streak-note')?.textContent ?? null, stats: r.save.lvStats['5'] };
+    return { streak: r.save.streak, note: document.querySelector('.result .streak-note')?.textContent ?? null, stats: r.save.lvStats['13'] };
   });
   check('win raises the streak to 3 and the card says so', win.streak === 3 && !!win.note, win);
   if (out) await p.screenshot({ path: out + '-win.png' });

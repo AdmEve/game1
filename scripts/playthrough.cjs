@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
     const res = await p.evaluate(async ([n, real]) => {
       const r = window.__rb;
       document.querySelectorAll('.modal-back').forEach((m) => m.remove());
-      r.save.seen = { spot: true, cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, tunnel: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true, ch8: true }; for (let k = 0; k < 400; k++) r.save.seen['boss' + k] = true;
+      r.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, spot: true, cover: true, broken: true, vip: true, oddEven: true, courier: true, officer: true, cart: true, wedding: true, granny: true, tunnel: true, ch2: true, ch3: true, ch4: true, ch5: true, ch6: true, ch7: true, ch8: true }; for (let k = 0; k < 400; k++) r.save.seen['boss' + k] = true;
       if (n.startsWith('n')) {
         const day = Number(n.slice(1)) - 1;
         const { nowruzLevel } = await import('/src/game/events.ts');

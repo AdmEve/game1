@@ -17,7 +17,7 @@ const LEVELS = process.argv.slice(2).map(Number);
   for (const L of LEVELS.length ? LEVELS : [5, 22, 64, 124, 161]) {
     const r = await p.evaluate(async (L) => {
       const rb = window.__rb; window.__popctx = !!window.__popctxOn;
-      rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'officer', 'cart', 'wedding', 'granny', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true]));
+      rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'officer', 'cart', 'wedding', 'granny', 'tunnel', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true]));
       for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
       rb.save.level = L - 1; rb.startLevel(L - 1, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
       const s = rb.session(); const { solve } = await import('/src/game/solver.ts');

@@ -39,7 +39,7 @@ const URL = process.env.URL || 'http://127.0.0.1:4173/';
     const r = await p.evaluate(async ([kind, n]) => {
       const rb = window.__rb;
       rb.save.settings.colorblind = true;
-      rb.save.seen = Object.fromEntries(['spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'wedding', 'officer', 'granny', 'tunnel', 'cart', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
+      rb.save.seen = Object.fromEntries(['help-bay', 'help-crane', 'help-whistle', 'spot', 'cover', 'broken', 'vip', 'oddEven', 'courier', 'wedding', 'officer', 'granny', 'tunnel', 'cart', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'].map((k) => [k, true])); for (let k = 0; k < 400; k++) rb.save.seen['boss' + k] = true;
       document.querySelectorAll('.modal-back, .wallet-float').forEach((m) => m.remove());
       rb.save.level = n;
       await rb.goLevel(n, undefined, false);
