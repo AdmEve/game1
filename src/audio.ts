@@ -236,6 +236,21 @@ export function win() {
 export function lose() {
   [392, 370, 311, 262].forEach((f, i) => pluck(f, i * 0.16, 0.2));
 }
+/**
+ * A hard level's call (its ribbon) and Mr. Ajool's entrance: two deep tombak strokes («بم») and a rim knock («تک»),
+ * then a low santur chord in Homayun (G, B♭, C♯, G). A boss sits a fourth lower.
+ */
+export function sting(boss = false) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime, k = boss ? 0.75 : 1;
+  for (const [at, f, peak] of [[0, 140, 0.42], [0.16, 140, 0.34], [0.3, 300, 0.2]] as const) {
+    const o = osc(c, 'sine', f * k, t + at, 0.3); o.frequency.exponentialRampToValueAtTime(52 * k, t + at + 0.2);
+    o.connect(env(c, t + at, 0.004, peak, 0.26)).connect(master);
+  }
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 2;
+  noise(c, t + 0.3, 0.05).connect(bp).connect(env(c, t + 0.3, 0.002, 0.22, 0.06)).connect(master);
+  [196, 233, 277, 392].forEach((f, i) => pluck(f * k, 0.4 + i * 0.035, 0.14));
+}
 
 // ───── Weather sounds ─────
 let ambBuf: AudioBuffer | null = null;

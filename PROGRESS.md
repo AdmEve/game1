@@ -382,3 +382,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Quitting a level now costs what losing it costs: from level 13, leaving through the pause menu after a move asks
   «ول می‌کنی؟» and takes a life (before, quitting just before a loss dodged it). Before the first move, on the first
   twelve levels, in the daily rush and in events, leaving stays free. Checked in CI by `scripts/quitcost.cjs`.
+- Sound for the big moments: a hard level's ribbon and Mr. Ajool's boss card now play a short sting (tombak strokes
+  and a low santur chord in Homayun, deeper for the boss), with the music ducking under it.

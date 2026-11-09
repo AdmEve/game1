@@ -320,8 +320,10 @@ function showBanner(html: string, ms: number) {
   banner.innerHTML = `<div class="rib">${html}</div>`;
   banner.classList.remove('show'); void banner.offsetWidth; banner.classList.add('show');
   setTimeout(() => banner.classList.remove('show'), ms);
-  haptic('medium');
+  haptic('medium'); sfx.sting(); duckMusic(1.2);
 }
+/** Run `f` once the level-change veil is down (a level-start card is built behind it, then shown as it lifts). */
+function afterVeil(f: () => void) { const go = () => { if (veil.classList.contains('on')) requestAnimationFrame(go); else f(); }; go(); }
 function pumpNotes(now: number) {
   if (!notes.length || now < noteReadyAt) return;
   if (modalOpen || modalBacks.length || veil.classList.contains('on') || hud.root.classList.contains('hidden') || swooping) { noteReadyAt = now + 500; return; }
@@ -742,6 +744,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     const line = BOSS_LINES[(ch.n - 1) % BOSS_LINES.length];
     c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad">${line.taunt}</div>`;
     const close = modal(c, 'pop boss');
+    afterVeil(() => { sfx.sting(true); duckMusic(1.2); });
     c.append(asBack(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; })));
   } else if (helpOpening(n) && n === save.level && !save.seen['help-' + helpOpening(n)]) {
     // A help opens on this level (game/helps.ts): Mash Rahim shows it, then its button pulses.
