@@ -32,6 +32,7 @@ import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
 import { askNotifications, planReminders, syncReminders } from './notify';
 import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
+import { deviceReport, recordBoot } from './devreport';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
@@ -1067,6 +1068,15 @@ function showSettings() {
         if (Capacitor.isNativePlatform()) { await Share.share({ title: 'Rahbandoon level stats', text }).catch(() => {}); return; }
         try { await navigator.clipboard.writeText(text); note('آمار کپی شد'); } catch { note('کپی نشد'); }
       }));
+      // Testers: this phone's GPU, render profile and cold-start timings (headless tests can't measure start-up).
+      c.append(button(`${icon('doc')} گزارش دستگاه`, 'ghost errs', async () => {
+        const text = deviceReport(`Rahbandoon ${__APP_VERSION__} (${__BUILD__})`, renderer.getContext(), {
+          Profile: `${profile.quality}, ${profile.lite ? 'lite' : 'full'}${profile.low ? ' + low' : ''}, shadows ${profile.shadows ? 'on' : 'off'}`,
+          Rendering: `tier ${tier}, pixel ratio ${renderer.getPixelRatio().toFixed(2)}, governor scale ${pacer.state.scale}, frame divider ${pacer.state.div}`,
+        });
+        if (Capacitor.isNativePlatform()) { await Share.share({ title: 'Rahbandoon device report', text }).catch(() => {}); return; }
+        try { await navigator.clipboard.writeText(text); note('گزارش کپی شد'); } catch { note('کپی نشد'); }
+      }));
     }
     if (taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); }
   };
@@ -1329,6 +1339,7 @@ async function boot() {
   };
   const splash = document.getElementById('splash');
   if (splash) { if (debug.has('shot')) splash.remove(); else { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); } }
+  recordBoot();
   document.title = 'ready';
 }
 mainLoaded();
