@@ -14,7 +14,7 @@ const PANTS = [0x283447, 0x1f2937, 0x3b3b46, 0x4a3b2c];
 // Real proportions: about 7½ heads tall. Units match the cars (a 4.4 m sedan is ~2.2 here), but people are
 // drawn a little larger than true scale so the queue stays readable on a phone.
 // Phones (lite) use coarser meshes: a passenger is ~25 px tall on screen, a few hundred triangles do.
-const R = (n: number) => (profile.lite ? Math.max(5, Math.round(n * 0.6)) : n);
+const R = (n: number) => (profile.low ? Math.max(5, Math.round(n * 0.45)) : profile.lite ? Math.max(5, Math.round(n * 0.6)) : n);
 const geo = {
   leg: new THREE.CylinderGeometry(0.036, 0.03, 0.44, R(8)).translate(0, -0.22, 0),
   shoe: new RoundedBoxGeometry(0.06, 0.035, 0.11, profile.lite ? 1 : 2, 0.012),

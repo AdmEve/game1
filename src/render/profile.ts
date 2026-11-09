@@ -9,4 +9,5 @@ let quality = 'auto';
 try { quality = JSON.parse(localStorage.getItem('rahbandoon.save.v1') ?? '{}')?.settings?.quality ?? 'auto'; } catch { /* no storage */ }
 const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
 const lite = q.has('lite') ? true : q.has('full') ? false : quality === 'high' ? false : quality === 'auto' ? mobile : true;
-export const profile = { mobile, quality, lite, shadows: quality !== 'low' };
+/** 'low' («ساده»): also lighter geometry (coarser cars and passengers, fewer leaf cards and weather particles). */
+export const profile = { mobile, quality, lite, shadows: quality !== 'low', low: quality === 'low' && !q.has('full') };

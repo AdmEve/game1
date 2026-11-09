@@ -222,7 +222,7 @@ export function foliageMat(palette: string[], seed = 1, kind: 'broad' | 'needle'
  */
 export function canopy(rx: number, ry: number, rz: number, cards: number, mat: THREE.Material, rnd: () => number, cardSize = 0.7): THREE.Mesh {
   // Leaf cards are alpha-tested and overlap heavily: the costliest pixels in the scene. Keep them few and big.
-  cards = Math.max(6, Math.round(cards * (profile.lite ? 0.18 : 0.4)));
+  cards = Math.max(6, Math.round(cards * (profile.low ? 0.12 : profile.lite ? 0.18 : 0.4)));
   cardSize *= profile.lite ? 1.75 : 1.3;
   const pos: number[] = [], nor: number[] = [], uv: number[] = [];
   const q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), n = new THREE.Vector3();

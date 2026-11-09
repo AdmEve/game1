@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { fbm } from './surfaces';
 import { profile } from './profile';
 /** Phones get fewer particles. */
-const K = (n: number) => Math.round(n * (profile.lite ? 0.45 : 1));
+const K = (n: number) => Math.round(n * (profile.low ? 0.3 : profile.lite ? 0.45 : 1));
 
 export type WeatherKind = 'clear' | 'leaves' | 'rain' | 'storm' | 'snow' | 'dust' | 'petals' | 'mist';
 

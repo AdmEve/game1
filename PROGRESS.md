@@ -294,4 +294,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   car, and toasts never sit over cars. Fixed: toasts now show in the free band between the lot and the booster bar (they
   covered the top rows of cars right when the player was deciding). Larger text sizes positioned HUD pieces by font size,
   not zoom (zoom pushed the centred toast off the right edge). 12/12.
+- Graphics qualities (`scripts/qualities.cjs`, normal play mode; `?shot` pins a 3× ratio for screenshots): every setting
+  boots and plays. Auto: lite, ratio 1.8. High: full profile, 2.0. Balanced: 1.4. Simple: 1.0, no shadows, and now also
+  lighter geometry (`profile.low`: car tessellation 0.12, coarser passengers, fewer leaf cards and weather particles), at
+  287k triangles instead of 341k on level 60, still readable.
+- The home screen with event banners (Yalda, Nowruz, both) still fits a 360×640 phone (Play ends at 616 px).
 

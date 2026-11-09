@@ -75,7 +75,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, debug.has('shot') ? 3 :
 renderer.shadowMap.enabled = profile.shadows;
 renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 // The world's shadows barely change, so phones redraw the shadow map only every few frames, and cars cast none.
-if (mobile || profile.lite) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(profile.lite ? 0.17 : 0.22); }
+if (mobile || profile.lite) { renderer.shadowMap.autoUpdate = false; setCarShadows(false); setCarQuality(profile.low ? 0.12 : profile.lite ? 0.17 : 0.22); }
 // Checking shader logs forces the main thread to wait for every compile; only do it when debugging.
 renderer.debug.checkShaderErrors = debug.has('debug');
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
