@@ -349,3 +349,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Store readiness: a Persian privacy policy (`store/privacy-fa.md`, accurate to what the app does: no servers of ours,
   Tapsell Plus ads, Bazaar purchases, local reminders, opt-in sharing), shown in the game too (Settings → حریم خصوصی)
   from the same file. The store listing text now covers hold-to-see, sharing wins and the accessibility options.
+- Store screenshots re-shot with the current look (they still showed the old HUD and render), each caption checked
+  against its level (the Tochal shot now really shows the traffic officer). 4.4 MB for all eight (JPEG) instead of 19 MB.
