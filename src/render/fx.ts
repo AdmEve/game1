@@ -161,3 +161,86 @@ export function fxWarmObjects(): THREE.Object3D[] {
   const r = new THREE.Mesh(ringGeo, ringMat), wm = new THREE.Mesh(ringGeo, warnMat);
   return [puffPool[0].s, coin, conf, r, wm];
 }
+
+/**
+ * Hold to see the way out (BEST_IN_MARKET_PLAN D4): chevrons on the ground along a vehicle's route, then an arrow
+ * past the lot edge when it can leave, or a bar where something is in its way. Green for a way out, red when
+ * blocked, amber when a rule holds it back right now. A few strips and one end piece, made once and reused; the
+ * chevrons drift along the route unless motion is reduced.
+ */
+export type LaneKind = 'go' | 'stop' | 'wait';
+// Green / red / amber, and the end piece differs too (arrow or bar), so the colour is never the only cue.
+const LANE_COLOR: Record<LaneKind, number> = { go: 0x4ee07f, stop: 0xff4a3d, wait: 0xffb020 };
+const laneCanvas = (draw: (g: CanvasRenderingContext2D, w: number, h: number) => void, w = 64, h = 64) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d')!, w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.userData.keep = true;
+  return t;
+};
+// One chevron per tile, pointing up the canvas (= along the strip's travel direction).
+const chevron = laneCanvas((g, w, h) => {
+  g.strokeStyle = '#fff'; g.lineWidth = 9; g.lineCap = 'round'; g.lineJoin = 'round'; g.shadowColor = '#fff'; g.shadowBlur = 4;
+  g.beginPath(); g.moveTo(w * 0.2, h * 0.68); g.lineTo(w * 0.5, h * 0.32); g.lineTo(w * 0.8, h * 0.68); g.stroke();
+});
+chevron.wrapT = THREE.RepeatWrapping;
+const arrowHead = laneCanvas((g, w, h) => {
+  g.fillStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 6;
+  g.beginPath(); g.moveTo(w * 0.5, h * 0.1); g.lineTo(w * 0.92, h * 0.86); g.lineTo(w * 0.5, h * 0.68); g.lineTo(w * 0.08, h * 0.86); g.closePath(); g.fill();
+});
+const stopBar = laneCanvas((g, w, h) => {
+  g.fillStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 6;
+  g.beginPath(); g.roundRect(w * 0.06, h * 0.36, w * 0.88, h * 0.28, h * 0.14); g.fill();
+});
+const flat = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2); // local -Z is "forward" (the canvas's up)
+flat.userData.keep = true;
+const laneMat = (map: THREE.Texture) => {
+  const m = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, opacity: 0 });
+  m.userData.keep = true; return m;
+};
+const strips = Array.from({ length: 6 }, () => {
+  const tex = chevron.clone(); tex.needsUpdate = true;
+  const m = new THREE.Mesh(flat, laneMat(tex));
+  m.renderOrder = 1; m.visible = false; m.userData.noPick = true;
+  return m;
+});
+const cap = new THREE.Mesh(flat, laneMat(arrowHead));
+cap.renderOrder = 1; cap.visible = false; cap.userData.noPick = true;
+const laneParts = [...strips, cap];
+const laneReduced = () => document.documentElement.classList.contains('reduce-motion');
+let laneToken = 0, laneShownAt = 0;
+// The chevrons drift forward as the strips are drawn (no per-frame work while hidden).
+for (const s of strips) s.onBeforeRender = () => {
+  const t = laneReduced() ? 0 : (performance.now() - laneShownAt) / 1000;
+  (s.material as THREE.MeshBasicMaterial).map!.offset.y = -t * 1.6;
+};
+
+/**
+ * Show a route (`legs` of world points from a to b, all along `dir`, on the ground) ending in an arrow or a bar at
+ * `end`; `parent` null hides it.
+ */
+export function lanePreview(parent: THREE.Object3D | null, legs: { a: THREE.Vector3; b: THREE.Vector3 }[], dir: THREE.Vector3, end: THREE.Vector3, kind: LaneKind, width: number) {
+  const token = ++laneToken;
+  if (!parent) { for (const p of laneParts) { p.visible = false; p.userData.lane = null; p.removeFromParent(); } return; }
+  const yaw = Math.atan2(-dir.x, -dir.z), color = LANE_COLOR[kind];
+  strips.forEach((s, k) => {
+    const leg = legs[k];
+    if (!leg) { s.visible = false; s.removeFromParent(); return; }
+    const len = leg.a.distanceTo(leg.b), m = s.material as THREE.MeshBasicMaterial;
+    parent.add(s); s.visible = true;
+    s.position.copy(leg.a).add(leg.b).multiplyScalar(0.5); s.rotation.set(0, yaw, 0);
+    s.scale.set(width, 1, len);
+    m.map!.repeat.set(1, len / (width * 0.9)); m.color.setHex(color);
+  });
+  const cm = cap.material as THREE.MeshBasicMaterial;
+  cm.map = kind === 'go' ? arrowHead : stopBar; cm.color.setHex(color);
+  parent.add(cap); cap.visible = true;
+  cap.position.copy(end); cap.rotation.set(0, yaw, 0);
+  cap.scale.set(width * (kind === 'go' ? 1.25 : 1.6), 1, width * (kind === 'go' ? 1.25 : 1.0));
+  for (const p of laneParts) p.userData.lane = p.visible ? kind : null; // for scripts/holdpreview.cjs
+  laneShownAt = performance.now();
+  // A quick fade in, so it reads as a hint rather than a flash.
+  void tween(0.14, (k) => {
+    if (token !== laneToken) return;
+    for (const p of laneParts) (p.material as THREE.MeshBasicMaterial).opacity = 0.92 * k;
+  }, ease.out);
+}

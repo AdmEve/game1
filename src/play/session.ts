@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import * as sfx from '../audio';
 import { disposeTree } from '../render/dispose';
 import { haptic } from '../haptics';
-import { KIND, DELTA, addBay, cellsOf, lane, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
+import { KIND, DELTA, addBay, cellsOf, lane, route, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
@@ -14,7 +14,7 @@ import { raycastModel, slot } from '../render/instancer';
 import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
-import { bayWarning, confetti, coinBurst, puff, tapRing } from '../render/fx';
+import { bayWarning, confetti, coinBurst, lanePreview, puff, tapRing } from '../render/fx';
 import { solve } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
@@ -655,6 +655,28 @@ export class Session {
     this.limitLost = null; this.ended = false;
     this.showLimits();
     return true;
+  }
+
+  /**
+   * Hold to see the way out (BEST_IN_MARKET_PLAN D4): vehicle i's route on the ground, through any tunnel, ending
+   * in an arrow past the edge or a bar at what is in the way; `i` < 0 hides it. Covered cars show nothing.
+   */
+  preview(i: number) {
+    const hide = () => lanePreview(null, [], new THREE.Vector3(), new THREE.Vector3(), 'go', 0);
+    if (i < 0 || this.ended || !this.s.inLot[i] || !this.s.revealed[i]) { hide(); return; }
+    const r = route(this.s, i), [dc, dr] = DELTA[r.dir], dir = new THREE.Vector3(dc, 0, dr), half = CELL / 2;
+    const at = (c: number, row: number) => this.L.cell(c, row).setY(LOT_Y + 0.03);
+    const legs = r.legs.map((l) => ({ a: at(l.from[0], l.from[1]).addScaledVector(dir, -half), b: at(l.to[0], l.to[1]).addScaledVector(dir, half) }));
+    let end: THREE.Vector3;
+    if (r.end === 'blocked') end = at(r.by![0], r.by![1]).addScaledVector(dir, -half - CELL * 0.12);
+    else {
+      // Out past the curb: the last leg runs on a little, and the arrow sits beyond it.
+      const v = this.level.vehicles[i], last = legs[legs.length - 1];
+      const from = last ? last.b : (() => { const f = cellsOf(v)[dc > 0 || dr > 0 ? KIND[v.kind].len - 1 : 0]; return at(f[0], f[1]).addScaledVector(dir, half); })();
+      if (last) last.b = from.clone().addScaledVector(dir, CELL * 0.35);
+      end = from.clone().addScaledVector(dir, CELL * 0.75);
+    }
+    lanePreview(this.group, legs, dir, end, r.end === 'blocked' ? 'stop' : r.hold ? 'wait' : 'go', CELL * 0.46);
   }
 
   /** Finger down on a vehicle: it squats a little, like it is about to launch. */

@@ -12,7 +12,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { App as CapApp } from '@capacitor/app';
 import PACKED from './game/levels.pack.json';
 import { unpackLevel } from './game/pack';
-import type { Kind, Level } from './game/rules';
+import { route, type Kind, type Level } from './game/rules';
 import { busy, ease, resetTraffic, setSpeed, tick, tween } from './render/anim';
 import { onGpuRestored, skyEnv } from './render/env.js';
 import { profile } from './render/profile';
@@ -286,7 +286,8 @@ function updateHand() {
   showSpot(spotOn);
 }
 /** First-levels tips, one line each. */
-const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.'];
+const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.',
+  'شک داری؟ انگشتت رو روی ماشین نگه دار تا ببینی راهش بازه یا نه.'];
 /**
  * Start-of-level notes wait for the player: shown one after another only while the level is in view (no card,
  * no veil, the opening camera move done), so a warning built behind the home screen or an intro card isn't lost.
@@ -466,9 +467,19 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   if (spot.classList.contains('show') && i !== hintFor) { nudgeHand(); return; }
   down = { x: e.clientX, y: e.clientY, i };
   if (i >= 0) session.press(i, true);
+  // Held a moment (not a quick tap): show where this car would go (BEST_IN_MARKET_PLAN D4).
+  clearTimeout(previewTimer);
+  if (i >= 0 && !craneMode) previewTimer = setTimeout(() => { if (down?.i === i) session?.preview(i); }, PREVIEW_DELAY);
 });
-renderer.domElement.addEventListener('pointercancel', () => { if (down && down.i >= 0) session?.press(down.i, false); down = null; });
+/** Hold-to-preview: how long a finger rests on a car before its route shows (quick taps never see it). */
+const PREVIEW_DELAY = 150;
+let previewTimer: ReturnType<typeof setTimeout> | undefined;
+const endPreview = () => { clearTimeout(previewTimer); session?.preview(-1); };
+// Sliding off cancels the tap (see pointerup), so the route goes away as soon as the finger moves off.
+renderer.domElement.addEventListener('pointermove', (e) => { if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 14) endPreview(); });
+renderer.domElement.addEventListener('pointercancel', () => { endPreview(); if (down && down.i >= 0) session?.press(down.i, false); down = null; });
 renderer.domElement.addEventListener('pointerup', (e) => {
+  endPreview();
   if (!down || !session || modalOpen) return;
   const d = down; down = null;
   if (d.i >= 0) session.press(d.i, false);
@@ -1356,6 +1367,8 @@ async function boot() {
   (window as unknown as { __rb: unknown }).__rb = {
     session: () => session, save, startLevel, goLevel, levels, camera, renderer, post, scene, instanceStats, Raycaster: THREE.Raycaster, pick,
     swooping: () => swooping, pointAt, errors, worldCacheInfo,
+    /** A vehicle's way out as the hold preview draws it (scripts/holdpreview.cjs). */
+    route: (i: number) => (session ? route(session.s, i) : null),
     /** The share-a-win image for level n (scripts/sharecard.cjs). */
     shareCard: async (n: number, brag = 'با ۱۲ حرکت ردش کردم!') => { await document.fonts.load('900 112px Vazirmatn'); return drawShareCard({ level: levels[n], title: `مرحله‌ی ${fa(n + 1)} · ${chapterOf(n).name}`, badge: levels[n].tag ? 'سخت' : undefined, brag }).toDataURL('image/png'); },
     /** Every card the game shows, for layout checks (scripts/cardfit.cjs). */

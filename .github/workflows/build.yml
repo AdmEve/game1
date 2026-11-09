@@ -40,6 +40,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/fatal.cjs
           # Older WebViews (Chrome 84+): no roundRect, CSS without :has()/inset, the update page (scripts/oldwebview.cjs).
           URL=http://127.0.0.1:4173/ node scripts/oldwebview.cjs
+          # Hold to see the way out: real pointer events, quick taps never show it (scripts/holdpreview.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/holdpreview.cjs
 
       - uses: actions/upload-artifact@v4
         if: failure()

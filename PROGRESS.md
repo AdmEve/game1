@@ -337,3 +337,8 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   `inset`), checked by screenshots before/after and by `scripts/oldwebview.cjs` in CI. Below 84, the app shows its own
   page explaining how to update Android System WebView (Bazaar or Google Play links) instead of a frozen splash, and a
   failure on an old WebView now says to update it rather than to restart the phone.
+- Hold to see the way out: keep a finger on a car for a moment and its route appears on the ground. Green chevrons
+  ending in an arrow past the curb if it can leave, red ending at whatever blocks it, amber if a rule holds it back
+  right now; it follows tunnels. Quick taps never show it; sliding off cancels the tap as before; covered cars stay
+  secret. Useful on dense boards and tap-budget levels, where a blocked tap costs a tap. Level 4's tip teaches it.
+  Unit-tested route logic (8 cases) and `scripts/holdpreview.cjs` with real pointer events.

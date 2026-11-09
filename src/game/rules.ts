@@ -262,6 +262,39 @@ export function lane(s: State, i: number, g = grid(s)): { by: { v?: number; cell
 }
 
 /** First thing in the vehicle's way, or null if its lane to the edge is clear. */
+/**
+ * What a finger held on a vehicle shows (BEST_IN_MARKET_PLAN D4): the stretches of grid it would drive along (a new
+ * leg after each tunnel; cells inclusive, possibly none), whether it reaches the edge or stops at something, and a
+ * rule that holds it back right now.
+ */
+export interface Route {
+  dir: Dir;
+  legs: { from: [number, number]; to: [number, number] }[];
+  end: 'out' | 'blocked';
+  /** The cell it would hit (blocked), or null. */
+  by: [number, number] | null;
+  hold: 'broken' | 'plate' | 'officer' | null;
+}
+export function route(s: State, i: number): Route {
+  const v = s.level.vehicles[i], [dc, dr] = DELTA[v.dir], { w, h } = s.level;
+  const inside = (c: number, r: number) => c >= 0 && r >= 0 && c < w && r < h;
+  const { by, hops } = lane(s, i);
+  const legs: Route['legs'] = [];
+  let start = frontCell(v);
+  for (const [into, outOf] of hops) {
+    legs.push({ from: start, to: into });
+    start = [outOf[0] + dc, outOf[1] + dr];
+  }
+  // The last leg runs to the cell before the blocker, or to the last cell before the edge.
+  let end: [number, number];
+  if (by) end = [by.cell[0] - dc, by.cell[1] - dr];
+  else { end = start; while (inside(end[0] + dc, end[1] + dr)) end = [end[0] + dc, end[1] + dr]; }
+  // Nothing to draw when the blocker is right in front, or a tunnel lets out at the edge.
+  const steps = (end[0] - start[0]) * dc + (end[1] - start[1]) * dr;
+  if (inside(start[0], start[1]) && steps >= 0) legs.push({ from: start, to: end });
+  return { dir: v.dir, legs, end: by ? 'blocked' : 'out', by: by ? by.cell : null, hold: lock(s, i)?.why ?? null };
+}
+
 export function blocker(s: State, i: number, g = grid(s)): { v?: number; cell: [number, number] } | null {
   return lane(s, i, g).by;
 }
