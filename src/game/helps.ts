@@ -18,3 +18,10 @@ export const anyHelpOpen = (progress: number): boolean => (Object.keys(HELP_FROM
 export function helpOpening(n: number): Help | null {
   return (Object.keys(HELP_FROM) as Help[]).find((h) => HELP_FROM[h] === n + 1) ?? null;
 }
+
+/**
+ * The ramp (GDD §9: the first fail-and-continue comes at level 9): on levels 1–8 a level that would be lost on full
+ * bays gets Mash Rahim's extra bay instead of the lose card (once: the sixth bay is the most there is). Clock and
+ * tap-budget losses are real losses. Measured with scripts/difficulty.ts.
+ */
+export const MERCY_LEVELS = 8;

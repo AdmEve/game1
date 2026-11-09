@@ -355,3 +355,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   the crane on 9, the whistle on 12, each introduced by Mash Rahim with a «کمک تازه!» card; helps still waiting show
   locked with their level. Players already further on keep everything. The win streak only gives helps that are open.
   Checked as a fresh player with `scripts/helpsopen.cjs` (10/10) and unit tests.
+- Difficulty ramp measured (`scripts/difficulty.ts`, two simulated players on the real rules): level 7, where car covers
+  first appear, lost 36–45% of them, more than the «سخت» level 5. Mash Rahim's extra bay on a would-be loss now covers
+  levels 1–8 (it was 1–3), so the first lose card comes at level 9 as the GDD says; level 7 falls to 3–7%. Levels 9 and
+  on are untouched (chess-level, as decided).

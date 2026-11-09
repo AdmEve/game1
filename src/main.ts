@@ -37,7 +37,7 @@ import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
 import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
 import { showPrivacy } from './ui/privacy';
-import { HELP_FROM, helpOpen, helpOpening } from './game/helps';
+import { HELP_FROM, MERCY_LEVELS, helpOpen, helpOpening } from './game/helps';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
 import { livesPill, showNoLives } from './ui/lives';
@@ -967,8 +967,10 @@ function askReminders(): Promise<void> {
 }
 
 function showLose(limit?: 'time' | 'moves') {
-  // The first three levels can't be lost (first session): Mash Rahim opens another bay and play goes on.
-  if (!limit && !rush && !event && current < 3 && session?.extraBay()) {
+  // The ramp (levels 1–8, game/helps.ts MERCY_LEVELS): a level that would be lost on full bays gets Mash Rahim's extra
+  // bay instead, so the first lose card comes at level 9 (GDD §9). The cover mechanic's first level (7) otherwise lost
+  // 36–45% of simulated players (scripts/difficulty.ts). Clock and tap-budget losses stay real.
+  if (!limit && !rush && !event && current < MERCY_LEVELS && session?.extraBay()) {
     helped = true; hud.refresh();
     hud.toast('مش‌رحیم یه جای پارک دیگه برات باز کرد!', 2800); haptic('medium');
     return;

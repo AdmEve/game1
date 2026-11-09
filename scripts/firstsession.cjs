@@ -1,5 +1,5 @@
-// First session: levels 1-3 can't be lost (a careless player gets Mash Rahim's extra bay instead of the lose
-// card), and the win card shows how far the next reward chest is.
+// First session: the ramp (levels 1–8) can't be lost on full bays (a careless player gets Mash Rahim's extra bay
+// instead of the lose card) and level 9 brings the first lose card; the win card shows how far the next chest is.
 //   node scripts/firstsession.cjs [out.png]
 const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:5173/';
@@ -10,8 +10,11 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
   await p.goto(URL + '?play&shot', { waitUntil: 'load' });
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
   let fails = 0; const check = (name, ok, info) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : ' ' + JSON.stringify(info)}`); };
-  const careless = await p.evaluate(async () => {
-    const r = window.__rb; r.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, spot: true }; r.save.level = 2; r.startLevel(2, undefined, false);
+  // Play a level carelessly (cars nobody at the front wants, first): on the ramp (levels 1–8) a would-be loss on full
+  // bays opens Mash Rahim's extra bay instead; from level 9 the lose card comes (GDD §9, game/helps.ts MERCY_LEVELS).
+  const careless = (n) => p.evaluate(async (n) => {
+    const r = window.__rb; document.querySelectorAll('.modal-back').forEach((m) => m.remove());
+    r.save.seen = { 'help-bay': true, 'help-crane': true, 'help-whistle': true, spot: true, cover: true, broken: true }; r.save.level = n; r.startLevel(n, undefined, false);
     document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     const s = r.session(), bays0 = s.s.bays.length, toasts = [];
     new MutationObserver(() => toasts.push(document.querySelector('.hud .toast').textContent)).observe(document.querySelector('.hud .toast'), { childList: true, characterData: true, subtree: true });
@@ -26,9 +29,14 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
     }
     for (let k = 0; k < 10 && !document.querySelector('.result'); k++) await r.advance(0.5, false);
     return { bays0, bays: s.s.bays.length, rahim: toasts.some((t) => t.includes('مش‌رحیم')), loseCard: !!document.querySelector('.result.lose'), over: s.s.over };
-  });
-  check('level 3: a would-be loss opens another bay instead', careless.rahim && careless.bays > careless.bays0, careless);
-  check('level 3: a lose card only once no bay is left to open', !careless.loseCard || careless.bays >= 6, careless);
+  }, n);
+  for (const n of [2, 7]) {
+    const c = await careless(n);
+    check(`level ${n + 1}: a would-be loss opens another bay instead`, c.rahim && c.bays > c.bays0, c);
+    check(`level ${n + 1}: a lose card only once no bay is left to open`, !c.loseCard || c.bays >= 6, c);
+  }
+  const nine = await careless(8);
+  check('level 9: the first real loss (lose card, no extra bay)', nine.loseCard && !nine.rahim && nine.bays === nine.bays0, nine);
   const win = await p.evaluate(async () => {
     const r = window.__rb; document.querySelectorAll('.modal-back').forEach((m) => m.remove());
     r.save.level = 2; r.startLevel(2, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove());
