@@ -384,3 +384,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   twelve levels, in the daily rush and in events, leaving stays free. Checked in CI by `scripts/quitcost.cjs`.
 - Sound for the big moments: a hard level's ribbon and Mr. Ajool's boss card now play a short sting (tombak strokes
   and a low santur chord in Homayun, deeper for the boss), with the music ducking under it.
+- Home screen fix: on 360-wide phones (the most common size) «ساعت شلوغی» ran past its button under the metro-card
+  button; it now wraps neatly, and the medal badge's number is centred. The card audit now catches any label that
+  spills out of its button, on every card at three screen sizes.

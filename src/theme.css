@@ -200,7 +200,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 50px 50px; gap: 8px; }
 .home-row .btn.ach-btn, .home-row .btn.pass-btn { justify-content: center; padding: 0; background: var(--glass); box-shadow: var(--shadow); }
 .home-row .btn.ach-btn .ico { width: 24px; height: 24px; color: var(--text); }
-.ach-btn .badge { background: var(--accent); color: var(--accent-ink); box-shadow: none; animation: none; font-weight: 800; }
+.ach-btn .badge { background: var(--accent); color: var(--accent-ink); box-shadow: none; animation: none; font-weight: 800; text-align: center; padding: 0 5px; box-sizing: border-box; }
 .btn.huge { font-size: 21px; font-weight: 800; padding: 15px; border-radius: 16px; margin-top: 12px; }
 .btn.huge .go { display: inline-flex; align-items: center; gap: 8px; }
 .btn.huge .go .ico { width: 20px; height: 20px; fill: currentColor; }
@@ -326,7 +326,9 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 }
 @media (max-width: 380px) {
   .home-row.with-ach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px 46px; gap: 6px; }
-  .home-row.with-ach .btn { font-size: 14px; }
+  /* About 93 px a cell at 360 wide: «ساعت شلوغی» needs ~118 on one line, so labels wrap rather than run under the
+     metro-card button (scripts/cardfit.cjs, text out of its button). */
+  .home-row.with-ach .btn { font-size: 14px; white-space: normal; gap: 8px; padding-left: 10px; padding-right: 10px; }
   .home-row .btn small { font-size: 11px; }
   .ch-map i { width: 24px; }
 }

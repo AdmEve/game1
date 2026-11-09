@@ -10,6 +10,8 @@ const SEEN = ['spot', 'help-bay', 'help-crane', 'help-whistle', 'cover', 'broken
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 const CARDS0 = [
   ['home', (r) => r.cards.home()],
+  // Mid-game: rush hour not yet played today, a streak, medals and metro-card stations waiting (every badge and chip).
+  ['home (mid-game)', (r) => { r.save.level = 41; r.save.streak = 2; r.save.rush = { day: '', streak: 0 }; r.cards.home(); }],
   ['pause', (r) => r.cards.pause()],
   ['levels', (r) => r.cards.levels()],
   ['shop', (r) => r.cards.shop()],
@@ -65,13 +67,24 @@ const CARDS = ONLY ? CARDS0.filter(([n]) => ONLY.some((o) => n.startsWith(o))) :
           if (!scrolls && (q.bottom > vh + 0.5 || q.top < -0.5)) hidden.push(x.textContent.trim().slice(0, 16));
         });
         card.querySelectorAll('*').forEach((x) => { const q = x.getBoundingClientRect(); if (q.width && (q.right > vw + 1 || q.left < -1)) wide.push((x.className && x.className.baseVal === undefined ? x.className : x.tagName).toString().slice(0, 20)); });
-        return { h: Math.round(cr.height), top: Math.round(cr.top), bottom: Math.round(cr.bottom), vh, scrolls, hidden, wide: [...new Set(wide)].slice(0, 4) };
+        // A label spilling out of its own button (over its neighbour, or cut off): every line of text inside the button's box.
+        const spill = [];
+        card.querySelectorAll('.btn, button').forEach((x) => {
+          const q = x.getBoundingClientRect(); if (!q.width) return;
+          const tw = document.createTreeWalker(x, NodeFilter.SHOW_TEXT);
+          for (let t = tw.nextNode(); t; t = tw.nextNode()) {
+            if (!t.textContent.trim() || t.parentElement.closest('.badge')) continue; // a count badge sits across the corner on purpose
+            const rg = document.createRange(); rg.selectNodeContents(t);
+            if ([...rg.getClientRects()].some((rr) => rr.width && (rr.left < q.left - 1 || rr.right > q.right + 1))) { spill.push(x.textContent.trim().replace(/\s+/g, ' ').slice(0, 18)); break; }
+          }
+        });
+        return { h: Math.round(cr.height), top: Math.round(cr.top), bottom: Math.round(cr.bottom), vh, scrolls, hidden, wide: [...new Set(wide)].slice(0, 4), spill: [...new Set(spill)].slice(0, 4) };
       }, [SEEN, open.toString()]);
       if (res.missing) { console.log(`  ?    ${name}: no card opened`); continue; }
       const fits = res.top >= -0.5 && res.bottom <= res.vh + 0.5;
-      const ok = fits && !res.hidden.length && !res.wide.length;
+      const ok = fits && !res.hidden.length && !res.wide.length && !res.spill.length;
       if (!ok) problems++;
-      console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name.padEnd(24)} ${String(res.h).padStart(4)} px${res.scrolls ? ' (scrolls)' : ''}${fits ? '' : `  off-screen (top ${res.top}, bottom ${res.bottom})`}${res.hidden.length ? `  buttons off-screen: ${res.hidden.join(' | ')}` : ''}${res.wide.length ? `  too wide: ${res.wide.join(', ')}` : ''}`);
+      console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name.padEnd(24)} ${String(res.h).padStart(4)} px${res.scrolls ? ' (scrolls)' : ''}${fits ? '' : `  off-screen (top ${res.top}, bottom ${res.bottom})`}${res.hidden.length ? `  buttons off-screen: ${res.hidden.join(' | ')}` : ''}${res.wide.length ? `  too wide: ${res.wide.join(', ')}` : ''}${res.spill.length ? `  text out of its button: ${res.spill.join(' | ')}` : ''}`);
     }
     if (errors.length) { problems++; console.log('  page errors:', [...new Set(errors)].slice(0, 3)); }
     await p.close();
