@@ -370,3 +370,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   after level 7, reminders after level 13, the first level that costs a life). The out-of-lives card can turn on the
   "lives are full" reminder right there. A contrast sweep of every card and the HUD fixed seven texts still in the old
   light theme's colours (the out-of-lives clock, shop/garage/agency hints, the daily gift, piggy-bank and medal notes).
+- Smaller download: the APK carried its launch splash as eleven PNGs (3.8 MB inside the APK). They are WebP now (0.31 MB, the
+  same picture), so the APK drops from 11.8 MB to about 8.3 MB. Shrinking the ad SDK's code could save a few MB more; it is
+  listed for the release build, to be tested on a phone first.

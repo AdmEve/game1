@@ -3,7 +3,7 @@
 // Run: node scripts/make-icons.mjs   (the car art comes from scripts/icon-car.html; see PROGRESS.md)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -71,6 +71,20 @@ async function render(html, w, h, file, transparent = true) {
   await page.waitForTimeout(50);
   await page.screenshot({ path: file, omitBackground: transparent, clip: { x: 0, y: 0, width: w, height: h } });
 }
+/** The splash as WebP at quality 90 (Chromium's encoder): 0.3 MB for all eleven instead of 4.7 MB of PNG, no visible
+ *  difference on the navy gradient; Android reads WebP drawables from API 18 (minSdk is 24). Replaces any old PNG. */
+async function renderWebp(html, w, h, file) {
+  const png = tmp + 'shot.png';
+  await render(html, w, h, png, false);
+  const url = await page.evaluate(async ([d, w, h]) => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + d; await img.decode();
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0);
+    return c.toDataURL('image/webp', 0.9);
+  }, [readFileSync(png).toString('base64'), w, h]);
+  if (!url.startsWith('data:image/webp')) throw new Error('this Chromium cannot encode WebP');
+  writeFileSync(file, Buffer.from(url.split(',')[1], 'base64'));
+  rmSync(file.replace(/\.webp$/, '.png'), { force: true });
+}
 
 const dens = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 const splashOnly = process.argv.includes('--splash');
@@ -92,9 +106,9 @@ for (const dir of readdirSync(res)) {
   const m = dir.match(/^drawable-(port|land)-(\w+)$/);
   if (!m) continue;
   const [w, h] = sizeOf(m[1], m[2]);
-  await render(splashHtml(w, h), w, h, res + dir + '/splash.png', false);
+  await renderWebp(splashHtml(w, h), w, h, res + dir + '/splash.webp');
 }
-await render(splashHtml(480, 800), 480, 800, res + 'drawable/splash.png', false);
+await renderWebp(splashHtml(480, 800), 480, 800, res + 'drawable/splash.webp');
 if (!existsSync(root + 'store')) mkdirSync(root + 'store');
 if (!splashOnly) await render(iconHtml({ size: 512, shape: 'square', scale: 0.62 }), 512, 512, root + 'store/icon-512.png', false);
 await browser.close();
