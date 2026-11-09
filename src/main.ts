@@ -1362,7 +1362,11 @@ async function boot() {
   post.render(scene, camera);
   performance.measure('first-frame', 'b3');
   await progress(STEPS);
-  if (!debug.has('play')) showHome();
+  // A new player goes straight into level 1: the camera sweeps down from the landmark as the loading screen fades,
+  // with the spotlight on the first car, the way the best puzzle games start. Home comes from the first win on
+  // (until then it holds nothing but its Play button). scripts/journey.cjs, smoke.cjs.
+  if (debug.has('play')) { /* tests start in the level */ } else if (save.level === 0) introSwoop();
+  else showHome();
   void initMonetization();
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.

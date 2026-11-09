@@ -373,3 +373,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Smaller download: the APK carried its launch splash as eleven PNGs (3.8 MB inside the APK). They are WebP now (0.31 MB, the
   same picture), so the APK drops from 11.8 MB to about 8.3 MB. Shrinking the ad SDK's code could save a few MB more; it is
   listed for the release build, to be tested on a phone first.
+- A new player starts playing at once: the first launch goes from the loading screen straight into level 1 (the camera
+  sweeps down from the Milad tower, then the first tip and the spotlight), instead of stopping on the home screen
+  first. Home appears from the first win on.

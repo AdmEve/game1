@@ -9,7 +9,7 @@ const out = process.argv[2];
   const errors = []; p.on('pageerror', (e) => errors.push(e.message));
   await p.goto((process.env.URL || 'http://127.0.0.1:5173/'), { waitUntil: 'load' });
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 });
-  await p.click('.home-card .btn.primary.huge'); await p.waitForTimeout(800);
+  await p.waitForTimeout(800); // a fresh save starts in level 1 (no home card first)
   await p.evaluate(() => document.querySelectorAll('.modal-back .card [data-back]').forEach((x) => x.click()));
   await p.waitForFunction(() => !window.__rb.swooping(), null, { timeout: 90000 }).catch(() => console.log("still swooping")); await p.waitForTimeout(400);
   await p.waitForFunction(() => document.querySelector('.spot').classList.contains('show'), null, { timeout: 20000 }).catch(() => console.log('no spot'));

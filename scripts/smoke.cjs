@@ -1,5 +1,5 @@
-// Smoke test of a production build (CI runs it before publishing the APK): boot to the home screen, win
-// level 1 with real taps, back to home, open and close the garage's 3D view, with no page errors and nothing
+// Smoke test of a production build (CI runs it before publishing the APK): boot a fresh save straight into
+// level 1, win it with real taps, back to home, open and close the garage's 3D view, with no page errors and nothing
 // in the game's own error log.
 //   npx vite preview --port 4173 & URL=http://127.0.0.1:4173/ node scripts/smoke.cjs
 const { chromium } = require('playwright');
@@ -17,11 +17,9 @@ const step = (s) => console.log(`[smoke] ${s}`);
     await p.goto(URL, { waitUntil: 'load' });
     await p.waitForFunction(() => document.title === 'ready', null, { timeout: 300000 });
     step(`booted in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-    if (!(await p.$('.home-card .btn.primary.huge'))) await fail('no home screen');
-    await p.click('.home-card .btn.primary.huge');
-    // Daily gift and any other cards: answer them the way back would.
-    for (let k = 0; k < 4; k++) { await p.waitForTimeout(400); await p.evaluate(() => document.querySelectorAll('.modal-back:not(.out) .card [data-back]').forEach((x) => x.click())); }
-    await p.waitForFunction(() => !window.__rb.swooping() && !document.querySelector('.modal-back'), null, { timeout: 120000 });
+    // A fresh save starts in level 1 (no home card first; home comes from the first win on).
+    if (await p.$('.modal-back:not(.out) .home-card')) await fail('a fresh save opened on home instead of level 1');
+    await p.waitForFunction(() => !window.__rb.swooping() && !document.querySelector('.modal-back') && window.__rb.session()?.level, null, { timeout: 120000 });
     step('in level 1');
     // Win level 1 like a new player: tap the car the hint suggests (the hint search runs in a worker, and on a fresh
     // save level 1's spotlight only accepts that car), with real pointer events through the tap pick.

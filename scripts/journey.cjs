@@ -1,4 +1,4 @@
-// A new player's first session, end to end through the real flow: a fresh install, home, «بزن بریم», each level won
+// A new player's first session, end to end through the real flow: a fresh install (straight into level 1), each level won
 // with the solver's moves, the win card's «مرحله‌ی بعد», on to level 12. Every card that opens on the way is logged
 // against the level it came with (and closed the way a player would), so pile-ups and early interruptions show.
 //   npx vite preview --port 4173 & URL=http://127.0.0.1:4173/ node scripts/journey.cjs [levels=12] [out-dir]
@@ -10,7 +10,7 @@ const LEVELS = Number(process.argv[2] || 12), out = process.argv[3];
   const ctx = await b.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: out ? 2 : 1, userAgent: 'Mozilla/5.0 (Linux; Android 13) Mobile' });
   const p = await ctx.newPage();
   const errors = []; p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto(URL + '?shot', { waitUntil: 'load' }); // a fresh browser profile: a fresh save, booting to home
+  await p.goto(URL + '?shot', { waitUntil: 'load' }); // a fresh browser profile: a fresh save
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 300000 });
   // The open card (not the win card), its title, and a press of the button a player would take.
   const card = () => p.evaluate(() => {
@@ -36,10 +36,11 @@ const LEVELS = Number(process.argv[2] || 12), out = process.argv[3];
       await closeCard();
     }
   };
-  // Home, then Play.
+  // A fresh save starts in level 1; an older build showed home first (then Play).
   await note(0, 'launch');
-  log.push({ level: 0, where: 'launch', cls: 'home-card', title: '(home)' });
-  await p.click('.home-card .btn.primary.huge');
+  const home = await p.$('.modal-back:not(.out) .home-card');
+  log.push({ level: 0, where: 'launch', cls: home ? 'home-card' : 'straight into level 1', title: home ? '(home)' : '' });
+  if (home) await p.click('.home-card .btn.primary.huge');
   for (let n = 1; n <= LEVELS; n++) {
     await note(n, 'start');
     await p.evaluate(async () => { const r = window.__rb; for (let k = 0; k < 30 && r.swooping(); k++) await new Promise((x) => setTimeout(x, 100)); });

@@ -1,4 +1,4 @@
-// Back navigation (Escape stands in for Android's back button): home → play → pause → resume, pause → home,
+// Back navigation (Escape stands in for Android's back button): a fresh save in level 1 → pause → resume, pause → home,
 // cards closing in order, and the win card's Home. Saves a screenshot of the pause card.
 //   node scripts/backnav.cjs [out.png]
 const { chromium } = require('playwright');
@@ -17,13 +17,9 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
   const checks = [];
   const check = (name, ok, info) => { checks.push([name, ok]); console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : ' ' + JSON.stringify(info)}`); };
   let s = await state();
-  check('boots to home', s.cards.some((c) => c.includes('home-card')), s);
-  await p.keyboard.press('Escape'); await wait(100);
-  s = await state(); check('back on home: stays, shows a note', s.note && s.cards.some((c) => c.includes('home-card')), s);
-  // Play.
-  await p.click('.home-card .btn.primary.huge'); await wait(900);
-  s = await state(); if (s.cards.length) { await p.evaluate(() => document.querySelectorAll('.modal-back .card [data-back]').forEach((x) => x.click())); await wait(400); s = await state(); }
-  check('play: no card', s.cards.length === 0, s);
+  // A fresh save starts in level 1 (home comes from the first win on).
+  await wait(900); s = await state();
+  check('fresh save: boots into level 1, no card', s.cards.length === 0 && !!(await p.evaluate(() => window.__rb.session()?.level)), s);
   await p.keyboard.press('Escape'); await wait(400);
   s = await state(); check('back in play: pause card', s.cards.some((c) => c.includes('pause-card')), s);
   if (process.argv[2]) await p.screenshot({ path: process.argv[2] });
@@ -48,6 +44,9 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
   await p.keyboard.press('Escape'); await wait(400);
   await p.click('.pause-row .btn:nth-child(3)'); await wait(1500);
   s = await state(); check('home from pause', s.cards.some((c) => c.includes('home-card')), s);
+  await p.keyboard.press('Escape'); await wait(100);
+  s = await state(); check('back on home: stays, shows a note', s.note && s.cards.some((c) => c.includes('home-card')), s);
+  await wait(2100); // past the double-back window, so the next back on home doesn't count as a second press
   // Win card → Home.
   await p.click('.home-card .btn.primary.huge'); await wait(900);
   await p.evaluate(async () => {
