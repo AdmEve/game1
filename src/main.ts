@@ -300,6 +300,8 @@ function updateHand() {
   hand.classList.add('show');
   showSpot(spotOn);
 }
+/** Levels finished before the daily gift starts showing (the first session is for learning to play). */
+const DAILY_FROM = 3;
 /** First-levels tips, one line each. */
 const TIPS = ['ماشینِ هم‌رنگِ مسافرهای جلوی صف رو بزن!', 'فلش، جهت حرکت ماشینه. اول راهش رو باز کن!', 'جای پارک کمه؛ ماشینی رو بفرست که مسافرش نزدیکه.',
   'شک داری؟ انگشتت رو روی ماشین نگه دار تا ببینی راهش بازه یا نه.'];
@@ -437,11 +439,18 @@ function introSwoop() {
 }
 /** Stop any level-start camera move (the level is changing under it). */
 function cancelSwoop() { swoopId++; swooping = false; }
+/** Floating texts still on screen, so two at one spot (cars leaving together) stack instead of printing over each other. */
+const liveFloats: { x: number; y: number; t: number }[] = [];
 function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
-  const p = at.clone().project(camera);
+  const p = at.clone().project(camera), now = performance.now();
+  const x = ((p.x + 1) / 2) * window.innerWidth;
+  let y = ((1 - p.y) / 2) * window.innerHeight;
+  for (let i = liveFloats.length - 1; i >= 0; i--) if (now - liveFloats[i].t > 1300) liveFloats.splice(i, 1);
+  for (let k = 0; k < 4 && liveFloats.some((f) => Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 30); k++) y -= 32;
+  liveFloats.push({ x, y, t: now });
   const el = h('div', 'float float-' + kind, kind === 'coin' ? `${emo('🧍', 'emo sm')}<b dir="ltr">${fa(text)}</b>` : `<b>${fa(text)}</b>`);
-  el.style.left = `${((p.x + 1) / 2) * window.innerWidth}px`;
-  el.style.top = `${((1 - p.y) / 2) * window.innerHeight}px`;
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
   document.body.append(el);
   setTimeout(() => el.remove(), 1300);
 }
@@ -913,8 +922,10 @@ function showWin() {
   const next = async (home = false) => {
     pay.close(); close(); modalOpen = true;
     if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
-    if ((n + 1 === 8 || n + 1 === 24) && !save.rated) await askRating();
-    if (n + 1 === 10 && !save.notifyAsked && Capacitor.isNativePlatform()) await askReminders();
+    // One card at a time after a win (scripts/journey.cjs): the rating ask after level 7 and the reminders ask after 13
+    // (the first level that cost a life) are the only cards there; 8→9 has the crane, 10→11 the chest and the broken car.
+    if ((n + 1 === 7 || n + 1 === 24) && !save.rated) await askRating();
+    if (n + 1 === FREE_LEVELS + 1 && !save.notifyAsked && Capacitor.isNativePlatform()) await askReminders();
     await maybeInterstitial(n);
     if (home) goHome(); else await goLevel();
   };
@@ -1264,7 +1275,8 @@ function showHome() {
   c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
-    await maybeDaily(() => hud.refresh());
+    // The daily gift waits until the first levels are done: a new player's Play goes straight into level 1 (scripts/journey.cjs).
+    if (save.level >= DAILY_FROM) await maybeDaily(() => hud.refresh());
     modalOpen = false; hud.show(true);
     introSwoop();
   }));

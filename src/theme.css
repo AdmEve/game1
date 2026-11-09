@@ -116,6 +116,14 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .btn .ico { width: 20px; height: 20px; }
 .reward { background: rgba(242, 177, 36, .12); color: var(--accent-hi); border: 1px solid rgba(242, 177, 36, .3); border-radius: 12px; font-weight: 800; }
 .reward.keyr, .reward.starr { background: rgba(242, 177, 36, .1); }
+/* The chest's loot, like the win card's rewards (it kept the old light theme's cream, under near-white text). */
+.chest .loot span { background: rgba(242, 177, 36, .12); color: var(--accent-hi); border: 1px solid rgba(242, 177, 36, .3); border-radius: 12px; }
+.chest .loot span .ico { width: 24px; height: 24px; color: var(--accent); }
+/* The out-of-lives clock in the dark theme's red (the light theme's #b91c1c was 2.6:1 on the card). */
+.nolives p b { color: #ff8a87; }
+/* Its «tell me when they're back» is a quiet link under the choices, not a fourth button. */
+.nolives .btn.notify-me { background: none; border: 0; box-shadow: none; min-height: 40px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: var(--accent-hi); }
+.nolives .notify-on { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }
 .speech .who { color: var(--accent); }
@@ -184,6 +192,10 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .lv.hard:not(.locked) { outline: 1px solid rgba(242, 177, 36, .7); } .lv.boss:not(.locked) { outline: 1px solid rgba(239, 83, 80, .8); }
 .shop-card, .pack, .arow, .day { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
 .shop-card small, .pack small, .arow .atx small, .day small, .arow .anum { color: var(--muted); }
+/* Light-theme slate, brown and violet that were still on the dark cards (3.7:1 down to 2.4:1; contrast sweep, H6). */
+.shop-card .have, .gaction .hint, .abar2 small, .mhead, .newach small { color: var(--muted); }
+.day i { color: #c4b5fd; }
+.piggy-note { color: var(--accent-hi); }
 .shop-card .price, .pack .price { color: var(--accent); background: none; }
 .pack .price { background: var(--accent); color: var(--accent-ink); }
 .pack.starter { background: rgba(60, 207, 142, .1); }

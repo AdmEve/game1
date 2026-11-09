@@ -364,3 +364,9 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   the automatic hand for beginners. Checked by `scripts/hintoffer.cjs` (in CI).
 - Screen readers: every control on the main screens now says what it is (the gear, metro card, trophies, coins, garage
   arrows; settings switches read as on/off). axe-core audit (WCAG 2 A/AA) of eight screens clean, in CI (`scripts/a11y.cjs`).
+- A new player's first session, played end to end (`scripts/journey.cjs`): the daily gift no longer pops up before
+  level 1 (it starts after three levels), the chest's prizes are readable (they were cream tiles under white text),
+  overlapping "great move" texts stack instead of printing over each other, and no two asks pile up after a win (rating
+  after level 7, reminders after level 13, the first level that costs a life). The out-of-lives card can turn on the
+  "lives are full" reminder right there. A contrast sweep of every card and the HUD fixed seven texts still in the old
+  light theme's colours (the out-of-lives clock, shop/garage/agency hints, the daily gift, piggy-bank and medal notes).

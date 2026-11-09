@@ -1,8 +1,10 @@
 /** Lives on screen: the hearts pill with its countdown, and the «جون نداری» screen. */
+import { Capacitor } from '@capacitor/core';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
 import { MAX_LIVES, addLives, clock, lives, msToNext } from '../lives';
 import { rewardedAvailable, showRewarded } from '../monetize';
+import { askNotifications } from '../notify';
 import { persist, save } from '../save';
 import { emo } from './emoji';
 import { button, fa, h, modal, asBack } from './hud';
@@ -45,5 +47,14 @@ export function showNoLives(onCoins: () => void): Promise<boolean> {
       c.append(ad);
     }
     c.append(asBack(button('صبر می‌کنم', 'ghost', () => finish(false))));
+    // Waiting is easier with a nudge when the hearts are back: asked here, where it means something (Android only).
+    if (Capacitor.isNativePlatform() && !save.settings.notify) {
+      const bell = button(`${emo('🔔', 'emo sm')} وقتی جون‌ها پر شد خبرم کن`, 'ghost notify-me', async () => {
+        bell.setAttribute('disabled', '');
+        save.settings.notify = await askNotifications(); save.notifyAsked = true; persist();
+        bell.replaceWith(h('p', 'notify-on', save.settings.notify ? 'باشه، پر که شد خبرت می‌کنیم.' : 'اجازه‌ی اعلان رو از تنظیمات گوشی بده.'));
+      });
+      c.append(bell);
+    }
   });
 }
