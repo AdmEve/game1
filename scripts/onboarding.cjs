@@ -16,7 +16,7 @@ const out = process.argv[2];
   await p.waitForTimeout(500);
   const st = await p.evaluate(() => ({ spot: document.querySelector('.spot').classList.contains('show'), hand: document.querySelector('.hand').classList.contains('show') }));
   console.log('spotlight on level 1:', JSON.stringify(st));
-  await p.screenshot({ path: out + '-spot.png' });
+  if (out) await p.screenshot({ path: out + '-spot.png' });
   // Tap a car that is not the suggested one: refused.
   const r = await p.evaluate(async () => {
     const rb = window.__rb, s = rb.session();
@@ -46,7 +46,7 @@ const out = process.argv[2];
   const mk = await p.evaluate(() => ({ show: document.querySelector('.mark').classList.contains('show'), label: document.querySelector('.mark span').textContent, tf: document.querySelector('.mark').style.transform }));
   console.log('intro card:', hasIntro, 'marker:', JSON.stringify(mk));
   console.log(await p.evaluate(() => { const m = document.querySelector('.mark'), cs = getComputedStyle(m), r = m.querySelector('i').getBoundingClientRect(); return JSON.stringify({ op: cs.opacity, disp: cs.display, z: cs.zIndex, pos: cs.position, r: [r.x, r.y, r.width, r.height], parent: m.parentElement.tagName }); }));
-  await p.screenshot({ path: out + '-mark.png' });
+  if (out) await p.screenshot({ path: out + '-mark.png' });
   if (errors.length) console.log('errors', errors);
   await b.close();
 })();

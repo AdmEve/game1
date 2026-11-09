@@ -20,11 +20,11 @@ const out = process.argv[2];
   const shots = [];
   await p.waitForFunction(() => document.querySelectorAll('.flycoin').length > 0, null, { timeout: 20000 });
   await p.evaluate(() => { for (const el of document.querySelectorAll('.flycoin')) for (const a of el.getAnimations()) { a.pause(); a.currentTime = a.effect.getTiming().delay + 330 + Math.random() * 120; } });
-  await p.screenshot({ path: `${out}-flight.png` });
+  if (out) await p.screenshot({ path: `${out}-flight.png` });
   await p.evaluate(() => { for (const el of document.querySelectorAll('.flycoin')) for (const a of el.getAnimations()) a.play(); });
   for (const [i, ms] of [[0, 700], [1, 1400]]) {
     await p.waitForTimeout(ms - (i ? 700 : 0));
-    await p.screenshot({ path: `${out}-${i}.png` });
+    if (out) await p.screenshot({ path: `${out}-${i}.png` });
     shots.push(await p.evaluate(() => ({ reward: document.querySelector('.result .reward b')?.textContent, wallet: document.querySelector('.wallet-float b')?.textContent, flying: document.querySelectorAll('.flycoin').length, coins: window.__rb.save.coins })));
   }
   console.log(JSON.stringify(shots));
