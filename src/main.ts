@@ -277,9 +277,17 @@ function showSpot(on: boolean) {
     spot.classList.add('show');
   } else spot.classList.remove('show');
 }
+/**
+ * When the level last came into view (no card, no veil, the opening camera move done). Idle time for the hint offer
+ * and the ramp's hand counts from the later of this and the last move: a level is built behind the loading screen,
+ * home and the level-change veil, and time spent on a card isn't time spent stuck (scripts/hintoffer.cjs).
+ */
+let inViewSince = 0;
 function updateHand() {
-  if (!session || modalOpen || session.s.over) { hand.classList.remove('show'); hintChip.classList.remove('show'); showSpot(false); hintFor = -1; return; }
-  const now = performance.now(), idle = now - session.lastInput;
+  if (!session || modalOpen || session.s.over) { inViewSince = performance.now(); hand.classList.remove('show'); hintChip.classList.remove('show'); showSpot(false); hintFor = -1; return; }
+  const now = performance.now();
+  if (swooping || veil.classList.contains('on')) inViewSince = now;
+  const idle = now - Math.max(session.lastInput, inViewSince);
   const spotOn = spotWanted(), ramp = current < MERCY_LEVELS && !rush && !event;
   if (hintAsked && session.lastInput > hintAsked) hintAsked = 0; // a move since: that hint is done
   // Asked, but the search found nothing for this position (or gave up): say so once rather than leave them waiting.
@@ -1487,6 +1495,8 @@ async function boot() {
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,
+    /** Pretend the player has looked at the board for `ms` without a move (the hint offer's idle clock). */
+    idleFor: (ms: number) => { const t = performance.now() - ms; if (session) session.lastInput = t; inViewSince = t; },
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },
     /** Advance the animations by `sec` in fixed steps, then draw one frame. */
