@@ -1083,6 +1083,7 @@ function applyAccess() {
   const os = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   document.documentElement.classList.toggle('reduce-motion', save.settings.reduceMotion ?? os);
   document.documentElement.classList.toggle('big-text', save.settings.bigText);
+  document.documentElement.classList.toggle('left-hand', save.settings.leftHand);
 }
 applyAccess();
 
@@ -1130,7 +1131,7 @@ function showSettings() {
     t.onchange = () => { persist(); if (key === 'sfxVol') click(); };
     r.append(t); c.append(r);
   };
-  const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText', apply?: () => void) => {
+  const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText' | 'leftHand', apply?: () => void) => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
     t.setAttribute('role', 'switch'); // read as on/off, not as a checkbox
@@ -1148,6 +1149,7 @@ function showSettings() {
   mt.onchange = () => { save.settings.reduceMotion = mt.checked; persist(); applyAccess(); };
   mr.append(mt); c.append(mr);
   row('متن بزرگ‌تر', 'bigText', applyAccess);
+  row('چپ‌دست<small>دکمه‌های گوشه و کمک‌ها برعکس می‌شن</small>', 'leftHand', applyAccess);
   if (Capacitor.isNativePlatform()) {
     const nr = h('label', 'row', '<span>اعلان‌ها<small>جون پر شد، ساعت شلوغی رسید (شب‌ها نه)</small></span>');
     const nt = h('input') as HTMLInputElement; nt.type = 'checkbox'; nt.className = 'switch'; nt.checked = save.settings.notify;

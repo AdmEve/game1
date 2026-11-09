@@ -53,6 +53,16 @@ describe('save safety', () => {
     expect(save.settings).toMatchObject({ sfxVol: 0, musicVol: 0, sound: false, music: false, haptics: true, reduceMotion: null, bigText: false });
   });
 
+  it('gives saves from before the left-handed setting the usual layout, and keeps it once chosen', async () => {
+    vi.stubGlobal('localStorage', storage({ [KEY]: JSON.stringify({ level: 30, coins: 10, settings: { sfxVol: 80, musicVol: 60, bigText: true } }) }));
+    let { save } = await import('../src/save');
+    expect(save.settings).toMatchObject({ leftHand: false, bigText: true, sfxVol: 80 });
+    vi.resetModules();
+    vi.stubGlobal('localStorage', storage({ [KEY]: JSON.stringify({ level: 30, coins: 10, settings: { sfxVol: 80, musicVol: 60, leftHand: true } }) }));
+    ({ save } = await import('../src/save'));
+    expect(save.settings.leftHand).toBe(true);
+  });
+
   it('keeps sound and music on for old saves that had them on', async () => {
     vi.stubGlobal('localStorage', storage({ [KEY]: JSON.stringify({ level: 2, coins: 10, settings: { sound: true, music: true } }) }));
     const { save } = await import('../src/save');

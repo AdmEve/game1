@@ -476,6 +476,9 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 /* Larger text: the home row (two labels and two icon buttons in a fixed grid) keeps its size and lets labels wrap,
    so it can't push past the screen edge on a 360-wide phone. */
 .big-text .home-row .btn { zoom: 1; white-space: normal; }
+/* Left-handed (Settings, GDD §9): the corner buttons swap sides and the help bar runs the other way, so the gear and
+   the first help sit under the left thumb. The signs (plate camera, officer) are information and stay where they are. */
+.left-hand .topbar, .left-hand .boosters { flex-direction: row-reverse; }
 /* Small screens (Android's "display size" at Large, small phones: 320 CSS px wide, under 600 tall). The home row and
    the level grid size to the width they have; the win card tightens; beside Share, Home keeps just its icon so
    Double stays on one line (BEST_IN_MARKET_PLAN H5, scripts/cardfit.cjs 320x568). */

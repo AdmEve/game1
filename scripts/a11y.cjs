@@ -49,7 +49,7 @@ const SCREENS = [
   }
   await p.evaluate(() => { document.querySelectorAll('.modal-back').forEach((m) => m.remove()); window.__rb.cards.pause(); });
   await p.waitForTimeout(500);
-  for (const [role, name] of [['switch', 'لرزش'], ['switch', /متن بزرگ‌تر/], ['slider', 'موسیقی'], ['slider', 'صداها']]) {
+  for (const [role, name] of [['switch', 'لرزش'], ['switch', /متن بزرگ‌تر/], ['switch', /^چپ‌دست/], ['slider', 'موسیقی'], ['slider', 'صداها']]) {
     const n = await p.getByRole(role, { name }).count();
     if (!n) total++;
     console.log(`${n ? 'ok  ' : 'FAIL'} settings: a ${role} named ${name}`);

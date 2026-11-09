@@ -15,6 +15,8 @@ export interface Save {
   settings: {
     sound: boolean; music: boolean; haptics: boolean; colorblind: boolean; quality: 'auto' | 'high' | 'balanced' | 'low';
     sfxVol: number; musicVol: number; reduceMotion: boolean | null; bigText: boolean;
+    /** Left-handed: the HUD's corner buttons and the help bar mirrored (GDD §9). */
+    leftHand: boolean;
     /** Reminders (lives full, daily rush hour); off until the player says yes. */
     notify: boolean;
   };
@@ -63,7 +65,7 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, notify: false },
+  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, leftHand: false, notify: false },
   notifyAsked: false,
   opens: [],
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },

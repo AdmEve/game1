@@ -392,3 +392,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   names all ten mechanics, the hard and boss levels, and the Nowruz event.
 - The city behind each level looks like Tehran from above now: rooftops carry water tanks, evaporative coolers and
   satellite dishes (they were flat grey boxes). Seen in every level's opening camera move; costs 3 draw calls.
+- Left-handed layout (Settings → «چپ‌دست»): the gear and coins swap corners and the help bar runs the other way, so
+  the controls sit under the left thumb. The last accessibility option the design document promised.
