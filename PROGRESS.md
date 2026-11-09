@@ -406,3 +406,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   month's card starts again at Tajrish.
 - Shop: tapping a help you can't afford now says how many coins you're missing and scrolls to where to get more (it
   only shook before). On-screen notes are solid so they read over anything.
+- Floating combo texts («افسانه‌ای!») no longer print into each other or under the counters at the top of the screen;
+  a finished daily rush says so when tapped.

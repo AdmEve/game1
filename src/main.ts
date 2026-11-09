@@ -460,18 +460,37 @@ function introSwoop() {
 /** Stop any level-start camera move (the level is changing under it). */
 function cancelSwoop() { swoopId++; swooping = false; }
 /** Floating texts still on screen, so two at one spot (cars leaving together) stack instead of printing over each other. */
-const liveFloats: { x: number; y: number; t: number }[] = [];
+const liveFloats: { el: HTMLElement; t: number }[] = [];
 function floatText(text: string, at: THREE.Vector3, kind: 'coin' | 'combo' | 'bad') {
-  const p = at.clone().project(camera), now = performance.now();
-  const x = ((p.x + 1) / 2) * window.innerWidth;
-  let y = ((1 - p.y) / 2) * window.innerHeight;
-  for (let i = liveFloats.length - 1; i >= 0; i--) if (now - liveFloats[i].t > 1300) liveFloats.splice(i, 1);
-  for (let k = 0; k < 4 && liveFloats.some((f) => Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 30); k++) y -= 32;
-  liveFloats.push({ x, y, t: now });
+  const p = at.clone().project(camera);
+  floatTextAt(text, kind, ((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight);
+}
+/**
+ * A floating text at a screen point, kept off the HUD and clear of the others still showing. Measured, not guessed:
+ * a wide «افسانه‌ای!» overlapped a neighbour whose anchor was 140 px away. It steps up past the one it meets, or down
+ * near the top of the board, so it never climbs under the counters.
+ */
+function floatTextAt(text: string, kind: 'coin' | 'combo' | 'bad', x: number, y: number) {
+  const now = performance.now();
+  for (let i = liveFloats.length - 1; i >= 0; i--) if (now - liveFloats[i].t > 1300 || !liveFloats[i].el.isConnected) liveFloats.splice(i, 1);
+  const minY = (hud.root.querySelector('.people')?.getBoundingClientRect().bottom ?? 110) + 22;
+  y = Math.max(y, minY);
   const el = h('div', 'float float-' + kind, kind === 'coin' ? `${emo('🧍', 'emo sm')}<b dir="ltr">${fa(text)}</b>` : `<b>${fa(text)}</b>`);
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
   document.body.append(el);
+  const others = liveFloats.map((f) => f.el.getBoundingClientRect());
+  const down = y < minY + 90;
+  // Its own box from its layout size, centred on the point (the pop-in animation starts it at 60% scale).
+  const w = el.offsetWidth, ht = el.offsetHeight;
+  for (let k = 0; k < 5; k++) {
+    const r = { left: x - w / 2, right: x + w / 2, top: y - ht / 2, bottom: y + ht / 2 };
+    const hit = others.find((q) => r.left < q.right && q.left < r.right && r.top < q.bottom && q.top < r.bottom);
+    if (!hit) break;
+    y = down ? hit.bottom + ht / 2 + 4 : hit.top - ht / 2 - 4;
+    el.style.top = `${y}px`;
+  }
+  liveFloats.push({ el, t: now });
   setTimeout(() => el.remove(), 1300);
 }
 function cameraFlash() {
@@ -1301,7 +1320,7 @@ function showHome() {
   c.append(rowEl);
   const rushDone = save.rush.day === today();
   const rushBtn = button(rushDone ? `${icon('clock')}<span>ساعت شلوغی<small>امروز رد شد!</small></span>` : `${icon('clock')}<span>ساعت شلوغی<small>چالش امروز ${icon('key')}</small></span>`, rushDone ? 'rush-btn done' : 'rush-btn', () => {
-    if (rushDone) return;
+    if (rushDone) { note('چالش امروز رو رد کردی؛ فردا یه ترافیک تازه منتظرته!', 2400); return; }
     const lvl = dailyLevel();
     if (!lvl) { hud.toast('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
@@ -1523,6 +1542,8 @@ async function boot() {
     solve: (lv: Level) => solveLevel(lv).solution,
     /** The touch handling's state, for a test that fails (scripts/holdpreview.cjs). */
     input: () => ({ modalOpen, down: down ? { ...down } : null, craneMode, swooping, veil: veil.classList.contains('on') }),
+    /** A floating text at a screen point, as a car leaving there would show it (scripts/floats.cjs). */
+    floatAt: (text: string, kind: 'coin' | 'combo' | 'bad', x: number, y: number) => floatTextAt(text, kind, x, y),
     /** Pretend the player has looked at the board for `ms` without a move (the hint offer's idle clock). */
     idleFor: (ms: number) => { const t = performance.now() - ms; if (session) session.lastInput = t; inViewSince = t; },
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
