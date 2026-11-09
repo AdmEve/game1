@@ -398,3 +398,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   counted time on the loading screen, home or a card. It now counts only time spent looking at the board.
 - Music from the start: inside the app the music now begins as the game opens (with level 1's opening camera move for
   a new player) instead of waiting for the first tap. A browser still waits for a touch, as browsers require.
+- Finishing the game: after the 240th level the game used to offer a nonexistent level 241 and replay the final boss.
+  Now there's a one-off «تبریک! راه‌بندون باز شد» card (with Mr. Ajool conceding), home says all 240 levels are won,
+  and Play opens the level list to replay any level.

@@ -979,7 +979,8 @@ function showWin() {
     });
     row.append(dbl);
   }
-  c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو تموم کردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(); }));
+  // After the last level there is no next one: home, where the finish is marked (showHome).
+  c.append(button(save.level >= levels.length ? 'همه‌ی مرحله‌ها رو بردی! 🎉' : `مرحله‌ی بعد ${fa(save.level + 1)}`, 'primary big', () => { void next(save.level >= levels.length); }));
   // Home: spend the stars and keys (agency, garage) before going on.
   row.append(asBack(button(`${icon('home')} <span class="lbl">خونه</span>`, 'ghost home-link', () => { void next(true); })));
   // Hard levels and chapter ends are worth showing off: the puzzle goes to friends as a picture (ui/sharecard.ts).
@@ -1230,7 +1231,8 @@ function showSettings() {
 }
 
 /** Level select: every chapter's levels; unlocked ones can be replayed. */
-function showLevels() {
+/** The level list (from the pause card, or from home once every level is won: `back` then returns there). */
+function showLevels(back?: () => void) {
   modalOpen = true;
   const c = h('div', 'levels');
   c.innerHTML = `<h2>${emo('🗺️')} مرحله‌ها</h2>`;
@@ -1254,7 +1256,7 @@ function showLevels() {
     c.append(grid);
   }
   close = modal(c, 'pop levels-card');
-  c.append(asBack(button('بستن', 'ghost', () => { close(); modalOpen = false; })));
+  c.append(asBack(button('بستن', 'ghost', () => { close(); if (back) back(); else modalOpen = false; })));
   // Open where the player is (the list runs to level 240), not at chapter 1.
   const here = c.querySelector<HTMLElement>('.lv.now') ?? c.querySelector<HTMLElement>(`.lgrid .lv:nth-child(1)`);
   requestAnimationFrame(() => here?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }));
@@ -1321,7 +1323,12 @@ function showHome() {
   rowEl.classList.add('with-ach');
   c.querySelector('.chapter')!.append(livesPill());
   if (save.streak > 0 && save.level < levels.length) c.querySelector('.chapter')!.append(h('div', 'streak-chip', `${emo('🔥', 'emo xs')}<b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>${helpsText(save.streak)} مجانی</small>` : ''}`));
-  c.append(button(`<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+  // Every level won: there is no level 241 to offer (Play used to replay the final boss under that number). Home says
+  // so, Play opens the level list for any replay, and the finish gets its card once (BEST_IN_MARKET_PLAN C6).
+  const finished = save.level >= levels.length;
+  if (finished) c.querySelector('.chapter')!.append(h('div', 'finale-note', `${emo('🏆', 'emo xs')} همه‌ی ${fa(levels.length)} مرحله رو بردی! <small>مرحله‌های تازه به‌زودی می‌رسن؛ تا اون موقع ساعت شلوغی هر روز منتظرته.</small>`));
+  c.append(button(finished ? `<span class="go">${icon('map')}دوباره بازی کن</span><small>هر مرحله‌ای که دوست داری</small>` : `<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+    if (finished) { close(); showLevels(() => showHome()); return; }
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
     // The daily gift waits until the first levels are done: a new player's Play goes straight into level 1 (scripts/journey.cjs).
@@ -1329,6 +1336,18 @@ function showHome() {
     modalOpen = false; hud.show(true);
     introSwoop();
   }));
+  if (finished && !save.seen.finale) showFinale();
+}
+
+/** Once, the first time home opens with every level won: the whole journey, and what comes next. */
+function showFinale() {
+  const c = h('div', 'finale');
+  c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>تبریک! راه‌بندون باز شد</h2>
+    <p>همه‌ی ${fa(levels.length)} مرحله رو بردی، از تجریش تا برج میلاد، و آقای عجول رو ${fa(CHAPTERS.length)} بار شکست دادی. مش‌رحیم بهت افتخار می‌کنه!</p>
+    <div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> باشه، باشه… این دفعه رو تو بردی. ولی من بیکار نمی‌شینم!</div></div>
+    <p class="next">مرحله‌های تازه به‌زودی می‌رسن. تا اون موقع ساعت شلوغی هر روز یه چالش تازه داره.</p>`;
+  const close = modal(c, 'pop');
+  c.append(asBack(button('دمت گرم!', 'primary big', () => { save.seen.finale = true; persist(); close(); })));
 }
 
 /**
@@ -1498,7 +1517,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), finale: () => showFinale(), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

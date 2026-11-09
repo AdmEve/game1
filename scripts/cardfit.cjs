@@ -12,6 +12,9 @@ const CARDS0 = [
   ['home', (r) => r.cards.home()],
   // Mid-game: rush hour not yet played today, a streak, medals and metro-card stations waiting (every badge and chip).
   ['home (mid-game)', (r) => { r.save.level = 41; r.save.streak = 2; r.save.rush = { day: '', streak: 0 }; r.cards.home(); }],
+  // Every level won: the finish note on home (the one-off card is its own case below).
+  ['home (finished)', (r) => { r.save.level = r.levels.length; r.save.seen.finale = true; r.cards.home(); }],
+  ['finale', (r) => r.cards.finale()],
   ['pause', (r) => r.cards.pause()],
   ['levels', (r) => r.cards.levels()],
   ['shop', (r) => r.cards.shop()],
