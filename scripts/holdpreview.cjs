@@ -38,7 +38,21 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
       covered: cars.find((i) => !s.s.revealed[i]),
     };
   }, n);
-  const hold = async (i, ms = 450) => { const [x, y] = await p.evaluate((i) => window.__screen(i), i); await p.evaluate(([x, y]) => window.__ptr('pointerdown', x, y), [x, y]); await p.waitForTimeout(ms); return [x, y]; };
+  // Press and hold. The route shows on the game's own 150 ms timer, which a slow machine runs late (software GL on CI:
+  // one frame can take ~400 ms, and CI run 232 read an empty route at 450 ms). So the route gets up to 3 s to appear
+  // instead of being read at a fixed moment; a car that must show nothing (covered) simply waits the 3 s out.
+  // The press waits until the car is really under its computed point (the level-start camera may still be settling
+  // on a slow machine, so the point found a moment ago can be off the car).
+  const hold = async (i, ms = 450) => {
+    const [x, y] = await p.waitForFunction((i) => { const [x, y] = window.__screen(i); return window.__rb.pick(x, y) === i ? [x, y] : false; }, i, { timeout: 5000, polling: 100 })
+      .then((h) => h.jsonValue()).catch(() => p.evaluate((i) => window.__screen(i), i));
+    await p.evaluate(([x, y]) => window.__ptr('pointerdown', x, y), [x, y]);
+    await p.waitForTimeout(ms);
+    await p.waitForFunction(() => window.__lane().length > 0, null, { timeout: 3000, polling: 50 }).catch(() => {});
+    return [x, y];
+  };
+  // What the game saw, for a report that fails.
+  const why = (i) => p.evaluate((i) => { const rb = window.__rb, [x, y] = window.__screen(i); return `car ${i} at ${Math.round(x)},${Math.round(y)} picks ${rb.pick(x, y)}, cards ${document.querySelectorAll('.modal-back:not(.out)').length}, veil ${document.querySelector('.veil')?.classList.contains('on')}`; }, i);
   const lane = () => p.evaluate(() => window.__lane());
   const shot = (name) => out ? p.screenshot({ path: `${out}/hold-${name}.png`, timeout: 120000 }) : null;
 
@@ -64,7 +78,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     // Held on a free car: a clear route.
     const [hx, hy] = await hold(c.free);
     let k = await lane();
-    report(k.length >= 2 && k.every((x) => x === 'go'), `held on a free car: clear route (${k.join(',')})`);
+    report(k.length >= 2 && k.every((x) => x === 'go'), `held on a free car: clear route (${k.join(',')})${k.length ? '' : ' — ' + (await why(c.free))}`);
     await shot('free');
     // Sliding off: hidden, and the tap is cancelled.
     await p.evaluate(([x, y]) => window.__ptr('pointermove', x + 40, y), [hx, hy]);
