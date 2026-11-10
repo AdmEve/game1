@@ -1,18 +1,18 @@
 /**
  * Share a win: the level's starting layout as a clean top-down puzzle diagram, with the level, how many taps it
- * took and the Bazaar link, sent through the phone's share sheet (Telegram, WhatsApp…). Drawn in 2D from the level
+ * took and the store's link, sent through the phone's share sheet (Telegram, WhatsApp…). Drawn in 2D from the level
  * data: at the win the 3D board is empty, and reading back a WebGL frame would stall a phone. Covered cars stay
  * covered, so the picture never spoils the puzzle.
  */
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { CONFIG } from '../config';
+import { STORE } from '../config';
 import { cellsOf, type Dir, type Level } from '../game/rules';
 import { PAINT } from '../render/fleet';
 import { TUNNEL_COLORS } from '../render/mechanics';
 
-export const STORE_URL = `https://cafebazaar.ir/app/${CONFIG.BAZAAR_PACKAGE}`;
+export const STORE_URL = STORE.page;
 export interface ShareWin {
   level: Level;
   /** e.g. «مرحله‌ی ۴۷ · ولیعصر» */
@@ -137,7 +137,7 @@ export function drawShareCard(info: ShareWin, canvas = document.createElement('c
   g.textAlign = 'center'; g.direction = 'rtl';
   g.fillStyle = '#fff'; g.font = `900 58px ${FONT}`; g.fillText(info.brag, W / 2, 1140);
   g.fillStyle = '#f2b124'; g.font = `800 48px ${FONT}`; g.fillText('تو می‌تونی؟', W / 2, 1208);
-  g.fillStyle = 'rgba(255,255,255,.7)'; g.font = `600 30px ${FONT}`; g.fillText('راه‌بندون رو از کافه‌بازار بگیر', W / 2, 1282);
+  g.fillStyle = 'rgba(255,255,255,.7)'; g.font = `600 30px ${FONT}`; g.fillText(`راه‌بندون رو از ${STORE.name} بگیر`, W / 2, 1282);
   g.direction = 'ltr'; g.fillStyle = 'rgba(255,255,255,.45)'; g.font = `500 24px ${FONT}`; g.fillText(STORE_URL.replace('https://', ''), W / 2, 1322);
   return canvas;
 }

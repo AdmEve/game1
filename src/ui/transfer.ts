@@ -5,6 +5,7 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
+import { STORE } from '../config';
 import { haptic } from '../haptics';
 import { replaceSave, save, type Save } from '../save';
 import { makeCode, merged, readCode } from '../transfer';
@@ -23,7 +24,7 @@ const tile = (name: string) => `<div class="burst"><span class="help-tile">${ico
 const WHY = {
   none: 'این کد راه‌بندون نیست. کد با «RB1.» شروع می‌شه.',
   broken: 'کد کامل نیست یا عوض شده؛ دوباره همه‌ش رو کپی کن.',
-  newer: 'این کد مال نسخه‌ی تازه‌تر بازیه؛ اول بازی رو از بازار به‌روز کن.',
+  newer: `این کد مال نسخه‌ی تازه‌تر بازیه؛ اول بازی رو از ${STORE.name} به‌روز کن.`,
 };
 
 function codeBox(value = '') {
@@ -46,7 +47,7 @@ export function showTransfer(total: number) {
   const close = modal(c, 'pop');
   c.append(button(`${icon('share')} کد این گوشی`, 'gold big', () => void showCode(total)));
   c.append(button(`${icon('import')} وارد کردن کد`, 'primary', () => showEnter(total)));
-  c.append(h('p', 'small', 'خریدهای بازار با همون حساب بازار خودشون برمی‌گردن.'));
+  c.append(h('p', 'small', `خریدها با همون حساب ${STORE.name} خودشون برمی‌گردن.`));
   c.append(asBack(button('برگرد', 'ghost', close)));
 }
 

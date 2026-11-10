@@ -36,10 +36,6 @@
         </provider>
     </application>
 
-    <queries>
-        <package android:name="com.farsitel.bazaar" />
-    </queries>
-
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

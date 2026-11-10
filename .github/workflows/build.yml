@@ -93,33 +93,44 @@ jobs:
               -validity 3650 -storepass "$PW" -keypass "$PW" -dname "CN=Test build" >/dev/null
             echo "::add-mask::$PW"
             echo "KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
-            echo "SIGNED_WITH=temporary test key (NOT for Cafe Bazaar upload)" >> "$GITHUB_ENV"
+            echo "SIGNED_WITH=temporary test key (NOT for store upload)" >> "$GITHUB_ENV"
           fi
 
-      - name: Build Android APK
+      # One APK per store (BEST_IN_MARKET_PLAN N12): Cafe Bazaar's from the web build tested above, then the web part
+      # rebuilt for Myket (its name, links and billing) and Myket's APK.
+      - name: Build Android APKs (Cafe Bazaar, Myket)
         env:
           VERSION_CODE: ${{ github.run_number }}
         run: |
+          if grep -qi 'myket\|mservices' dist/assets/*.js; then echo "The Bazaar build names Myket"; exit 1; fi
           npx cap sync android
-          cd android
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk ../Rahbandoon.apk
+          chmod +x android/gradlew
+          (cd android && ./gradlew --no-daemon assembleBazaarRelease)
+          cp android/app/build/outputs/apk/bazaar/release/app-bazaar-release.apk Rahbandoon.apk
+          VITE_STORE=myket npm run build
+          if grep -q 'cafebazaar\|کافه‌بازار' dist/assets/*.js; then echo "The Myket build names Cafe Bazaar"; exit 1; fi
+          npx cap copy android
+          (cd android && ./gradlew --no-daemon assembleMyketRelease)
+          cp android/app/build/outputs/apk/myket/release/app-myket-release.apk Rahbandoon-myket.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: Rahbandoon-android-apk
-          path: Rahbandoon.apk
+          path: |
+            Rahbandoon.apk
+            Rahbandoon-myket.apk
 
       - name: Publish "latest" release (download link for your phone)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete android-latest --yes --cleanup-tag || true
-          gh release create android-latest Rahbandoon.apk \
+          gh release create android-latest Rahbandoon.apk Rahbandoon-myket.apk \
             --target "$GITHUB_SHA" \
             --title "Rahbandoon – latest build (${GITHUB_REF_NAME}, #${{ github.run_number }})" \
             --notes "Install on Android: open this page on your phone, tap **Rahbandoon.apk**, then allow installing from this source.
+
+          Rahbandoon.apk is the Cafe Bazaar build; Rahbandoon-myket.apk is the same game for Myket (its own billing and links).
 
           Signed with: ${SIGNED_WITH}.
 

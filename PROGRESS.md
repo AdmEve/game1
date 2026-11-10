@@ -457,3 +457,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   at a time, each in a voice of their own (Rahim low and gravelly, Sabouri over the agency radio, Ajool fast and
   nasal); a tap shows the rest. «صدای شخصیت‌ها» in settings turns the voices off; with «حرکت کمتر» the line is
   there at once.
+- A Myket build: every push now makes two APKs, `Rahbandoon.apk` for Cafe Bazaar and `Rahbandoon-myket.apk` for
+  Myket, each with its own billing and naming only its own store (Bazaar's review turns away apps that mention
+  another). Myket's key and products go in when the owner opens a Myket developer account.

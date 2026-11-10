@@ -33,7 +33,7 @@ import { introIcon, introTitle, maybeDaily, maybeStarterOffer, showWelcomeBack, 
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, MAX_LIVES, addLives, fullAt, lives, loseLife } from './lives';
 import { AWAY_DAYS, askNotifications, planReminders, syncReminders } from './notify';
-import { UNLOCK_ALL_LEVELS } from './config';
+import { STORE, UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
 import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
@@ -1167,7 +1167,7 @@ function shareButton(info: ShareWin): HTMLElement {
 function askRating(): Promise<void> {
   return new Promise((done) => {
     const c = h('div', 'rate');
-    c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div><h2>از راه‌بندون خوشت میاد؟</h2><p>با پنج ستاره تو بازار کمکمون کن تا مرحله‌های بیشتری بسازیم!</p>`;
+    c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div><h2>از راه‌بندون خوشت میاد؟</h2><p>با پنج ستاره تو ${STORE.name} کمکمون کن تا مرحله‌های بیشتری بسازیم!</p>`;
     const close = modal(c, 'pop');
     c.append(button(`${emo('⭐', 'emo sm')} آره، پنج ستاره!`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
     c.append(asBack(button('بعداً', 'ghost', () => { close(); done(); })));

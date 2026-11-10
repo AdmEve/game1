@@ -13,9 +13,12 @@ import ir.cafebazaar.poolakey.config.PaymentConfiguration
 import ir.cafebazaar.poolakey.config.SecurityCheck
 import ir.cafebazaar.poolakey.request.PurchaseRequest
 
-/** Cafe Bazaar in-app billing (Poolakey) exposed to the web layer. */
-@CapacitorPlugin(name = "Bazaar")
-class BazaarPlugin : Plugin() {
+/**
+ * Cafe Bazaar in-app billing (Poolakey) exposed to the web layer as "Store" (src/monetize.ts). The Bazaar build's;
+ * the Myket build has its own StorePlugin with the same methods (android/app/src/myket/).
+ */
+@CapacitorPlugin(name = "Store")
+class StorePlugin : Plugin() {
     private var payment: Payment? = null
     private var connection: Connection? = null
 

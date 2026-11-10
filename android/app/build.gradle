@@ -36,6 +36,17 @@ android {
     kotlinOptions {
         jvmTarget = '21'
     }
+    // One build per store (BEST_IN_MARKET_PLAN N12): each has only its own billing (src/<store>/StorePlugin.kt) and
+    // names only its own store, as Cafe Bazaar's review requires. The web part is built for it too (VITE_STORE).
+    flavorDimensions = ["store"]
+    productFlavors {
+        bazaar { dimension "store" }
+        myket { dimension "store" }
+    }
+    // Myket's billing service is reached through its AIDL interface (src/myket/aidl/).
+    buildFeatures {
+        aidl true
+    }
     buildTypes {
         release {
             signingConfig signingConfigs.release
@@ -57,7 +68,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    implementation "com.github.cafebazaar.Poolakey:poolakey:2.2.0"
+    bazaarImplementation "com.github.cafebazaar.Poolakey:poolakey:2.2.0"
     implementation "ir.tapsell.plus:tapsell-plus-sdk-android:2.3.3"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

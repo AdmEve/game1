@@ -1,9 +1,11 @@
 /**
  * When the game can't start, say so on the splash (it would otherwise sit there forever with its loading bar):
  * no WebGL (a blocklisted GPU driver, or an old Android System WebView), or a failure while booting. The player gets
- * what to do and a retry; the save is never touched. Kept free of the game's own modules so it works when they fail.
+ * what to do and a retry; the save is never touched. Kept free of the game's own modules so it works when they fail
+ * (config.ts, for the store's name, has none of its own).
  */
 import { SplashScreen } from '@capacitor/splash-screen';
+import { STORE } from '../config';
 
 export type Fatal = 'webgl' | 'boot';
 
@@ -12,7 +14,7 @@ const TEXT: Record<Fatal, { title: string; body: string; steps: string[] }> = {
     title: 'گرافیک گوشیت در دسترس نیست',
     body: 'راه‌بندون سه‌بعدیه و برای اجرا به WebGL نیاز داره، که الان روی این گوشی خاموشه یا پشتیبانی نمی‌شه.',
     // The app names stay in English (that is how they are listed in the stores), isolated from the Persian around them.
-    steps: ['برنامه‌های <bdi>Android System WebView</bdi> و <bdi>Chrome</bdi> رو از بازار یا گوگل‌پلی به‌روز کن.', 'گوشی رو یه بار خاموش و روشن کن.'],
+    steps: [`برنامه‌های <bdi>Android System WebView</bdi> و <bdi>Chrome</bdi> رو از ${STORE.name} یا گوگل‌پلی به‌روز کن.`, 'گوشی رو یه بار خاموش و روشن کن.'],
   },
   boot: {
     title: 'بازی درست باز نشد',
@@ -65,7 +67,7 @@ export function showFatal(kind: Fatal, detail = ''): void {
   host.classList.add('fatal');
   const style = document.createElement('style'); style.textContent = CSS; document.head.append(style);
   const t = kind === 'boot' && chrome > 0 && chrome < 110
-    ? { ...TEXT.boot, steps: [`برنامه‌ی <bdi>Android System WebView</bdi> گوشیت قدیمیه (نسخه‌ی ${faDigits(chrome)}). از بازار یا گوگل‌پلی به‌روزش کن (یا <bdi>Chrome</bdi> رو).`, 'بعد بازی رو دوباره باز کن.'] }
+    ? { ...TEXT.boot, steps: [`برنامه‌ی <bdi>Android System WebView</bdi> گوشیت قدیمیه (نسخه‌ی ${faDigits(chrome)}). از ${STORE.name} یا گوگل‌پلی به‌روزش کن (یا <bdi>Chrome</bdi> رو).`, 'بعد بازی رو دوباره باز کن.'] }
     : TEXT[kind];
   const box = document.createElement('div'); box.className = 'fatal-box'; box.dir = 'rtl'; box.setAttribute('role', 'alert');
   const h = document.createElement('h2'); h.textContent = t.title;

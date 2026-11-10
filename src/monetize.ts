@@ -1,13 +1,17 @@
-/** Cafe Bazaar billing (Poolakey) and Tapsell ads through the native plugins in android/. */
+/**
+ * The store's in-app billing (Cafe Bazaar's Poolakey, or Myket's billing service, in the Myket build: config.ts STORE)
+ * and Tapsell ads, through the native plugins in android/.
+ */
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { CONFIG, PRODUCTS, type Product } from './config';
+import { CONFIG, PRODUCTS, STORE, type Product } from './config';
 import { persist, save } from './save';
 import { faNum, note } from './ui/hud';
 
-interface BazaarPlugin {
+/** The same in both builds: android/app/src/bazaar/ and android/app/src/myket/ each have their own StorePlugin. */
+interface StorePlugin {
   connect(o: { rsaKey: string }): Promise<{ connected: boolean }>;
   getPrices(o: { skus: string[] }): Promise<{ prices: Record<string, string> }>;
-  /** `reason` when not purchased: «canceled» by the player, «failed», or the flow could not «begin». */
+  /** `reason` when not purchased: «canceled» by the player, «failed», the flow could not «begin», or already «owned». */
   purchase(o: { sku: string }): Promise<{ purchased: boolean; token?: string; reason?: string }>;
   consume(o: { token: string }): Promise<void>;
   owned(): Promise<{ skus: string[]; tokens: Record<string, string> }>;
@@ -21,9 +25,9 @@ interface AdsPlugin {
 }
 
 const native = Capacitor.isNativePlatform();
-const Bazaar = registerPlugin<BazaarPlugin>('Bazaar');
+const Store = registerPlugin<StorePlugin>('Store');
 const Ads = registerPlugin<AdsPlugin>('Ads');
-let bazaarReady = false;
+let storeReady = false;
 export const prices: Record<string, string> = {};
 /** The browser build simulates the stores; `?iap=fail` and `?ads=none` make them fail, for tests. */
 const sim = new URLSearchParams(typeof location === 'undefined' ? '' : location.search);
@@ -31,42 +35,46 @@ const sim = new URLSearchParams(typeof location === 'undefined' ? '' : location.
 export async function initMonetization() {
   if (!native) return;
   if (CONFIG.TAPSELL_APP_ID) Ads.init({ appId: CONFIG.TAPSELL_APP_ID }).catch(() => {});
-  await connectBazaar();
+  await connectStore();
 }
 
-/** Bazaar can sell in this build (an RSA key is set), whether or not it is reachable right now. */
-export const iapConfigured = () => !native || !!CONFIG.BAZAAR_RSA_KEY;
+/** The store can sell in this build (an RSA key is set), whether or not it is reachable right now. */
+export const iapConfigured = () => !native || !!STORE.rsaKey;
 let lastTry = 0;
 /**
- * Bazaar again, if it wasn't reachable at start (no network, Bazaar updating): the shop asks on opening, so the coin
- * packs come back without a restart. At most every 15 s.
+ * The store again, if it wasn't reachable at start (no network, the store app updating): the shop asks on opening, so
+ * the coin packs come back without a restart. At most every 15 s.
  */
-export async function ensureBazaar(): Promise<boolean> {
+export async function ensureStore(): Promise<boolean> {
   if (iapAvailable() || !iapConfigured() || Date.now() - lastTry < 15_000) return iapAvailable();
   // Never longer than 8 s: a purchase or the shop waits on this.
-  await Promise.race([connectBazaar(), new Promise((w) => setTimeout(w, 8000))]);
+  await Promise.race([connectStore(), new Promise((w) => setTimeout(w, 8000))]);
   return iapAvailable();
 }
 
-async function connectBazaar() {
-  if (!CONFIG.BAZAAR_RSA_KEY) return;
+async function connectStore() {
+  if (!STORE.rsaKey) return;
   lastTry = Date.now();
   try {
-    bazaarReady = (await Bazaar.connect({ rsaKey: CONFIG.BAZAAR_RSA_KEY })).connected;
-    if (!bazaarReady) return;
-    Object.assign(prices, (await Bazaar.getPrices({ skus: PRODUCTS.map((x) => x.sku) })).prices);
-    const { skus, tokens } = await Bazaar.owned();
-    for (const sku of skus) {
-      const p = PRODUCTS.find((x) => x.sku === sku);
-      if (!p) continue;
-      // A consumable paid for but never delivered (app closed mid-purchase).
-      if (p.consumable && tokens[sku]) { await Bazaar.consume({ token: tokens[sku] }); deliver(p); }
-      else if (!p.consumable) deliver(p, true);
-    }
-  } catch { bazaarReady = false; }
+    storeReady = (await Store.connect({ rsaKey: STORE.rsaKey })).connected;
+    if (!storeReady) return;
+    Object.assign(prices, (await Store.getPrices({ skus: PRODUCTS.map((x) => x.sku) })).prices);
+    await restoreOwned();
+  } catch { storeReady = false; }
 }
 
-export const iapAvailable = () => !native || bazaarReady;
+/** What the store says the player owns: one-time products back, and a consumable paid for but never delivered (the app closed mid-purchase) delivered now. */
+async function restoreOwned() {
+  const { skus, tokens } = await Store.owned();
+  for (const sku of skus) {
+    const p = PRODUCTS.find((x) => x.sku === sku);
+    if (!p) continue;
+    if (p.consumable && tokens[sku]) { await Store.consume({ token: tokens[sku] }); deliver(p); }
+    else if (!p.consumable) deliver(p, true);
+  }
+}
+
+export const iapAvailable = () => !native || storeReady;
 
 function deliver(p: Product, restoring = false) {
   if (!restoring) {
@@ -87,7 +95,7 @@ function deliver(p: Product, restoring = false) {
 
 /**
  * How a purchase ended: «ok» (delivered), «cancel» (the player backed out, or one was already under way), «error»
- * (Bazaar unreachable or the payment failed), «pending» (paid, but Bazaar didn't confirm the delivery: it comes on
+ * (the store unreachable or the payment failed), «pending» (paid, but the store didn't confirm the delivery: it comes on
  * the next start, see initMonetization).
  */
 export type BuyResult = 'ok' | 'cancel' | 'error' | 'pending';
@@ -112,13 +120,15 @@ async function purchase(p: Product): Promise<BuyResult> {
     deliver(p);
     return 'ok';
   }
-  if (!(await ensureBazaar())) return 'error';
+  if (!(await ensureStore())) return 'error';
   let r: { purchased: boolean; token?: string; reason?: string };
-  try { r = await Bazaar.purchase({ sku: p.sku }); } catch { return 'error'; }
+  try { r = await Store.purchase({ sku: p.sku }); } catch { return 'error'; }
+  // Already theirs (bought before, or paid for and never delivered): take back what the store says they own.
+  if (!r.purchased && r.reason === 'owned') { try { await restoreOwned(); return 'ok'; } catch { return 'error'; } }
   if (!r.purchased) return r.reason === 'canceled' ? 'cancel' : 'error';
   if (p.consumable && r.token) {
     // Consumed before it is delivered, so it can never be delivered twice; one retry for a blip.
-    const consume = () => Bazaar.consume({ token: r.token! }).then(() => true, () => false);
+    const consume = () => Store.consume({ token: r.token! }).then(() => true, () => false);
     if (!(await consume()) && !(await new Promise((w) => setTimeout(w, 1500)).then(consume))) return 'pending';
   }
   deliver(p);
@@ -130,7 +140,7 @@ function purchaseNote(p: Product, r: BuyResult) {
   if (r === 'ok') {
     note(p.sku === 'no_ads' ? 'تبلیغ‌های بین مرحله‌ها برای همیشه حذف شد!' : p.sku === 'pass' ? 'کارت طلایی این ماه مال تو شد!'
       : p.sku === 'starter' ? 'بسته‌ی شروع مال تو شد!' : p.coins ? `${faNum(p.coins)} سکه اومد تو کیفت!` : 'خرید انجام شد!', 2600);
-  } else if (r === 'error') note('خرید انجام نشد. اینترنت و ورودت به کافه‌بازار رو چک کن و دوباره امتحان کن.', 3600);
+  } else if (r === 'error') note(`خرید انجام نشد. اینترنت و ورودت به ${STORE.name} رو چک کن و دوباره امتحان کن.`, 3600);
   else if (r === 'pending') note('پولش رو دادی و ثبت شد؛ بازی رو دوباره که باز کنی تحویلت می‌دیم.', 4000);
 }
 
@@ -178,6 +188,6 @@ export async function maybeInterstitial(levelIndex: number): Promise<void> {
 }
 
 export function rateApp() {
-  if (native) Bazaar.rate({ packageName: CONFIG.BAZAAR_PACKAGE }).catch(() => {});
-  else window.open(`https://cafebazaar.ir/app/${CONFIG.BAZAAR_PACKAGE}`, '_blank');
+  if (native) Store.rate({ packageName: CONFIG.PACKAGE }).catch(() => {});
+  else window.open(STORE.page, '_blank');
 }

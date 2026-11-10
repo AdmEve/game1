@@ -1,24 +1,37 @@
 /**
  * Store and ad-network keys. Fill these in from the dashboards before publishing:
  *  - BAZAAR_RSA_KEY: Cafe Bazaar developer panel → the app → «پرداخت درون‌برنامه‌ای» → RSA key.
+ *  - MYKET_RSA_KEY: Myket developer panel → the app → «پرداخت درون‌برنامه‌ای» → RSA key (the Myket build).
  *  - TAPSELL_APP_ID and zone ids: tapsell.ir dashboard → the app (Tapsell Plus).
  * With empty values the game still runs: purchases and ads are simply unavailable on phones
  * (and simulated in the browser build so the flows can be tested).
  */
 export const CONFIG = {
-  BAZAAR_RSA_KEY: '',
   TAPSELL_APP_ID: '',
   TAPSELL_REWARDED_ZONE: '',
   TAPSELL_INTERSTITIAL_ZONE: '',
-  BAZAAR_PACKAGE: 'com.admeve.rahbandoon',
+  /** The app's id in the stores (android/app/build.gradle applicationId). */
+  PACKAGE: 'com.admeve.rahbandoon',
 };
+// Each store's key on its own, so a build carries only its own store's (the other is left out with its branch).
+const BAZAAR_RSA_KEY = '';
+const MYKET_RSA_KEY = '';
+
+/**
+ * The store this build is for (VITE_STORE when building; Cafe Bazaar unless it says Myket). Each build names only its
+ * own store, with its own billing plugin (android/app/src/<store>/): Bazaar's review turns away an app that points
+ * to another store, and the other store's words and code are left out of the build, not just unused.
+ */
+export const STORE: { id: 'bazaar' | 'myket'; name: string; page: string; rsaKey: string } = __STORE__ === 'myket'
+  ? { id: 'myket', name: 'مایکت', page: `https://myket.ir/app/${CONFIG.PACKAGE}`, rsaKey: MYKET_RSA_KEY }
+  : { id: 'bazaar', name: 'کافه‌بازار', page: `https://cafebazaar.ir/app/${CONFIG.PACKAGE}`, rsaKey: BAZAAR_RSA_KEY };
 
 export interface Product {
   sku: string;
   title: string;
   desc: string;
   icon: string;
-  /** Toman, shown until Bazaar returns its own localized price. */
+  /** Toman, shown until the store returns its own localized price. */
   fallbackPrice: number;
   consumable: boolean;
   coins?: number;
@@ -26,7 +39,7 @@ export interface Product {
   badge?: string;
 }
 
-/** In-app products. Create the same SKUs in the Bazaar panel. */
+/** In-app products. Create the same SKUs in each store's panel. */
 export const PRODUCTS: Product[] = [
   { sku: 'starter', icon: '🎁', title: 'بسته‌ی شروع', desc: '۲٬۰۰۰ سکه + از هر کمکی ۳ تا + بدون تبلیغ', fallbackPrice: 29000, consumable: false, coins: 2000, boosters: 3, badge: 'یک‌بار' },
   { sku: 'coins_s', icon: '🪙', title: '۱٬۰۰۰ سکه', desc: 'یه کیسه سکه', fallbackPrice: 19000, consumable: true, coins: 1000 },

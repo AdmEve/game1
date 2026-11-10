@@ -1,6 +1,7 @@
 /**
  * The privacy policy, in the game (Settings): the same text as the store listing's (store/privacy-fa.md), so the two
- * can't drift apart. The file only uses headings, paragraphs and "- " lists, which is all this renders.
+ * can't drift apart. The file only uses headings, paragraphs and "- " lists, which is all this renders. It names
+ * Cafe Bazaar; Myket's build has Myket's name in its place (vite.config.ts).
  */
 import POLICY from '../../store/privacy-fa.md?raw';
 import { asBack, button, h, modal } from './hud';

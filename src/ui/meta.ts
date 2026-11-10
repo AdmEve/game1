@@ -1,9 +1,9 @@
 /** Meta screens: the shop «دکه», the daily gift calendar and chapter chests. */
 import { coin } from '../audio';
-import { PRODUCTS } from '../config';
+import { PRODUCTS, STORE } from '../config';
 import { helpOpen } from '../game/helps';
 import { haptic } from '../haptics';
-import { buy, ensureBazaar, iapAvailable, iapConfigured, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
+import { buy, ensureStore, iapAvailable, iapConfigured, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
 import { persist, save } from '../save';
 import { RAHIM } from './characters';
 import { emo } from './emoji';
@@ -60,7 +60,7 @@ export function showShop(onClose: () => void, onChange: () => void) {
     coinsAt = free;
   }
 
-  // Coin packs for real money. If Bazaar wasn't reachable when the game started, it is asked again now, so they come
+  // Coin packs for real money. If the store wasn't reachable when the game started, it is asked again now, so they come
   // back without a restart; a purchase under way greys the others out (one at a time), and each says how it went.
   const packsBox = h('div', 'packs-box');
   const fillPacks = () => {
@@ -83,10 +83,10 @@ export function showShop(onClose: () => void, onChange: () => void) {
   };
   if (iapAvailable()) fillPacks();
   else if (iapConfigured()) {
-    packsBox.append(h('p', 'packs-wait', 'در حال وصل شدن به کافه‌بازار…'));
-    void ensureBazaar().then((ok) => {
+    packsBox.append(h('p', 'packs-wait', `در حال وصل شدن به ${STORE.name}…`));
+    void ensureStore().then((ok) => {
       if (ok) fillPacks();
-      else packsBox.replaceChildren(h('p', 'packs-wait', 'کافه‌بازار در دسترس نیست؛ برای خرید سکه، اینترنت و کافه‌بازار رو چک کن.'));
+      else packsBox.replaceChildren(h('p', 'packs-wait', `${STORE.name} در دسترس نیست؛ برای خرید سکه، اینترنت و ${STORE.name} رو چک کن.`));
     });
   }
   c.append(packsBox);

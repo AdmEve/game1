@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Myket build: Myket's billing service (StorePlugin binds to it) and its app for the rating page. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="ir.mservices.market.BILLING" />
+    <queries>
+        <package android:name="ir.mservices.market" />
+    </queries>
+</manifest>

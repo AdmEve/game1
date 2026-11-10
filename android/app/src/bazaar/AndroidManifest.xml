@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Bazaar build: Poolakey reaches Cafe Bazaar's app for payments and the rating page. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.farsitel.bazaar" />
+    </queries>
+</manifest>
