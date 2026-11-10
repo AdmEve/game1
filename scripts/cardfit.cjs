@@ -15,9 +15,19 @@ const CARDS0 = [
   // Every level won: the finish note on home (the one-off card is its own case below).
   ['home (finished)', (r) => { r.save.level = r.levels.length; r.save.seen.finale = true; r.cards.home(); }],
   ['finale', (r) => r.cards.finale()],
-  // The metro card with the whole line ridden this month (its header says so instead of «تا ایستگاه بعد»).
   // A help with none left and too few coins: a video, the shop, or not now (H10).
   ['help offer', (r) => { r.save.coins = 120; r.cards.helpOffer('bay'); }],
+  // Progress to another phone (N11): the card, this phone's code, and the swap asked before it happens.
+  ['transfer', (r) => r.cards.transfer()],
+  ['transfer (code)', async (r) => { r.cards.transfer(); [...document.querySelectorAll('.transfer .btn')].find((x) => x.textContent.includes('کد این گوشی')).click(); await new Promise((x) => setTimeout(x, 400)); }],
+  ['transfer (swap)', async (r) => {
+    const wait = (ms) => new Promise((x) => setTimeout(x, ms)), press = (t) => [...[...document.querySelectorAll('.modal-back:not(.out) .card')].pop().querySelectorAll('.btn')].find((x) => x.textContent.includes(t)).click();
+    r.save.level = 118; r.save.coins = 12845; r.cards.transfer(); press('کد این گوشی'); await wait(400);
+    const code = document.querySelector('.transfer-code textarea').value;
+    r.save.level = 3; r.save.coins = 260; press('برگرد'); await wait(250); press('وارد کردن کد'); await wait(250);
+    const ta = document.querySelector('.transfer-in textarea'); ta.value = code; ta.dispatchEvent(new Event('input')); press('بیار'); await wait(400);
+  }],
+  // The metro card with the whole line ridden this month (its header says so instead of «تا ایستگاه بعد»).
   ['pass (end of line)', (r) => { r.save.pass = { month: new Date().toISOString().slice(0, 7), punches: 41, free: [], prem: [], premium: false }; r.cards.pass(); }],
   ['pause', (r) => r.cards.pause()],
   ['levels', (r) => r.cards.levels()],

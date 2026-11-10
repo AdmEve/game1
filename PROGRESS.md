@@ -417,3 +417,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - No dead end on a help: tapping a help you have none of, without the coins for it, used to just say «سکه کافی نداری!»
   (right after the hint pointed at it). It now opens a small card: watch a video for one (it's used at once), go to
   the shop, or not now.
+- Progress to a new phone: Settings → «انتقال پیشرفت به گوشی دیگه» gives a code with all your progress (send it to
+  yourself, e.g. Telegram Saved Messages); on the new phone, «وارد کردن کد» shows both phones' progress and swaps
+  after you say yes. Bazaar purchases come back from your Bazaar account as before.

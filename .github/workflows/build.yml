@@ -50,6 +50,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/quitcost.cjs
           # The lose card's paid continue is offered only when one more bay can still win (scripts/fairgo.cjs).
           URL=http://127.0.0.1:4173/ node scripts/fairgo.cjs
+          # Progress to another phone by code: refuses bad codes, asks first, keeps this phone's purchases (scripts/transfer.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/transfer.cjs
           # Screen-reader names and structure on the main screens (axe-core, WCAG 2 A/AA: scripts/a11y.cjs).
           URL=http://127.0.0.1:4173/ node scripts/a11y.cjs
 

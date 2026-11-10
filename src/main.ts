@@ -37,6 +37,7 @@ import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
 import { drawShareCard, shareWin, type ShareWin } from './ui/sharecard';
 import { showPrivacy } from './ui/privacy';
+import { showTransfer, takeTransferNote } from './ui/transfer';
 import { HELP_FROM, MERCY_LEVELS, helpOpen, helpOpening } from './game/helps';
 import { solve as solveLevel } from './game/solver';
 import { Share } from '@capacitor/share';
@@ -1276,6 +1277,8 @@ function showSettings() {
       try { await navigator.clipboard.writeText(text); note('گزارش کپی شد'); } catch { note('کپی نشد'); }
     }));
   }
+  // Progress to or from another phone (a code; Bazaar has no cloud save).
+  c.append(button(`${icon('transfer')} انتقال پیشرفت به گوشی دیگه`, 'ghost errs transfer-btn', () => showTransfer(levels.length)));
   // The privacy policy (the store listing's text, store/privacy-fa.md).
   c.append(button(`${icon('shield')} حریم خصوصی`, 'ghost errs privacy-btn', () => showPrivacy()));
   // Version label: three taps show the performance overlay, seven unlock every level (for testers).
@@ -1512,6 +1515,9 @@ async function boot() {
   // (until then it holds nothing but its Play button). scripts/journey.cjs, smoke.cjs.
   if (debug.has('play')) { /* tests start in the level */ } else if (save.level === 0) introSwoop();
   else showHome();
+  // Back from a progress transfer (Settings → انتقال پیشرفت), which restarts the game: say it arrived.
+  const moved = takeTransferNote();
+  if (moved) note(moved, 3200);
   void initMonetization();
   window.addEventListener('resize', fitCamera);
   // Browsers only allow audio after a gesture: start the music on the first touch.
@@ -1594,7 +1600,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

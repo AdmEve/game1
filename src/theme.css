@@ -88,12 +88,12 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .boosters.none { display: none; }
 .bst.locked .ic, .bst.locked .nm { opacity: .38; }
 .bst .cnt.lock { background: #1d2128; color: var(--muted); border: 1px solid var(--line-2); left: 50%; transform: translateX(-50%); padding: 0 7px; font-size: 10.5px; white-space: nowrap; }
-/* The card on the level a help opens: its icon on a large tile, like the button it lights up. */
-.help-intro .help-tile, .help-offer .help-tile { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: rgba(242, 177, 36, .14);
+/* The card on the level a help opens (and the help offer, the transfer card): its icon on a large tile. */
+.burst .help-tile { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: rgba(242, 177, 36, .14);
   border: 1px solid rgba(242, 177, 36, .45); box-shadow: 0 0 34px rgba(242, 177, 36, .25); }
 /* Over the card's top edge, so opaque: the gold wash on the card's own colour, not the scene showing through. */
-.help-intro .help-tile, .help-offer .help-tile { background: linear-gradient(rgba(242, 177, 36, .14), rgba(242, 177, 36, .14)), #1a1e26; }
-.help-intro .help-tile .ico, .help-offer .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
+.burst .help-tile { background: linear-gradient(rgba(242, 177, 36, .14), rgba(242, 177, 36, .14)), #1a1e26; }
+.burst .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
 .help-intro .have { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
 /* Past the ramp a hint is offered, not shown: a chip over the booster bar after a long idle (main.ts updateHand). */
 .btn.hint-chip { position: fixed; z-index: 6; left: 50%; bottom: calc(112px + var(--sab)); width: auto; margin: 0; padding: 8px 16px; border-radius: 999px;
@@ -121,7 +121,8 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 
 /* ───── Modals ───── */
 .modal-back.in { background: rgba(5, 7, 10, .55); }
-.card { background: linear-gradient(180deg, rgba(26, 30, 38, .96), rgba(16, 19, 24, .97)); border: 1px solid var(--line); border-radius: 22px; color: var(--text);
+/* Opaque: a card opened over another (pause → privacy, transfer) would show the one beneath through its 4% glass. */
+.card { background: linear-gradient(180deg, #1a1e26, #101318); border: 1px solid var(--line); border-radius: 22px; color: var(--text);
   box-shadow: 0 30px 70px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .06); transition: .32s cubic-bezier(.2, .9, .3, 1); }
 .card h2 { color: #fff; font-weight: 800; letter-spacing: .2px; font-size: 26px; }
 .card p { color: var(--muted); font-weight: 500; }
@@ -528,3 +529,23 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 /* Toasts sit in the free band between the lot and the booster bar, never over the cars or the signs at the top. */
 .hud .toast, .hud.has-sign .toast, .hud.has-limit.has-sign .toast {
   top: auto; bottom: calc(106px + var(--sab)); max-width: calc(100vw - 32px); }
+
+/* «انتقال پیشرفت»: the code in a left-to-right box, both phones' progress side by side before a swap. */
+.transfer textarea.code { display: block; width: 100%; margin: 12px 0 6px; padding: 10px 12px; direction: ltr; text-align: left; resize: none;
+  font: 500 12.5px/1.5 ui-monospace, 'Roboto Mono', monospace; word-break: break-all; color: var(--text);
+  background: rgba(0, 0, 0, .3); border: 1px solid var(--line-2); border-radius: 12px; user-select: text; -webkit-user-select: text; }
+.transfer textarea.code:focus { outline: 2px solid rgba(242, 177, 36, .6); outline-offset: 1px; }
+.transfer textarea.code::placeholder { color: var(--muted); }
+.transfer .small { font-size: 13px; line-height: 1.7; margin: 6px 0 14px; }
+.transfer .where { color: var(--accent); font-weight: 700; margin-bottom: 0; }
+.transfer .err { color: #ff8a87; font-weight: 700; margin: 2px 0 10px; }
+.transfer .err:empty { display: none; }
+.transfer-ok .swap { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; }
+.transfer-ok .swap > div { flex: 1; padding: 10px 8px; border-radius: 14px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); }
+.transfer-ok .swap > div.to { background: rgba(242, 177, 36, .1); border-color: rgba(242, 177, 36, .5); }
+.transfer-ok .swap small { display: block; font-size: 12px; color: var(--muted); }
+.transfer-ok .swap b { display: block; margin-top: 3px; font-size: 15px; color: #fff; }
+.transfer-ok .swap span { display: block; font-size: 13px; color: var(--muted); }
+.transfer-ok .swap .to span { color: var(--accent); }
+.transfer-ok .swap i .ico { width: 20px; height: 20px; color: var(--muted); }
+.transfer-ok .warn { color: #ff8a87; font-weight: 700; margin-top: -4px; }

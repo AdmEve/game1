@@ -99,23 +99,26 @@ function read(key: string): Partial<Save> | null {
   } catch { return null; }
 }
 
+/** A stored (or transferred) save brought up to the current shape: defaults for anything missing. */
+export function normalize(s: Partial<Save>): Save {
+  const f = fresh();
+  // Saves from before the volume sliders: a switched-off sound or music starts at zero.
+  const st = { ...f.settings, ...s.settings };
+  if (s.settings && s.settings.sfxVol === undefined && s.settings.sound === false) st.sfxVol = 0;
+  if (s.settings && s.settings.musicVol === undefined && s.settings.music === false) st.musicVol = 0;
+  st.sound = st.sfxVol > 0; st.music = st.musicVol > 0;
+  return {
+    ...f, ...s, v: SAVE_VERSION,
+    boosters: { ...f.boosters, ...s.boosters }, settings: st, stats: { ...f.stats, ...s.stats },
+    owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
+  };
+}
+
 function load(): Save {
   try {
     // The main copy, or the backup when the main one is missing or spoiled.
     const s = read(KEY) ?? read(BAK);
-    if (s) {
-      const f = fresh();
-      // Saves from before the volume sliders: a switched-off sound or music starts at zero.
-      const st = { ...f.settings, ...s.settings };
-      if (s.settings && s.settings.sfxVol === undefined && s.settings.sound === false) st.sfxVol = 0;
-      if (s.settings && s.settings.musicVol === undefined && s.settings.music === false) st.musicVol = 0;
-      st.sound = st.sfxVol > 0; st.music = st.musicVol > 0;
-      return {
-        ...f, ...s, v: SAVE_VERSION,
-        boosters: { ...f.boosters, ...s.boosters }, settings: st, stats: { ...f.stats, ...s.stats },
-        owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
-      };
-    }
+    if (s) return normalize(s);
   } catch { /* corrupted or blocked storage: start fresh */ }
   return fresh();
 }
@@ -127,4 +130,15 @@ export function persist() {
   // One write each; if either fails or is cut short, the other still holds a whole save.
   try { localStorage.setItem(KEY, json); } catch { /* storage unavailable or full */ }
   try { localStorage.setItem(BAK, json); } catch { /* storage unavailable or full */ }
+}
+
+/**
+ * Progress brought from another phone (transfer.ts) takes this one's place. What was here is kept under a third key,
+ * in case it is ever wanted back.
+ */
+export function replaceSave(next: Save) {
+  try { localStorage.setItem(KEY + '.before-transfer', JSON.stringify(save)); } catch { /* storage unavailable or full */ }
+  for (const k of Object.keys(save)) delete (save as unknown as Record<string, unknown>)[k];
+  Object.assign(save, next);
+  persist();
 }
