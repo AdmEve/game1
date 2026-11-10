@@ -42,14 +42,15 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
       for (let w = 0; w < 50 && !card.querySelector('.review-note'); w++) await new Promise((x) => setTimeout(x, 100));
       const review = card.querySelector('.review-note')?.textContent ?? null;
       const btns = [...card.querySelectorAll('.btn')].map((x) => ({ t: x.textContent.trim(), cls: x.className }));
-      return { level: n + 1, known: s.continueKnown, bays: s.s.bays.length, offer: btns.some((x) => x.t.includes('یه جای پارک دیگه')), note: card.querySelector('.continue-note')?.textContent ?? null, review, restartMain: btns.some((x) => x.t.startsWith('از اول') && x.cls.includes('primary')) };
+      return { level: n + 1, known: s.continueKnown, bays: s.s.bays.length, offer: btns.some((x) => x.t.includes('یه جای پارک دیگه')), note: card.querySelector('.continue-note')?.textContent ?? null, review, rewindFirst: !!card.querySelector('.btn')?.classList.contains('rewind'), restartMain: btns.some((x) => x.t.startsWith('از اول') && x.cls.includes('primary')) };
     }, [n, attempt]);
     if (r.skip || r.known === null || r.known === undefined || r.bays >= 6) continue;
     if (/از حرکت [۰-۹]+ به بعد دیگه راهی نبود/.test(r.review ?? '')) reviewed++;
     if (seen[r.known]) continue;
     seen[r.known]++;
     if (r.known) report(r.offer && /هنوز می‌شه برد/.test(r.note ?? '') && !r.restartMain, `level ${r.level}, still winnable with one more bay: the paid continue, and it says so (${JSON.stringify(r)})`);
-    else report(!r.offer && /راهی نمی‌مونه/.test(r.note ?? '') && r.restartMain, `level ${r.level}, hopeless even with one more bay: no paid continue, an honest note, «از اول» first (${JSON.stringify(r)})`);
+    // Hopeless: no extra bay for sale; «از اول» first, unless going back to before the losing tap is offered (C13).
+    else report(!r.offer && /راهی نمی‌مونه/.test(r.note ?? '') && (r.restartMain || (r.rewindFirst && /هنوز می‌شه برد/.test(r.note ?? ''))), `level ${r.level}, hopeless even with one more bay: no extra bay for sale, an honest note, «از اول» or the rewind first (${JSON.stringify(r)})`);
     if (out) await p.screenshot({ path: `${out}/fair-${r.known ? 'still' : 'hopeless'}.png`, timeout: 180000 });
   }
   report(seen.true && seen.false, `found both cases (winnable ${seen.true}, hopeless ${seen.false})`);

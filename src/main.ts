@@ -678,7 +678,7 @@ function veilTo(on: boolean, loading = false): Promise<void> {
  * showing), compile what's new, draw one frame underneath, then lift the veil. `under` runs just before the
  * veil lifts (e.g. to open the home screen over the new level).
  */
-function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null, under?: () => void): Promise<void> {
+function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | null = null, under?: () => void | Promise<void>): Promise<void> {
   const run = async () => {
     const p = levelPlan(pick, custom, ev);
     const heavy = !worldCached(p.level.w, p.level.h, p.seed, p.world);
@@ -695,7 +695,7 @@ function goLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | nul
         void prepareMusic();
       }
       post.render(scene, camera);
-      under?.();
+      await under?.();
       if (swoop && !under) introSwoop();
     } finally {
       // Never leave the player behind the veil, whatever happened while building.
@@ -1159,6 +1159,35 @@ function askReminders(): Promise<void> {
   });
 }
 
+/**
+ * Back to before the losing move (C13): the same level from the start, the player's taps up to the mistake replayed
+ * behind the veil at speed and in silence, and play goes on from the last position that could still be won.
+ */
+function rewindTo(plan: { bays: number; taps: number[] }, move: number) {
+  void goLevel(current, rush ?? undefined, false, event, async () => {
+    const s = session!;
+    const sound = save.settings.sound, buzz = save.settings.haptics;
+    save.settings.sound = false; save.settings.haptics = false;
+    try {
+      while (s.s.bays.length < plan.bays && s.extraBay()) { /* the bays it began with (a win streak's free one) */ }
+      setSpeed(12);
+      for (const i of plan.taps) { s.tap(i); for (let f = 0; f < 4; f++) tick(1 / 30); }
+      for (let f = 0; f < 1800 && (s.backlog > 0 || busy()); f++) { tick(1 / 30); if (f % 60 === 59) await nextFrame(); }
+    } finally {
+      setSpeed(1);
+      save.settings.sound = sound; save.settings.haptics = buzz;
+    }
+    // Words from the replayed moves (combos and the like) are not for now.
+    document.querySelectorAll('.float').forEach((e) => e.remove());
+    helped = true;
+    hud.refresh();
+    post.render(scene, camera);
+    // The level's opening notes were read the first time round: only where play goes on.
+    notes.length = 0;
+    queueNote(`برگشتی به قبل از حرکت ${fa(move)}؛ از اینجا هنوز می‌شه برد!`, 3200);
+  });
+}
+
 function showLose(limit?: 'time' | 'moves') {
   // The ramp (levels 1–8, game/helps.ts MERCY_LEVELS): a level that would be lost on full bays gets Mash Rahim's extra
   // bay instead, so the first lose card comes at level 9 (GDD §9). The cover mechanic's first level (7) otherwise lost
@@ -1198,6 +1227,10 @@ function showLose(limit?: 'time' | 'moves') {
   const close = modal(c, 'pop');
   // Which tap lost it (C12): the solver looks back over the level in the worker; the line appears when it knows,
   // usually as the card opens. Most losses are decided several moves before the bays fill, out of the player's sight.
+  // When even one more bay can't win, going back to before that tap becomes the paid continue (C13).
+  let rewind: { plan: { bays: number; taps: number[] }; move: number } | null = null;
+  // Hopeless: no continue on offer (all six bays open), or, below, the solver says one more bay can't win.
+  let hopelessNow = !limit && bride < 0 && !canBay;
   if (!limit && session) {
     const played = session;
     void played.review().then((r) => {
@@ -1205,6 +1238,8 @@ function showLose(limit?: 'time' | 'moves') {
       const v = played.level.vehicles[r.car];
       const car = r.covered ? 'ماشین زیر چادر' : `${KIND_FA[v.kind]} ${COLOR_FA[v.color] ?? ''}`.trim();
       c.querySelector('p')!.after(h('div', 'review-note', `${emo('🔍', 'emo xs')}<span>بدون کمک، از حرکت <b>${fa(r.move)}</b> به بعد دیگه راهی نبود: <b>${car}</b>.</span>`));
+      const plan = played.rewindPlan(r.k);
+      if (plan) { rewind = { plan, move: r.move }; offerRewind(); }
     });
   }
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
@@ -1239,16 +1274,42 @@ function showLose(limit?: 'time' | 'moves') {
   });
   c.append(restartAt);
   // The solver's answer: known now, or patched in when it arrives (a second at most) if the card is still open.
+  let hopelessNote: HTMLElement | null = null;
   const apply = (wins: boolean | null) => {
     if (!bayCase || wins === null || !c.isConnected) return;
     if (wins) { verdictNote(STILL, 'still'); return; }
     for (const o of offer.splice(0)) o.remove();
     restartAt.className = 'btn primary big';
-    verdictNote(HOPELESS, 'hopeless');
+    hopelessNote = verdictNote(HOPELESS, 'hopeless'); hopelessNow = true;
     const why = c.querySelector('.streak-note.risk small'); if (why) why.textContent = riskWhy(false);
+    offerRewind();
   };
+  /** Hopeless with one more bay, and the losing tap known and replayable: back to before it, for what a bay costs. */
+  let rewindOffered = false;
+  function offerRewind() {
+    if (!rewind || !hopelessNow || rewindOffered || !c.isConnected) return;
+    rewindOffered = true;
+    const { plan, move } = rewind;
+    const back = () => { close(); rewindTo(plan, move); };
+    const pay = button(`${icon('restart')} از حرکت ${fa(move)} دوباره، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big rewind', () => {
+      if (save.coins < price) { note(`${fa(price - save.coins)} سکه‌ی دیگه لازم داری`); showShop(() => {}, () => hud.refresh()); return; }
+      save.coins -= price; persist(); hud.refresh();
+      back();
+    });
+    const btns: HTMLElement[] = [pay];
+    if (rewardedAvailable()) {
+      const ad = button(`${emo('🎬', 'emo sm')} با دیدن تبلیغ، از حرکت ${fa(move)}`, 'primary', async () => {
+        ad.setAttribute('disabled', '');
+        if (await showRewarded()) back(); else ad.removeAttribute('disabled');
+      });
+      btns.push(ad);
+    }
+    restartAt.before(...btns);
+    restartAt.className = 'btn ghost';
+    if (hopelessNote) hopelessNote.textContent = `با یه جای پارک دیگه هم راهی نمی‌مونه؛ ولی از قبل از حرکت ${fa(move)} هنوز می‌شه برد.`;
+  }
   if (bayCase && session!.continueKnown === undefined) void session!.continueWins.then(apply);
-  else if (bayCase) { if (hopeless) verdictNote(HOPELESS, 'hopeless'); else apply(session!.continueKnown ?? null); }
+  else if (bayCase) { if (hopeless) { hopelessNote = verdictNote(HOPELESS, 'hopeless'); hopelessNow = true; offerRewind(); } else apply(session!.continueKnown ?? null); }
 }
 
 /** Reduced motion (a setting; it follows the phone's own preference until changed). */

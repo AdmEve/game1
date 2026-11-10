@@ -767,7 +767,7 @@ export class Session {
    * After a loss: which tap lost the level (C12), as the tap's number in the level, the car and whether it was still
    * under its cover then. Null when it can't be told (no worker, a search ran out, nothing recorded).
    */
-  review(): Promise<{ move: number; car: number; covered: boolean } | null> {
+  review(): Promise<{ move: number; car: number; covered: boolean; k: number } | null> {
     const { snaps, cars, from } = this.record;
     const w = searchWorker();
     if (!w || !snaps.length) return Promise.resolve(null);
@@ -778,10 +778,31 @@ export class Session {
         clearTimeout(timer);
         if (k === null || k >= cars.length) { resolve(null); return; }
         const car = cars[k];
-        resolve({ move: from + k + 1, car, covered: !!this.level.vehicles[car].covered && !snaps[k].revealed[car] });
+        resolve({ move: from + k + 1, car, covered: !!this.level.vehicles[car].covered && !snaps[k].revealed[car], k });
       });
       w.postMessage({ id, kind: 'review', level: this.level, snaps: snaps.map(({ level: _l, ...p }) => ({ ...p, level: null })), limit: 60_000 });
     });
+  }
+
+  /**
+   * For a rewind to before the losing move (C13): the bays the level started with and the taps up to tap `k` of the
+   * record, if a fresh start of the level replays them to exactly the position before that tap. Only when the record
+   * began at the start of the level, with nothing but bays added before the first tap (a win streak's free bay): a
+   * whistle or the crane can't be replayed. Checked here with the rules alone, before anything is offered.
+   */
+  rewindPlan(k: number): { bays: number; taps: number[] } | null {
+    const { snaps, cars, from } = this.record;
+    // Before the first tap would only be a restart: not something to sell.
+    if (from !== 0 || k < 1 || k >= cars.length || !snaps.length) return null;
+    const plain = (x: State) => JSON.stringify({ ...cloneState(x), level: null });
+    const fresh = newState(this.level);
+    while (fresh.bays.length < snaps[0].bays.length) addBay(fresh);
+    if (plain(fresh) !== plain(snaps[0])) return null;
+    // The taps, replayed by the rules, must reach the same lot, queue and exits (which bay a car took may differ).
+    for (let t = 0; t < k; t++) ruleTap(fresh, cars[t], false);
+    const key = (x: State) => JSON.stringify([x.inLot, x.q, x.exits, x.revealed, x.over]);
+    if (key(fresh) !== key(snaps[k])) return null;
+    return { bays: snaps[0].bays.length, taps: cars.slice(0, k) };
   }
 
   /** Parking booster / continue: unlock the sixth bay. */

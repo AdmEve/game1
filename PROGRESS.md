@@ -439,3 +439,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   still the same level for everyone each day; it's prepared in the background when home opens.
 - The lose card now tells you which tap actually lost the level («بدون کمک، از حرکت ۷ به بعد دیگه راهی نبود: پیکان
   سبز»): the solver looks back over your moves. Most losses are decided several moves before the bays fill.
+- When even an extra bay can't save a level, the lose card now offers to go back to just before the losing move
+  («از حرکت ۷ دوباره», 300 coins or a video) instead of offering nothing: the game replays your moves up to there and
+  you continue from a position that can still be won. No life lost.
