@@ -70,12 +70,12 @@ const still = () => document.documentElement.classList.contains('reduce-motion')
 
 /** Start the first character line on a card speaking (does nothing on a card without one). */
 export function talk(card: HTMLElement) {
-  const sp = card.querySelector<HTMLElement>('.speech, .beaten');
+  const sp = card.querySelector<HTMLElement>('.speech, .beaten, .says');
   if (!sp || sp.dataset.said) return;
   sp.dataset.said = '1';
   const who = (sp.querySelector('[data-who]') ?? card.querySelector('[data-who]'))?.getAttribute('data-who') as Voice | null;
   if (!who || !(who in VOICES)) return;
-  const line = sp.matches('.with-face, .beaten') ? sp.querySelector<HTMLElement>(':scope > div') ?? sp : sp;
+  const line = sp.matches('.with-face, .beaten, .says') ? sp.querySelector<HTMLElement>(':scope > div') ?? sp : sp;
   const { nodes, icons } = lineParts(line);
   const text = nodes.map((n) => n.textContent ?? '').join('');
   if (!text.trim() || quiet()) return;

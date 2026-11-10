@@ -64,6 +64,8 @@ const CARDS0 = [
     const n = document.createElement('div'); n.className = 'review-note'; n.innerHTML = '<span>بدون کمک، از حرکت <b>۱۲</b> به بعد دیگه راهی نبود: <b>وانت زامیاد نقره‌ای</b>.</span>';
     document.querySelector('.result.lose p').after(n); }],
   ['lose (time)', (r) => { r.save.level = 40; r.startLevel(40, undefined, false); r.cards.lose('time'); }],
+  // His boss level lost: Mr. Ajool's gloat under the reason, with the clock's longest card (L3).
+  ['lose (boss, time)', (r) => { r.save.level = 29; r.save.streak = 3; r.startLevel(29, undefined, false); r.cards.lose('time'); }],
   ['win (boss, worst case)', (r) => { r.save.level = 29; r.save.streak = 3; r.save.stats.wins = 0; r.startLevel(29, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove()); r.cards.win(); }],
   ['rush win', (r) => { r.cards.rushWin(); }],
   ['yalda win (last night)', (r) => r.cards.yaldaWin(6)],

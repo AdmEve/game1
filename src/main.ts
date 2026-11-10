@@ -48,7 +48,7 @@ import { starsFor } from './render/agency';
 import { POM, showYaldaWin, yaldaBanner } from './ui/yalda';
 import { nowruzBanner, showNowruzWin } from './ui/nowruz';
 import { fillPiggy } from './ui/piggy';
-import { AJOOL, BOSS_LINES, RAHIM } from './ui/characters';
+import { AJOOL, BOSS_LINES, RAHIM, SABOURI } from './ui/characters';
 import { passReady, punch, showPass } from './ui/pass';
 import { HAFT_SIN, nowruzLevel, yaldaLevel } from './game/events';
 import { addKeys, showGarage } from './ui/garage';
@@ -1042,7 +1042,8 @@ function showRushWin() {
   modalOpen = true; hud.show(false); hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${missionNotes(missionsDone)}${ach}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${missionNotes(missionsDone)}
+    <div class="says">${SABOURI('sm')}<div><b>خانم صبوری:</b> ${streak > 1 ? `${fa(streak)}&nbsp;روز پشت سر هم! کل آژانس از بی‌سیم داره تشویقت می‌کنه.` : 'ساعت شلوغی امروز رد شد! همه‌ی راننده‌ها از بی‌سیم دارن دست می‌زنن.'}</div></div>${ach}`;
   const close = modal(c, 'pop');
   const pay = payout(c, coins, before);
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
@@ -1269,7 +1270,10 @@ function showLose(limit?: 'time' | 'moves') {
   // Only mention continuing when the card offers it.
   const riskWhy = (offer: boolean) => (offer ? 'ادامه بدی، می‌مونه؛ از اول، می‌سوزه.' : 'از اول شروع کنی، از صفر می‌شمره.');
   const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${riskWhy(canBay)}</small></div>` : '';
-  c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${risk}`;
+  // His own level lost: Mr. Ajool gloats (L3), in his voice (talk.ts).
+  const bossLost = !rush && !event && levels[current]?.tag === 'boss';
+  const gloat = bossLost ? `<div class="says bad">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(current).n - 1) % BOSS_LINES.length].gloat}</div></div>` : '';
+  c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${gloat}${risk}`;
   const close = modal(c, 'pop');
   // Which tap lost it (C12): the solver looks back over the level in the worker; the line appears when it knows,
   // usually as the card opens. Most losses are decided several moves before the bays fill, out of the player's sight.

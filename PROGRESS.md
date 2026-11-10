@@ -464,3 +464,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   beaten or a run of four wins (from level 12), naming that moment; when the win already brought the chest, after the
   next win instead (a loss in between lets it go). At most three times, days apart; it asks for a rating and a short
   comment, not for five stars.
+- The characters react: lose a boss level and Mr. Ajool gloats on the lose card (a line per chapter, in his voice);
+  beat the rush hour and Ms. Sabouri cheers over the agency radio.

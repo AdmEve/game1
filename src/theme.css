@@ -672,3 +672,11 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .tw-rest { color: transparent; }
 /* K5: the high point the rating ask comes after, above its question. */
 .rate .rate-moment { margin: -4px 0 4px; color: var(--accent); font-weight: 800; font-size: 15px; }
+/* L3: a character's word on a result card: Mr. Ajool gloating after his boss level is lost, Ms. Sabouri cheering a
+   rush hour won (over the radio). Laid out as his «beaten» line, without its beaten look. */
+.says { display: flex; gap: 10px; align-items: center; margin-top: 6px; border-radius: 16px; padding: 6px 10px; text-align: right;
+  font-size: 13px; line-height: 1.8; background: rgba(255, 255, 255, .05); color: var(--text); }
+.says .face.sm { width: 46px; height: 46px; }
+.says.bad { background: rgba(239, 83, 80, .12); }
+.says b { color: var(--accent); }
+.says.bad b { color: #ff8a80; }
