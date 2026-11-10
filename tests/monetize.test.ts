@@ -21,7 +21,7 @@ describe('purchases say how they went', () => {
 
   it('a purchase backed out of gives nothing and says nothing', async () => {
     vi.stubGlobal('confirm', () => false);
-    // A string result: callers must compare with «ok» (a cancelled pass or piggy was once a truthy value).
+    // A word, not true/false: callers compare with «ok» (`if (await buy(…))` would take a cancel for a purchase).
     expect(await M.buy('coins_m')).toBe('cancel');
     expect(S.save.coins).toBe(100);
     expect(notes).toEqual([]);
