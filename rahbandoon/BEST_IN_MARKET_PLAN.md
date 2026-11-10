@@ -312,6 +312,9 @@ the player sees value in them, not at first launch.
 
 ## Release checklist (owner)
 
+The full, ordered steps (key, store products and prices, config, privacy policy, store page, a phone check list,
+upload) are in `RELEASE.md` at the top of the repository; in short:
+
 - `UNLOCK_ALL_LEVELS = false` in `src/config.ts`.
 - Bazaar RSA key, Tapsell app and zone IDs in `src/config.ts`.
 - Myket (optional second store, N12): the Myket RSA key in `src/config.ts` (`MYKET_RSA_KEY`), the same product SKUs
