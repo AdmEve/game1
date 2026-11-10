@@ -430,3 +430,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - The city heard: each chapter now has its own quiet soundscape under the music (distant traffic, sparrows in
   Tajrish and in spring, the bazaar's crowd, a far-off horn now and then; only wind up on Tochal). And the game's
   sound now stops when the app goes to the background.
+- The starter pack is offered once (after a win from level 18), saying plainly what's in it, including that it turns
+  off the ads between levels, which the shop never mentioned. «نه، ممنون» closes it for good; it stays in the shop.

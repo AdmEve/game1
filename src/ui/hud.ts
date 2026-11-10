@@ -188,6 +188,8 @@ export function backPress(): boolean {
 
 /** A short note that shows over any screen (the HUD's toast is hidden under menus). */
 export function note(text: string, ms = 1800) {
+  // One at a time: a new note takes the place of one still showing (they sit on the same spot).
+  document.querySelectorAll('.note').forEach((x) => x.remove());
   const n = h('div', 'note', text);
   document.body.append(n);
   void n.offsetWidth; n.classList.add('show');

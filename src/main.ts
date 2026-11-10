@@ -28,7 +28,7 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
-import { introIcon, introTitle, maybeDaily, showChest, showGuide, showIntro, showRule, showShop, type IntroKind } from './ui/meta';
+import { introIcon, introTitle, maybeDaily, maybeStarterOffer, showChest, showGuide, showIntro, showRule, showShop, type IntroKind } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
 import { askNotifications, planReminders, syncReminders } from './notify';
@@ -1023,11 +1023,14 @@ function showWin() {
   const pay = payout(c, coins, before);
   const next = async (home = false) => {
     pay.close(); close(); modalOpen = true;
-    if (!replay && (n + 1) % 5 === 0) await showChest(() => hud.refresh());
+    let carded = false;
+    if (!replay && (n + 1) % 5 === 0) { carded = true; await showChest(() => hud.refresh()); }
     // One card at a time after a win (scripts/journey.cjs): the rating ask after level 7 and the reminders ask after 13
     // (the first level that cost a life) are the only cards there; 8→9 has the crane, 10→11 the chest and the broken car.
-    if ((n + 1 === 7 || n + 1 === 24) && !save.rated) await askRating();
-    if (n + 1 === FREE_LEVELS + 1 && !save.notifyAsked && Capacitor.isNativePlatform()) await askReminders();
+    if ((n + 1 === 7 || n + 1 === 24) && !save.rated) { carded = true; await askRating(); }
+    if (n + 1 === FREE_LEVELS + 1 && !save.notifyAsked && Capacitor.isNativePlatform()) { carded = true; await askReminders(); }
+    // The starter pack, offered once, on the first win from level 18 with no other card (O2).
+    if (!replay && !carded && n + 1 >= 18) await maybeStarterOffer();
     await maybeInterstitial(n);
     if (home) goHome(); else await goLevel();
   };
@@ -1638,7 +1641,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

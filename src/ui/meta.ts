@@ -94,6 +94,41 @@ export function showShop(onClose: () => void, onChange: () => void) {
   c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }
 
+/** The first level with ads between levels (monetize.ts maybeInterstitial: from level index 20). */
+const ADS_FROM = 21;
+/**
+ * «بسته‌ی شروع», offered once (BEST_IN_MARKET_PLAN O2): the one-time pack was only in the shop, its ad removal not
+ * even mentioned. Mash Rahim offers it after a win from level 18 (just before ads between levels start at 21), on a
+ * win that showed no other card. It says what is in it and what it is worth; «نه، ممنون» closes it for good, and it
+ * stays in the shop. Resolves when closed.
+ */
+export function maybeStarterOffer(): Promise<void> {
+  const p = PRODUCTS.find((x) => x.sku === 'starter')!;
+  if (save.seen.starterOffer || save.owned.starter || !iapAvailable()) return Promise.resolve();
+  save.seen.starterOffer = true; persist();
+  const worth = (p.coins ?? 0) + (p.boosters ?? 0) * BOOSTERS.reduce((a, b) => a + b.price, 0);
+  return new Promise((done) => {
+    const c = h('div', 'starter-offer');
+    c.innerHTML = `<div class="new">یک‌بار</div><div class="burst">${emo('🎁', 'emo huge')}</div><h2>بسته‌ی شروع</h2>
+      <div class="speech with-face so-rahim">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> یه بسته‌ی مخصوص تازه‌واردها؛ فقط همین یه بار!</div></div>
+      <p class="so-sub">مخصوص تازه‌واردها؛ فقط همین یه بار!</p>
+      <ul class="so-list">
+        <li>${emo('🪙', 'emo sm')}<b>${faNum(p.coins ?? 0)} سکه</b></li>
+        <li><span class="so-helps">${BOOSTERS.map((b) => icon(b.icon)).join('')}</span><b>از هر کمکی ${fa(p.boosters ?? 0)} تا</b></li>
+        ${save.owned.no_ads ? '' : `<li>${emo('🚫', 'emo sm')}<b>بدون تبلیغ بین مرحله‌ها</b><small>از مرحله‌ی ${fa(ADS_FROM)} گاهی یه تبلیغ کوتاه میاد</small></li>`}
+      </ul>
+      <p class="so-worth">ارزشش بیش از ${faNum(worth)} سکه</p>`;
+    const close = modal(c, 'pop starter-card');
+    const go = button(`بخرش، ${priceLabel(p)}`, 'gold big', async () => {
+      go.setAttribute('disabled', '');
+      if ((await buy('starter')) === 'ok') { coin(); coin(0.12); haptic('success'); close(); done(); }
+      else go.removeAttribute('disabled');
+    });
+    c.append(go, h('p', 'so-later', 'تو دکه هم هست، هر وقت خواستی.'));
+    c.append(asBack(button('نه، ممنون', 'ghost', () => { close(); done(); })));
+  });
+}
+
 const DAILY = [50, 80, 120, 160, 200, 250, 400];
 const today = () => new Date().toISOString().slice(0, 10);
 const yesterday = () => new Date(Date.now() - 864e5).toISOString().slice(0, 10);

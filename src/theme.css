@@ -255,7 +255,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .newach { background: rgba(242, 177, 36, .12); color: var(--text); }
 .beaten { background: rgba(255, 255, 255, .05); color: var(--text); }
 .card.boss { background: linear-gradient(180deg, rgba(40, 20, 30, .97), rgba(16, 19, 24, .97)); }
-.intro .new { background: var(--accent); color: var(--accent-ink); transform: none; border-radius: 6px; }
+.intro .new, .starter-offer .new { background: var(--accent); color: var(--accent-ink); transform: none; border-radius: 6px; }
 .result.yalda .hafez { background: rgba(242, 177, 36, .08); border-color: rgba(242, 177, 36, .4); box-shadow: none; }
 .result.yalda .hafez p { color: var(--text); }
 
@@ -582,3 +582,20 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .guide .ahead { margin: 14px 0 0; font-size: 13px; }
 .guide .gi.n { font-weight: 800; font-size: 15px; }
 .card.guide-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* O2: the starter pack, offered once: what is in it, what it is worth. */
+.starter-offer .so-list { list-style: none; padding: 0; margin: 12px 0 4px; display: flex; flex-direction: column; gap: 6px; text-align: right; }
+.starter-offer .so-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 9px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); }
+.starter-offer .so-list b { color: #fff; font-size: 15px; }
+.starter-offer .so-list small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
+.starter-offer .so-helps { display: inline-flex; gap: 1px; color: var(--accent); }
+.starter-offer .so-helps .ico { width: 18px; height: 18px; }
+.starter-offer .so-worth { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
+.starter-offer .so-later { font-size: 12.5px; margin: 6px 0 0; }
+.starter-offer .so-sub { display: none; margin: 2px 0 0; }
+/* Short screens: Mash Rahim's bubble becomes a line, the rows tighten (the card fits 320×568 without scrolling). */
+@media (max-height: 660px) {
+  .starter-offer .so-rahim { display: none; }
+  .starter-offer .so-sub { display: block; }
+  .starter-offer .so-list li { padding: 7px 12px; }
+}

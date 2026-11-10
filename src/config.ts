@@ -28,7 +28,7 @@ export interface Product {
 
 /** In-app products. Create the same SKUs in the Bazaar panel. */
 export const PRODUCTS: Product[] = [
-  { sku: 'starter', icon: '🎁', title: 'بسته‌ی شروع', desc: '۲٬۰۰۰ سکه + از هر کمکی ۳ تا', fallbackPrice: 29000, consumable: false, coins: 2000, boosters: 3, badge: 'یک‌بار' },
+  { sku: 'starter', icon: '🎁', title: 'بسته‌ی شروع', desc: '۲٬۰۰۰ سکه + از هر کمکی ۳ تا + بدون تبلیغ', fallbackPrice: 29000, consumable: false, coins: 2000, boosters: 3, badge: 'یک‌بار' },
   { sku: 'coins_s', icon: '🪙', title: '۱٬۰۰۰ سکه', desc: 'یه کیسه سکه', fallbackPrice: 19000, consumable: true, coins: 1000 },
   { sku: 'coins_m', icon: '💰', title: '۳٬۰۰۰ سکه', desc: '۲۰٪ بیشتر', fallbackPrice: 49000, consumable: true, coins: 3000, badge: 'محبوب' },
   { sku: 'coins_l', icon: '💰', title: '۸٬۰۰۰ سکه', desc: '۴۰٪ بیشتر', fallbackPrice: 99000, consumable: true, coins: 8000 },

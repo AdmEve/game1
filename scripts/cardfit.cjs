@@ -46,6 +46,8 @@ const CARDS0 = [
   ['no lives', (r) => { r.save.lives = { n: 0, next: Date.now() + 25 * 60e3 }; r.cards.noLives(); }],
   ['daily gift (day 7)', (r) => { r.save.daily = { day: '2000-01-01', streak: 6 }; r.save.daily.day = new Date(Date.now() - 864e5).toISOString().slice(0, 10); r.cards.daily(); }],
   ['rate', (r) => r.cards.rate()],
+  // The starter pack, offered once after a win from level 18 (O2).
+  ['starter offer', (r) => { r.save.owned.starter = false; r.save.owned.no_ads = false; r.cards.starter(); }],
   ['privacy policy', (r) => r.cards.privacy()],
   ['chapter card', (r) => { delete r.save.seen.ch2; r.save.level = 30; r.startLevel(30, undefined, false); }],
   ['boss card', (r) => { delete r.save.seen.boss29; r.save.level = 29; r.startLevel(29, undefined, false); }],
