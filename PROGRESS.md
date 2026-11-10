@@ -427,3 +427,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Rules on hand: the pause card lists the special rules of the level you're in (tap one to read Mash Rahim's
   explanation again and have it pointed out on the board), and Settings has a «راهنمای بازی» with the basics, the
   helps and every rule met so far.
+- The city heard: each chapter now has its own quiet soundscape under the music (distant traffic, sparrows in
+  Tajrish and in spring, the bazaar's crowd, a far-off horn now and then; only wind up on Tochal). And the game's
+  sound now stops when the app goes to the background.

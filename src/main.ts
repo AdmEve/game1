@@ -59,6 +59,7 @@ import { dailyLevel, today } from './game/daily';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
+import { scapeNow, soundscape } from './soundscape';
 import { disposeTree } from './render/dispose';
 import { click, coin } from './audio';
 import { MOODS as WEATHER_MOODS, type WeatherKind } from './render/weather';
@@ -219,6 +220,8 @@ function applyLight(light: Light) {
 // Weather: thicker fog and dimmer light in rain and snow, and a flash of the sky for lightning.
 let wxBase = { hemi: 0.7, sun: 2.6, exposure: 0.95 };
 let wxFlashing = false;
+/** The chapter light of the level on screen (its soundscape follows it). */
+let placeLight: Light | null = null;
 function applyWeatherMood(kind: WeatherKind) {
   const m = WEATHER_MOODS[kind], fog = scene.fog as THREE.Fog;
   fog.near = m.fogNear; fog.far = m.fogFar;
@@ -710,6 +713,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   const { level, ch } = plan;
   applyLight(ch.light);
   applyWeatherMood(ch.weather);
+  // The place's own sounds under the music (traffic, sparrows, the bazaar's crowd, a far horn): I7.
+  placeLight = ch.light; soundscape(placeLight);
   setMood(ch.light);
   craneMode = false;
   modalOpen = false;
@@ -1232,7 +1237,7 @@ function showSettings(home = false) {
       if (key === 'musicVol') { save.settings.music = v > 0; setMusicVolume(v); if (v > 0) startMusic(); else stopMusic(0.3); }
       else { save.settings.sound = v > 0; sfx.setSfxVolume(v); }
     };
-    t.onchange = () => { persist(); if (key === 'sfxVol') click(); };
+    t.onchange = () => { persist(); if (key === 'sfxVol') { click(); soundscape(save.settings.sound ? placeLight : null); } };
     r.append(t); c.append(r);
   };
   const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText' | 'leftHand', apply?: () => void) => {
@@ -1566,10 +1571,12 @@ async function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopMusic(0.2);
+      sfx.pauseAudio();
       void syncReminders(save.settings.notify, planReminders({ now: Date.now(), livesFullAt: fullAt(), opens: save.opens }));
       return;
     }
     void syncReminders(false, []);
+    sfx.resumeAudio();
     startMusic();
     // Back from another app in the middle of a level: wait on the pause card instead of dropping straight in.
     if (session && !session.s.over && session.taps > 0 && !modalOpen && !veil.classList.contains('on')) showSettings();
@@ -1640,6 +1647,7 @@ async function boot() {
     /** A floating text at a screen point, as a car leaving there would show it (scripts/floats.cjs). */
     floatAt: (text: string, kind: 'coin' | 'combo' | 'bad', x: number, y: number) => floatTextAt(text, kind, x, y),
     /** Pretend the player has looked at the board for `ms` without a move (the hint offer's idle clock). */
+    scape: () => scapeNow(), amb: () => sfx.ambOut(),
     idleFor: (ms: number) => { const t = performance.now() - ms; if (session) session.lastInput = t; inViewSince = t; },
     /** Render the level-start camera move at progress k (0 = the landmark shot). */
     swoop: (k: number) => { const st = landmarkShot(); swoopPose(k, st.startPos, st.startLook, camBase.clone(), camTarget.clone()); post.render(scene, camera); },

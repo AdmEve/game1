@@ -69,6 +69,27 @@ export function audioOut(): { c: AudioContext; out: AudioNode } | null {
   return { c: ctx, out };
 }
 
+/** The weather bus (also the city's sounds: soundscape.ts), when sound is on. */
+export function ambOut(): { c: AudioContext; bus: GainNode } | null {
+  const c = ac();
+  return c ? { c, bus: ambBus } : null;
+}
+
+/**
+ * The app went to the background: after the music's fade, all sound stops (weather and city beds would otherwise
+ * play on behind other apps where the WebView keeps running). Any sound or the music resumes it (audioOut).
+ */
+export function pauseAudio() {
+  const c = ctx;
+  if (!c || offline) return;
+  setTimeout(() => { if (document.hidden && c.state === 'running') void c.suspend(); }, 300);
+}
+
+/** Back in view: sound again (the music would resume it too, but it may be off). */
+export function resumeAudio() {
+  if (ctx && !offline && ctx.state === 'suspended') void ctx.resume();
+}
+
 function ac(): AudioContext | null {
   if (!save.settings.sound) return null;
   return audioOut()?.c ?? null;
