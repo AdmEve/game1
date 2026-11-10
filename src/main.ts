@@ -289,6 +289,8 @@ function showSpot(on: boolean) {
  * home and the level-change veil, and time spent on a card isn't time spent stuck (scripts/hintoffer.cjs).
  */
 let inViewSince = 0;
+/** A rewind (C13) put the player back before their mistake at this tap count: until they tap again, the hint comes early. */
+let rewoundAt = -1;
 function updateHand() {
   if (!session || modalOpen || session.s.over) { inViewSince = performance.now(); hand.classList.remove('show'); hintChip.classList.remove('show'); showSpot(false); hintFor = -1; return; }
   const now = performance.now();
@@ -307,11 +309,13 @@ function updateHand() {
     else hud.toast('از اینجا دیگه راهی نیست؛ بهتره مرحله رو از اول شروع کنی.', 3400);
   }
   if (hintAsked && now - hintAsked > 3000 && hintFor < 0) { hintAsked = 0; hud.toast('این‌بار راهنمایی پیدا نشد؛ شاید بهتره مرحله رو از اول شروع کنی.', 3200); }
-  hintChip.classList.toggle('show', !ramp && !spotOn && !hintAsked && idle > HINT_OFFER_MS);
+  // Just back from a rewind (they lost from here a moment ago): the offer comes after 4 s, not 20.
+  const offerAfter = session.taps === rewoundAt ? 4000 : HINT_OFFER_MS;
+  hintChip.classList.toggle('show', !ramp && !spotOn && !hintAsked && idle > offerAfter);
   const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || (ramp && idle > 10000) || !!hintAsked;
   if (!want) {
     // Search a little ahead of the offer, so a tap on the chip shows the hand at once.
-    if (!ramp && idle > HINT_OFFER_MS - 3000) session.hint();
+    if (!ramp && idle > offerAfter - 3000) session.hint();
     hand.classList.remove('show'); showSpot(false); hintFor = -1; return;
   }
   // The hint is searched in a worker: until it arrives (a frame or two) no hand shows.
@@ -723,6 +727,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   craneMode = false;
   modalOpen = false;
   helped = false;
+  rewoundAt = -1;
   session = new Session(level, {
     queueLeft: (q, total) => hud.setQueue(q, total),
     toast: (t) => hud.toast(t),
@@ -1184,6 +1189,7 @@ function rewindTo(plan: { bays: number; taps: number[] }, move: number) {
     post.render(scene, camera);
     // The level's opening notes were read the first time round: only where play goes on.
     notes.length = 0;
+    rewoundAt = s.taps;
     queueNote(`برگشتی به قبل از حرکت ${fa(move)}؛ از اینجا هنوز می‌شه برد!`, 3200);
   });
 }

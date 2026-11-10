@@ -63,6 +63,13 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     });
     report(after.sameLot && after.taps === offer.move - 1 && !after.over && !after.cards && !after.floats, `taken: the lot exactly as before tap ${offer.move}, nothing open, no stray words (${JSON.stringify(after)})`);
     report(after.coins === -300 && after.lives === 0 && /برگشتی به قبل از حرکت/.test(after.note ?? ''), 'paid as a bay is, no life gone, and a note says where play goes on');
+    // Back where they just lost: the hint is offered after a few seconds, not the usual twenty.
+    const chip = await p.evaluate(async () => {
+      const rb = window.__rb;
+      rb.idleFor(5000); await rb.advance(0.05, false);
+      return document.querySelector('.hint-chip').classList.contains('show');
+    });
+    report(chip, 'after the rewind, 5 s idle brings the «راهنما؟» chip (usually 20 s)');
   }
   report(!errors.length, `no page errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 2).join(' | ') : ''}`);
   console.log(fails ? `${fails} failure(s)` : 'all ok');
