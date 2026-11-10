@@ -56,7 +56,8 @@ import { radioCard } from './ui/radio';
 import { countUp, floatingWallet, flyCoins } from './ui/juice';
 import { nextStreak, streakHelps, type Help } from './streak';
 import { count, hardest, statsCsv } from './levelstats';
-import { dailyLevel, today } from './game/daily';
+import { today } from './game/daily';
+import { prepareRush, rushReady } from './rush';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
@@ -1481,14 +1482,21 @@ function showHome() {
   rowEl.append(gar);
   c.append(rowEl);
   const rushDone = save.rush.day === today();
-  const rushBtn = button(rushDone ? `${icon('clock')}<span>ساعت شلوغی<small>امروز رد شد!</small></span>` : `${icon('clock')}<span>ساعت شلوغی<small>چالش امروز ${icon('key')}</small></span>`, rushDone ? 'rush-btn done' : 'rush-btn', () => {
+  const rushBtn = button(rushDone ? `${icon('clock')}<span>ساعت شلوغی<small>امروز رد شد!</small></span>` : `${icon('clock')}<span>ساعت شلوغی<small>چالش امروز ${icon('key')}</small></span>`, rushDone ? 'rush-btn done' : 'rush-btn', async () => {
     if (rushDone) { note('چالش امروز رو رد کردی؛ فردا یه ترافیک تازه منتظرته!', 2400); return; }
-    const lvl = dailyLevel();
-    if (!lvl) { hud.toast('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
+    if (rushBtn.classList.contains('busy')) return;
+    // Today's level is made ahead (rush.ts); if it isn't ready yet, the button says so and waits for it.
+    const small = rushBtn.querySelector('small')!, was = small.innerHTML;
+    if (!rushReady()) { rushBtn.classList.add('busy'); small.textContent = 'آماده می‌شه…'; }
+    const lvl = await prepareRush();
+    rushBtn.classList.remove('busy'); small.innerHTML = was;
+    if (!rushBtn.isConnected) return; // home was left meanwhile
+    if (!lvl) { note('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
     close(); modalOpen = false;
     void goLevel(undefined, lvl);
   });
   rowEl.append(rushBtn);
+  if (!rushDone) void prepareRush();
   const tickets = passReady();
   const passBtn = button(`${icon('ticket')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
     close(); showPass(() => hud.refresh(), () => showHome());

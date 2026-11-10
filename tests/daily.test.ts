@@ -25,3 +25,24 @@ describe('daily rush hour over a season', () => {
     }
   }, 120_000);
 });
+
+describe('the rush as played (C11)', () => {
+  it('is the day\'s level made deeper: the same for everyone, winnable, «سخت»', async () => {
+    const { hardDaily } = await import('../src/game/daily');
+    const { solve } = await import('../src/game/solver');
+    const a = hardDaily('2026-11-12'), b = hardDaily('2026-11-12');
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(validate(a!)).toEqual([]);
+    expect(a!.tag).toBe('hard');
+    expect(solve(a!, 400_000).solvable).toBe(true);
+  }, 60_000);
+
+  it('is as hard as the Journey: an attentive player loses most rush levels', async () => {
+    const { hardDaily } = await import('../src/game/daily');
+    const { attentiveLoss } = await import('../src/game/sim');
+    let loss = 0;
+    const days = ['2026-11-01', '2026-11-05', '2026-11-09', '2026-11-13', '2026-11-17', '2026-11-21'];
+    for (const d of days) loss += attentiveLoss(hardDaily(d)!, 40, 1);
+    expect(loss / days.length).toBeGreaterThan(0.9);
+  }, 120_000);
+});

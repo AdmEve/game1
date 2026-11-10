@@ -602,3 +602,7 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
   .starter-offer .so-sub { display: block; }
   .starter-offer .so-list li { padding: 7px 12px; }
 }
+/* C11: today's rush still being made: its line breathes until it's ready. */
+.rush-btn.busy small { animation: breathe 1.2s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .4; } }
+.reduce-motion .rush-btn.busy small { animation: none; }
