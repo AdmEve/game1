@@ -28,10 +28,12 @@ const LEVELS = Number(process.argv[2] || 12), out = process.argv[3];
   const log = [];
   let shot = 0;
   const note = async (level, where) => {
-    for (let k = 0; k < 6; k++) {
+    // Cards can open a moment after the last one closes (a tip after the chest): look twice before taking none for none.
+    for (let k = 0, quiet = 0; k < 8 && quiet < 2; k++) {
       await p.waitForTimeout(500);
       const c = await card();
-      if (!c || c.cls.includes('result') || c.cls.includes('home-card')) return;
+      if (!c || c.cls.includes('result') || c.cls.includes('home-card')) { quiet++; continue; }
+      quiet = 0;
       log.push({ level, where, ...c });
       if (out) await p.screenshot({ path: `${out}/journey-${String(++shot).padStart(2, '0')}-L${level}.png` });
       await closeCard();

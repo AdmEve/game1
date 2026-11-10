@@ -1,8 +1,10 @@
 /** «رادیو راه‌بندون»: short, funny traffic bulletins in the style of a Tehran traffic report. */
 import { audioOut } from '../audio';
+import { today } from '../game/daily';
+import { MISSIONS_FROM, todayMissions } from '../missions';
 import { save } from '../save';
 import { emo } from './emoji';
-import { h } from './hud';
+import { fa, h } from './hud';
 
 const BULLETINS = [
   'ترافیک سنگین در بزرگراه همت… به‌جز یه پراید که داره از لاین سبقت ویراژ می‌ده!',
@@ -37,8 +39,17 @@ function jingle() {
   });
 }
 
+/** Ms. Sabouri on the agency radio (P4): today's missions, while any is left, on one visit in three. */
+function dispatch(): string | null {
+  if (save.level < MISSIONS_FROM || Math.random() > 1 / 3) return null;
+  const ms = todayMissions(save, today()), done = ms.list.filter((m) => m.got >= m.goal).length;
+  if (done === ms.list.length) return null;
+  return done ? `خانم صبوری از آژانس: ${fa(done)} تا از مأموریت‌های امروز رو انجام دادی؛ ${fa(ms.list.length - done)} تای دیگه تو «امروز» منتظرتن!`
+    : 'خانم صبوری از آژانس: مأموریت‌های امروز رسید! یه سر به «امروز» بزن؛ هر سه تا رو بری، یه سوئیچ جایزه داری.';
+}
+
 export function radioCard(): HTMLElement {
-  const text = BULLETINS[idx++ % BULLETINS.length];
+  const text = dispatch() ?? BULLETINS[idx++ % BULLETINS.length];
   const card = h('div', 'radio', `<div class="rhead">${emo('📻', 'emo sm')} <b>رادیو راه‌بندون</b> <span class="live">زنده</span></div><div class="rtext">${text}</div>`);
   setTimeout(jingle, 300);
   return card;

@@ -667,3 +667,4 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
   .btn.rush-row { margin-top: 8px; padding: 10px 12px; }
   .today-h { margin: 12px 0 6px; }
 }
+.sabouri-says { margin: 0 0 8px; font-size: 13px; }

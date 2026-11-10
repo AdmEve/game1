@@ -35,7 +35,7 @@ export function planReminders(o: { now: number; livesFullAt: number | null; open
   }
   const d = new Date(o.now);
   d.setDate(d.getDate() + 1); d.setHours(usualHour(o.opens), 0, 0, 0);
-  out.push({ id: DAILY_ID, at: d.getTime(), title: 'ساعت شلوغی امروز رسید! ⏰', body: 'چالش امروز آماده‌ست؛ یه سوئیچ جایزه داره.' });
+  out.push({ id: DAILY_ID, at: d.getTime(), title: 'ساعت شلوغی امروز رسید! ⏰', body: 'چالش امروز و سه تا مأموریت تازه‌ی خانم صبوری منتظرتن.' });
   // Away for days: the welcome back waits (P3), and the reminder says so (it is cleared if they come back sooner).
   if (o.comeback) {
     const c = new Date(o.now);

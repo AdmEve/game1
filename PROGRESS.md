@@ -450,3 +450,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   reminder after three days away tells you it's waiting.
 - Daily missions: home's rush button is now «امروز», with today's rush hour and three missions from Ms. Sabouri over
   the agency radio (win levels, a clean win, a combo, a hard level…), coins for each and a key for all three.
+- Ms. Sabouri has a face: her portrait (headset, agency uniform) speaks in the «امروز» card, her line following the
+  day's progress, and the radio on home passes on her missions now and then while any are left. The daily reminder
+  mentions the missions too.

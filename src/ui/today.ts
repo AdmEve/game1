@@ -6,6 +6,7 @@ import { coin } from '../audio';
 import { haptic } from '../haptics';
 import { BONUS, MISSION_ICON, MISSIONS_FROM, REWARD, claimableMissions, missionText, todayMissions } from '../missions';
 import { persist, save } from '../save';
+import { SABOURI } from './characters';
 import { emo } from './emoji';
 import { addKeys } from './garage';
 import { asBack, button, fa, faNum, h, modal } from './hud';
@@ -44,7 +45,13 @@ export function showToday(o: TodayOpts) {
   c.append(rush);
   if (save.level >= MISSIONS_FROM) {
     const ms = todayMissions(save, o.day);
-    c.append(h('h3', 'today-h', `مأموریت‌های امروز <small>${emo('📻', 'emo xs')} خانم صبوری از بی‌سیم آژانس</small>`));
+    c.append(h('h3', 'today-h', 'مأموریت‌های امروز'));
+    // Ms. Sabouri on the agency radio, her line following the day's progress.
+    const done = ms.list.filter((m) => m.got >= m.goal).length;
+    const line = done === ms.list.length ? 'دمت گرم! همه‌ی مأموریت‌های امروز رو انجام دادی.'
+      : done ? `آفرین، ${fa(done)}&nbsp;تا انجام شد! ${fa(ms.list.length - done)}&nbsp;تای دیگه مونده.`
+      : 'سلام! مأموریت‌های امروز رو از بی‌سیم می‌گم؛ هر سه تا رو بری، یه سوئیچ هم جایزه داری.';
+    c.append(h('div', 'speech with-face sabouri-says', `${SABOURI('sm')}<div><span class="who">خانم صبوری:</span> ${line}</div>`));
     const list = h('div', 'missions');
     const draw = () => {
       list.innerHTML = '';

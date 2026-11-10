@@ -1,6 +1,6 @@
 /**
- * The cast, drawn as small portraits: «مش‌رحیم», the veteran taxi driver who teaches the ropes, and
- * «آقای عجول», owner of the rival agency, whose jams are the boss levels.
+ * The cast, drawn as small portraits: «مش‌رحیم», the veteran taxi driver who teaches the ropes, «آقای عجول», owner
+ * of the rival agency, whose jams are the boss levels, and «خانم صبوری», the agency's dispatcher with the day's missions.
  */
 
 /** Mash Rahim: flat cap, big grey moustache, kind eyes, a brown driver's jacket. */
@@ -51,6 +51,33 @@ export const AJOOL = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 12
     <path d="M57 61 Q60 68 63 61" stroke="#c98d64" stroke-width="2.5" fill="none"/>
     <path d="M48 71 Q60 67 72 71" stroke="#111827" stroke-width="2.6" fill="none" stroke-linecap="round"/>
     <path d="M52 76 Q63 80 72 73" stroke="#7f1d1d" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>`;
+
+/** Ms. Sabouri, the agency's dispatcher (GDD §5): a navy headscarf, a radio headset with its microphone, a warm smile. */
+export const SABOURI = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true">
+  <defs><clipPath id="fs"><circle cx="60" cy="60" r="56"/></clipPath>
+    <radialGradient id="sbg" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#ccfbf1"/><stop offset="1" stop-color="#0f766e"/></radialGradient></defs>
+  <circle cx="60" cy="60" r="58" fill="#134e4a"/><circle cx="60" cy="60" r="56" fill="url(#sbg)"/>
+  <g clip-path="url(#fs)">
+    <path d="M12 122 Q16 90 60 86 Q104 90 108 122 Z" fill="#1e3a5f"/>
+    <path d="M30 62 Q27 22 60 19 Q93 22 90 62 Q91 86 76 98 L44 98 Q29 86 30 62Z" fill="#33295a"/>
+    <ellipse cx="60" cy="59" rx="21" ry="25" fill="#ebbd96"/>
+    <path d="M38 52 Q39 30 60 29 Q81 30 82 52 Q75 38 60 37 Q45 38 38 52Z" fill="#33295a"/>
+    <path d="M45 44 Q56 37 72 42 Q62 40 53 46Z" fill="#3a2418"/>
+    <path d="M46 51 Q51 48 56 51" stroke="#3a2418" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M64 51 Q69 48 74 51" stroke="#3a2418" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M47 58 Q51 55 55 58" stroke="#2b1d14" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M65 58 Q69 55 73 58" stroke="#2b1d14" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <ellipse cx="46" cy="66" rx="4" ry="2.4" fill="#f19c8a" opacity=".55"/><ellipse cx="74" cy="66" rx="4" ry="2.4" fill="#f19c8a" opacity=".55"/>
+    <path d="M60 60 Q62 65 59 67" stroke="#c98d64" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M51 72 Q60 79 69 72" stroke="#9f3a3a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M33 58 Q33 16 60 15 Q87 16 87 58" stroke="#111827" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <rect x="26" y="51" width="12" height="17" rx="5" fill="#111827"/><rect x="82" y="51" width="12" height="17" rx="5" fill="#111827"/>
+    <path d="M32 67 Q36 82 49 78" stroke="#111827" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="50" cy="78" r="3.4" fill="#f2b124"/>
+    <path d="M46 98 L60 106 L74 98" stroke="#f8fafc" stroke-width="4" fill="none"/>
+    <circle cx="85" cy="108" r="4.2" fill="#f2b124"/>
   </g>
 </svg>`;
 
