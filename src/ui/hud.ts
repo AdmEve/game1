@@ -123,6 +123,8 @@ export class Hud {
   bump(id: BoosterId) { const b = this.btns.get(id)!; b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
   /** The coin pill (for flying coins to it). */
   get wallet(): HTMLElement { return this.coins; }
+  /** Take down the toast now (a result card is opening: its advice is over). */
+  clearToast() { clearTimeout((this.toastEl as unknown as { t: number }).t); this.toastEl.classList.remove('show'); }
   toast(text: string, ms = 1400) {
     this.toastEl.textContent = text;
     this.toastEl.classList.add('show');

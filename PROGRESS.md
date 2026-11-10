@@ -411,3 +411,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Smarter hints when you're stuck: on the hard levels, when no move can win any more, the hint used to say "maybe
   start over" (which costs a life). It now tells the truth: in 86% of those positions one more parking spot still
   wins, so it says so and the «جای پارک» help pulses; if even that can't save it, it says the level is lost.
+- A fair continue: the lose card used to sell «یه جای پارک دیگه» (300 coins or a video) even when one more bay could
+  no longer win, which was two times out of three. The game now checks first: if the extra bay can still win, it says
+  so; if not, it doesn't sell it and says honestly that this one has to be started over.

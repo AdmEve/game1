@@ -1066,6 +1066,7 @@ function showLose(limit?: 'time' | 'moves') {
     return;
   }
   duckMusic(1.6);
+  hud.clearToast(); // the in-level advice (e.g. «آخرین جای پارک!») is over
   save.stats.losses++;
   if (!rush && !event) count(save.lvStats, current, 'loss');
   persist();
@@ -1079,14 +1080,23 @@ function showLose(limit?: 'time' | 'moves') {
   const culprit = bride >= 0 ? bride : session ? session.culprit() : -1;
   if (culprit >= 0) session!.highlight(culprit);
   const why = limit === 'time' ? 'وقت تموم شد و هنوز ماشین‌ها تو پارکینگ موندن! سریع‌تر تصمیم بگیر.' : limit === 'moves' ? 'ضربه‌هات تموم شد! ضربه روی ماشین گیر کرده هم حساب می‌شه، پس قبل از زدن خوب نگاه کن.' : bride >= 0 ? 'ماشین عروس به موقع راه نیفتاد و عروس دیر رسید! دفعه‌ی بعد اول راهش رو باز کن.' : want && culprit >= 0 ? `مسافر جلوی صف ماشین <b>${COLOR_FA[want]}</b> می‌خواست، ولی هنوز تو پارکینگ گیر کرده بود.` : 'همه‌ی جاهای پارک پر شد و مسافر جلوی صف ماشینش رو نداره.';
-  const canBay = !!session && (!!limit || session.s.bays.length < 6 || bride >= 0);
+  // A fair continue (GDD §6, BEST_IN_MARKET_PLAN C9): at a loss on full bays one more bay still wins only about a
+  // third of the time (scripts/continueodds.ts), so the solver is asked first. Hopeless: no paid continue, said so.
+  const bayCase = !limit && bride < 0 && !!session && session.s.bays.length < 6;
+  const hopeless = bayCase && session!.continueKnown === false;
+  const canBay = !!session && (!!limit || (session.s.bays.length < 6 && !hopeless) || bride >= 0);
+  const HOPELESS = 'حتی با یه جای پارک دیگه هم راهی نمی‌مونه؛ این یکی رو باید از اول بری.';
+  const STILL = 'با یه جای پارک دیگه هنوز می‌شه برد!';
   // Only mention continuing when the card offers it.
-  const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${canBay ? 'ادامه بدی، می‌مونه؛ از اول، می‌سوزه.' : 'از اول شروع کنی، از صفر می‌شمره.'}</small></div>` : '';
+  const riskWhy = (offer: boolean) => (offer ? 'ادامه بدی، می‌مونه؛ از اول، می‌سوزه.' : 'از اول شروع کنی، از صفر می‌شمره.');
+  const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${riskWhy(canBay)}</small></div>` : '';
   c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${risk}`;
   const close = modal(c, 'pop');
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
+  const verdictNote = (text: string, cls: string) => { const n = h('div', 'continue-note ' + cls, text); (offer[0] ?? restartAt).before(n); return n; };
+  const offer: HTMLElement[] = [];
   if (canBay) {
-    c.append(button(`${emo(limit === 'time' ? '⏱️' : limit === 'moves' ? '👆' : bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${limit === 'time' ? '۱۵ ثانیه وقت بیشتر' : limit === 'moves' ? '۴ ضربه‌ی بیشتر' : bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
+    offer.push(button(`${emo(limit === 'time' ? '⏱️' : limit === 'moves' ? '👆' : bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${limit === 'time' ? '۱۵ ثانیه وقت بیشتر' : limit === 'moves' ? '۴ ضربه‌ی بیشتر' : bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
       if (save.coins < price) { hud.toast('سکه کافی نداری!'); showShop(() => {}, () => hud.refresh()); return; }
       save.coins -= price; persist(); hud.refresh();
       resume();
@@ -1096,12 +1106,13 @@ function showLose(limit?: 'time' | 'moves') {
         ad.setAttribute('disabled', '');
         if (await showRewarded()) resume(); else ad.removeAttribute('disabled');
       });
-      c.append(ad);
+      offer.push(ad);
     }
+    c.append(...offer);
   }
   // Starting over costs a life on a Journey level (below); the button says so, so continuing is a real choice.
   const costsLife = !rush && current >= FREE_LEVELS;
-  c.append(button(costsLife ? `از اول <small class="life-cost">${emo('💔', 'emo xs')} یه جون</small>` : 'از اول', canBay ? 'ghost' : 'primary big', async () => {
+  const restartAt = button(costsLife ? `از اول <small class="life-cost">${emo('💔', 'emo xs')} یه جون</small>` : 'از اول', canBay ? 'ghost' : 'primary big', async () => {
     close();
     if (newLevelRun) { save.streak = nextStreak(save.streak, 'gaveUp', true); persist(); }
     // Giving up on a Journey level costs a life (the daily challenge and events are free).
@@ -1110,7 +1121,19 @@ function showLose(limit?: 'time' | 'moves') {
       if (lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
     }
     void goLevel(current, rush ?? undefined, true, event);
-  }));
+  });
+  c.append(restartAt);
+  // The solver's answer: known now, or patched in when it arrives (a second at most) if the card is still open.
+  const apply = (wins: boolean | null) => {
+    if (!bayCase || wins === null || !c.isConnected) return;
+    if (wins) { verdictNote(STILL, 'still'); return; }
+    for (const o of offer.splice(0)) o.remove();
+    restartAt.className = 'btn primary big';
+    verdictNote(HOPELESS, 'hopeless');
+    const why = c.querySelector('.streak-note.risk small'); if (why) why.textContent = riskWhy(false);
+  };
+  if (bayCase && session!.continueKnown === undefined) void session!.continueWins.then(apply);
+  else if (bayCase) { if (hopeless) verdictNote(HOPELESS, 'hopeless'); else apply(session!.continueKnown ?? null); }
 }
 
 /** Reduced motion (a setting; it follows the phone's own preference until changed). */

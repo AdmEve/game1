@@ -152,6 +152,10 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .chapter .finale-note { margin-left: 104px; text-align: right; min-height: 30px; }
 .finale .next { color: var(--muted); font-size: 14px; }
 .tk-punch.end span { line-height: 1.6; font-weight: 700; }
+/* The lose card's word on the continue (C9): still winnable with one more bay, or not even then. */
+.continue-note { margin-top: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.6; }
+.continue-note.still { color: var(--accent-hi); }
+.continue-note.hopeless { color: var(--muted); font-weight: 600; }
 @media (max-height: 660px) { .finale-note small { display: none; } }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }

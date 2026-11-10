@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import * as sfx from '../audio';
 import { disposeTree } from '../render/dispose';
 import { haptic } from '../haptics';
-import { KIND, DELTA, addBay, cellsOf, lane, route, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
+import { KIND, DELTA, addBay, cellsOf, cloneState, lane, route, startState as newState, tap as ruleTap, whistle as ruleWhistle, type Event, type Level, type State } from '../game/rules';
 import { CELL, makeArrow, makeVehicle, type VehicleObj } from '../render/fleet';
 import { TUNNEL_COLORS, tunnelMouth, blowOff, brokenBadge, carCover, colorSymbol, fruitCart, hazard, plateBadge, poseOfficer, seatsBadge, setBrokenBadge, setPlateBadge, setWeddingBadge, trafficOfficer, vipMarker, weddingBadge, weddingDecor } from '../render/mechanics';
 import { drive, ease, keepRight, occupy, roundedPath, settleBody, tween, wait } from '../render/anim';
@@ -723,6 +723,23 @@ export class Session {
     return true;
   }
 
+  /**
+   * For the lose card's paid continue: can one more bay still win from where the bays filled? true or false, or null
+   * when unknown (the search ran out, or no bay is left to add); undefined while the search runs. Started the moment
+   * the loss is decided, so it is usually known by the time the card shows (BEST_IN_MARKET_PLAN C9).
+   */
+  continueKnown: boolean | null | undefined = undefined;
+  continueWins: Promise<boolean | null> = Promise.resolve(null);
+  private checkContinue() {
+    if (this.s.bays.length >= MAX_BAYS) { this.continueKnown = null; this.continueWins = Promise.resolve(null); return; }
+    const more = cloneState(this.s); addBay(more);
+    this.continueKnown = undefined;
+    this.continueWins = new Promise<boolean | null>((done) => {
+      const late = setTimeout(() => done(null), 2500);
+      askHint(this.level, more, (_move, verdict) => { clearTimeout(late); done(verdict === 'ok' ? true : verdict === 'unsure' ? null : false); });
+    }).then((v) => (this.continueKnown = v));
+  }
+
   /** Parking booster / continue: unlock the sixth bay. */
   extraBay(): boolean {
     const wasLost = this.s.over === 'lost';
@@ -815,6 +832,7 @@ export class Session {
         this.hooks.won();
       } else if (e.t === 'lost') {
         this.ended = true;
+        this.checkContinue();
         await Promise.all(landings);
         await wait(0.3);
         sfx.lose(); haptic('warn');
