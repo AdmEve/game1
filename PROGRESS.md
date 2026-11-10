@@ -468,3 +468,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   beat the rush hour and Ms. Sabouri cheers over the agency radio.
 - Stuck on a level: lose the same level twice in a row (past level 8) and Mash Rahim's line on the lose card points to
   the hint; in the next try the «راهنما؟» chip comes after 6 seconds instead of 20.
+- The garage grows to nine classics: the first Pride made in Iran (the 1372 hatchback) and the Land Rover Series
+  (the gendarmerie's 4×4, spare wheel on the bonnet, white safari roof). Restored, they stand in for ordinary cars in
+  levels; there the Land Rover's roof is in its body colour, so its colour reads from above.

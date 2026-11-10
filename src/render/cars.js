@@ -700,6 +700,18 @@ export const CARS = {
     plateF: 0.44, plateR: 0.45, handles: [-0.05],
     strips: [{ y0: 0.5, y1: 0.58, x0: -1.6, x1: 1.6 }],
   },
+  // Kia Pride five-door hatchback, the first Pride made in Iran (Saipa, 1372): the sedan's nose on a short hatch.
+  pridehatch: {
+    name: 'پراید هاچ‌بک', L: 3.56, W: 1.6, R: 0.28, tireW: 0.165, wheels: [1.1, -1.18], rim: 'steel', planExp: 7, bodyRt: 0.08,
+    top: [[-1.78, 0.58], [-1.765, 0.86], [-1.68, 0.905], [0.77, 0.9], [1.54, 0.775], [1.75, 0.72], [1.78, 0.56]],
+    cab: { xA: 0.86, xRF: 0.02, xRR: -1.28, xC: -1.7, roof: 1.37, half: 0.74, tumble: 0.2, rt: 0.09,
+      roofPts: [[-1.7, 0.905], [-1.56, 1.2], [-1.32, 1.37], [0.02, 1.37], [0.86, 0.9]] },
+    windows: [[0.64, -0.1], [-0.18, -1.12]],
+    bumpers: [{ y0: 0.3, y1: 0.52, mat: 'plastic', depth: 0.32, grow: 0.04 }],
+    headlights: [], taillights: [], extra: prideExtra,
+    plateF: 0.4, plateR: 0.62, handles: [0.0, -0.78],
+    strips: [{ y0: 0.56, y1: 0.6, x0: -1.68, x1: 1.68 }],
+  },
   // Zamyad (Nissan Junior) pickup: built separately below.
 };
 
@@ -883,6 +895,70 @@ export function buildJeep(color, opts = {}) {
   return g;
 }
 
+
+/**
+ * Land Rover Series (the 88-inch hard top, on Iran's village roads and with the gendarmerie through the 1960s–70s):
+ * flat aluminium panels, the spare wheel on the bonnet, headlamps in the wings, a mesh grille between them, a hard top
+ * with a white «safari» roof and little alpine windows along its edge.
+ */
+export function buildLandRover(color, opts = {}) {
+  const Q = opts.q ?? 1;
+  DETAIL = Q;
+  const g = new THREE.Group();
+  const P = typeof color === 'object' && color.isMaterial ? color : paint(color);
+  // The white «safari» roof in the garage; in levels (roofColor passed as undefined, as for the buses) the roof is in the
+  // body colour: seen from above the hard top is most of the car, and its colour is what the player reads.
+  const ROOF = 'roofColor' in opts && opts.roofColor == null ? P : paint(opts.roofColor ?? 0xf1eee6);
+  const L = 3.62, W = 1.66, hl = L / 2;
+  const box = (w, h, d, x, y, z, mat = P, r = 0.03) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, rseg(), r), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  // Body: the tub with its straight sides on a dark chassis (the wheels show below it, as on the real thing), then the
+  // bonnet between two flat-topped wings.
+  box(L - 0.34, 0.44, W - 0.1, -0.08, 0.84, 0, P, 0.05);
+  box(L - 0.7, 0.14, W - 0.56, -0.05, 0.56, 0, M.under, 0.02);
+  box(1.02, 0.12, W - 0.76, hl - 0.66, 1.1, 0, P, 0.05);
+  for (const sg of [1, -1]) box(1.04, 0.2, 0.36, hl - 0.64, 1.0, sg * (W / 2 - 0.2), P, 0.03);
+  // Grille: a dark mesh panel between the wings, with a few bars; the headlamps sit in the wing fronts.
+  box(0.05, 0.44, W - 0.82, hl - 0.13, 0.86, 0, M.trim, 0.01);
+  for (let k = -3; k <= 3; k++) box(0.02, 0.38, 0.03, hl - 0.1, 0.86, k * 0.1, M.steel, 0.005);
+  for (const sg of [1, -1]) {
+    box(0.05, 0.3, 0.34, hl - 0.13, 0.94, sg * (W / 2 - 0.2), P, 0.02);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.014, 8, 24), M.chrome); ring.rotation.y = Math.PI / 2; ring.position.set(hl - 0.1, 0.96, sg * (W / 2 - 0.2)); g.add(ring);
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.04, 20).rotateZ(Math.PI / 2), M.lens); lamp.position.set(hl - 0.1, 0.96, sg * (W / 2 - 0.2)); g.add(lamp);
+    const ind = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 12).rotateZ(Math.PI / 2), M.amber ?? M.lens); ind.position.set(hl - 0.1, 0.8, sg * (W / 2 - 0.2)); g.add(ind);
+  }
+  // A plain steel bumper on two brackets, and the spare wheel on the bonnet, as on every Series.
+  box(0.1, 0.13, W - 0.04, hl + 0.03, 0.58, 0, M.plastic, 0.02);
+  for (const sg of [1, -1]) box(0.22, 0.07, 0.07, hl - 0.08, 0.58, sg * 0.42, M.under, 0.01);
+  const spare = wheel(0.33, 0.2, 'steel', Q); spare.rotation.z = Math.PI / 2; spare.rotation.x = Math.PI / 2; spare.position.set(hl - 0.68, 1.25, 0); g.add(spare);
+  // Windscreen: upright, two panes in a body-coloured frame.
+  const wsX = hl - 1.22;
+  box(0.06, 0.06, W - 0.12, wsX, 1.66, 0, P, 0.02); box(0.06, 0.06, W - 0.12, wsX, 1.16, 0, P, 0.02);
+  for (const z of [W / 2 - 0.08, 0, -(W / 2 - 0.08)]) box(0.06, 0.5, 0.05, wsX, 1.41, z, P, 0.015);
+  for (const sg of [1, -1]) { const gl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.44, W / 2 - 0.16), M.glass); gl.position.set(wsX + 0.01, 1.41, sg * (W / 4 - 0.01)); g.add(gl); }
+  // Hard top: body-coloured sides with glass, the white roof, and the alpine windows along its edge.
+  const topL = L / 2 + wsX - 0.2, topX = (wsX - hl + 0.12) / 2;
+  box(topL, 0.6, W - 0.12, topX, 1.36, 0, P, 0.04);
+  box(topL + 0.06, 0.08, W - 0.04, topX, 1.7, 0, ROOF, 0.04);
+  for (const sg of [1, -1]) {
+    for (const [x, w] of [[wsX - 0.36, 0.56], [topX - 0.34, 0.58], [topX - 0.95, 0.42]]) {
+      const gl = new THREE.Mesh(new THREE.BoxGeometry(w, 0.32, 0.02), M.glass); gl.position.set(x, 1.42, sg * (W / 2 - 0.05)); g.add(gl);
+    }
+    for (let k = 0; k < 3; k++) { const a = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.02), M.glass); a.position.set(topX + 0.3 - k * 0.42, 1.62, sg * (W / 2 - 0.045)); g.add(a); }
+    // Door line and handle.
+    box(0.012, 0.46, 0.012, wsX - 0.7, 1.05, sg * (W / 2 - 0.04), M.trim, 0.003);
+    box(0.1, 0.025, 0.02, wsX - 0.55, 1.08, sg * (W / 2 - 0.035), M.steel, 0.006);
+  }
+  // Back: the rear door's window and two small lamps.
+  const rear = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.3, W - 0.7), M.glass); rear.position.set(-hl + 0.05, 1.42, 0); g.add(rear);
+  for (const sg of [1, -1]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.1, 0.08), M.red ?? M.lens); t.position.set(-hl + 0.07, 0.86, sg * (W / 2 - 0.12)); g.add(t); }
+  // Tall, narrow tyres (88-inch wheelbase).
+  for (const [x, sg] of [[1.12, 1], [1.12, -1], [-1.12, 1], [-1.12, -1]]) {
+    const w = wheel(0.38, 0.22, 'steel', Q); w.position.set(x, 0.38, sg * (W / 2 - 0.15)); if (sg < 0) w.rotation.y = Math.PI; g.add(w);
+  }
+  const pl = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ map: plateTex({ a: 22, letter: 'ل', b: 457, city: 10 }), roughness: 0.5 }));
+  pl.position.set(hl + 0.09, 0.72, 0); pl.rotation.y = Math.PI / 2; pl.scale.setScalar(0.8); g.add(pl);
+  return g;
+}
 
 // ───── Peugeot Pars details ─────
 const parsMats = {};

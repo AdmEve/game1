@@ -12,5 +12,6 @@ export const M: Record<string, THREE.Material>;
 export function buildVanet(color: number | THREE.Material, opts?: Record<string, unknown>): THREE.Group;
 export function buildBenzBus(color?: number | THREE.Material, opts?: Record<string, unknown>): THREE.Group;
 export function buildJeep(color: number | THREE.Material, opts?: Record<string, unknown>): THREE.Group;
+export function buildLandRover(color: number | THREE.Material, opts?: Record<string, unknown>): THREE.Group;
 export function setSnow(k: number): void;
 export function setPaintLift(k: number): void;

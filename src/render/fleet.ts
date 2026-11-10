@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { profile } from './profile';
-import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildVanet, buildZamyad, curve, paint } from './cars.js';
+import { CARS, buildBenzBus, buildBus, buildCar, buildJeep, buildLandRover, buildVanet, buildZamyad, curve, paint } from './cars.js';
 import { KIND, type Color, type Kind } from '../game/rules';
 import { courierBike } from './mechanics';
 import { slot, toSlots } from './instancer';
@@ -265,6 +265,7 @@ function template(kind: Kind, skin?: string): Template {
   else if (kind === 'zamyad' && skin === 'vanet') { raw = buildVanet(P, { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.45; }
   else if (kind === 'zamyad') { raw = buildZamyad(P, { q: QUALITY }); length = 4.97; width = 1.68; roofX = 0.62; roofY = 1.7; }
   else if (skin === 'jeep') { raw = buildJeep(P, { q: QUALITY }); length = 3.5; width = 1.57; roofX = 1.05; roofY = 1.12; }
+  else if (skin === 'landrover') { raw = buildLandRover(P, { q: QUALITY, roofColor: undefined }); length = 3.62; width = 1.66; roofX = -0.55; roofY = 1.76; }
   else {
     const spec = CARS[skin ?? kind];
     raw = buildCar(spec, P, { taxi: kind === 'samand', q: QUALITY });

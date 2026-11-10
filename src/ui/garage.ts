@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { coin } from '../audio';
 import { haptic } from '../haptics';
-import { CARS, buildBenzBus, buildCar, buildJeep, buildVanet } from '../render/cars.js';
+import { CARS, buildBenzBus, buildCar, buildJeep, buildLandRover, buildVanet } from '../render/cars.js';
 import { onGpuRestored, outdoorEnv } from '../render/env.js';
 import { persist, save } from '../save';
 import { emo } from './emoji';
@@ -16,6 +16,8 @@ export const CLASSICS = [
     story: 'ژیان! کوچیک بود ولی دلش بزرگ. می‌گن تو سربالایی‌های دربند مسافرها پیاده می‌شدن هلش می‌دادن!' },
   { id: 'renault5', name: 'رنو ۵', year: '۱۳۵۵', cost: 6, color: 0xf2c230,
     story: 'رنو ۵، ماشین اولِ خیلی‌ها. کوچیک و زرنگ؛ همیشه یه جای پارک پیدا می‌کرد، حتی جلوی بازار.' },
+  { id: 'pridehatch', name: 'پراید هاچ‌بک', year: '۱۳۷۲', cost: 7, color: 0xe8e4da,
+    story: 'اولین پرایدی که تو ایران ساختن، هاچ‌بک بود. سفیدش رو دایی‌ت قسطی خرید و تا یه سال، هر جمعه با دستمال‌کاغذی برقش می‌انداخت!' },
   { id: 'royale', name: 'شورولت رویال', year: '۱۳۵۶', cost: 8, color: 0x1e3a5f,
     story: 'شورولت رویال، ماشین آدم‌حسابی‌ها! هر کی سوارش می‌شد حس می‌کرد وزیره. عروس‌کشون محل همیشه با این بود.' },
   { id: 'vanet', name: 'پیکان وانت', year: '۱۳۶۰', cost: 6, color: 0x7fb4d9,
@@ -24,11 +26,14 @@ export const CLASSICS = [
     story: 'جیپ ویلیز! سقف نداشت ولی از هر کوهی بالا می‌رفت. عمو جونت می‌گه یه بار باهاش تا قله‌ی توچال رفته… شاید هم نرفته!' },
   { id: 'benz', name: 'اتوبوس بنز دودر', year: '۱۳۵۸', cost: 12, color: 0x1f7a4c,
     story: 'اتوبوس‌های سبز بنز، خط انقلاب–آزادی. بلیت کاغذی، صندلی‌های چرمی و صدای موتوری که از دو کوچه اون‌ورتر شنیده می‌شد. حالا جای اتوبوس‌ها تو مرحله‌ها!' },
+  { id: 'landrover', name: 'لندرور', year: '۱۳۴۸', cost: 14, color: 0x5b7a5a,
+    story: 'لندرور سبز ژاندارمری، با زاپاس روی کاپوت. تو جاده‌های خاکی ده هیچ‌چی جلودارش نبود؛ فقط بنزینش رو باید با سطل می‌آوردی!' },
 ] as const;
 
 function buildClassic(id: string, color: number | THREE.Material) {
   if (id === 'vanet') return buildVanet(color as number, { q: 0.55 });
   if (id === 'jeep') return buildJeep(color, { q: 0.55 });
+  if (id === 'landrover') return buildLandRover(color, { q: 0.55 });
   if (id === 'benz') { const b = buildBenzBus(color as number, { q: 0.5 }); b.scale.setScalar(0.62); return b; }
   return buildCar(CARS[id], color, { q: 0.55 });
 }
