@@ -23,6 +23,8 @@ export interface Save {
   /** Whether the reminders question has been asked; the hours of recent app opens (for its timing). */
   notifyAsked: boolean;
   opens: number[];
+  /** The day (YYYY-MM-DD) the game was last opened, for the welcome back after a few days away. */
+  lastDay: string;
   stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
   /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
   ach: Record<string, number>;
@@ -72,6 +74,7 @@ const fresh = (): Save => ({
   settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, leftHand: false, notify: false },
   notifyAsked: false,
   opens: [],
+  lastDay: '',
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
   ach: {},
   achSeen: {},

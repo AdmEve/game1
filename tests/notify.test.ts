@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: {} }));
-import { DAILY_ID, LIVES_ID, outsideQuiet, planReminders, usualHour } from '../src/notify';
+import { AWAY_DAYS, COMEBACK_ID, DAILY_ID, LIVES_ID, outsideQuiet, planReminders, usualHour } from '../src/notify';
 
 const at = (h: number, m = 0, day = 10) => new Date(2026, 10, day, h, m).getTime();
 
@@ -23,6 +23,14 @@ describe('reminders', () => {
     expect(p[0].at).toBe(now + 60 * 60_000);
     expect(p[1].at).toBe(at(18, 0, 11));
     expect(planReminders({ now, livesFullAt: now + 5 * 60_000, opens: [] }).map((r) => r.id)).toEqual([DAILY_ID]);
+    expect(planReminders({ now, livesFullAt: null, opens: [] }).map((r) => r.id)).toEqual([DAILY_ID]);
+  });
+  it('plan the welcome back for three days on, at the usual hour, only when asked for', () => {
+    const now = at(15);
+    const p = planReminders({ now, livesFullAt: null, opens: [20], comeback: true });
+    expect(p.map((r) => r.id)).toEqual([DAILY_ID, COMEBACK_ID]);
+    expect(p[1].at).toBe(at(20, 0, 10 + AWAY_DAYS));
+    expect(p[1].body).toContain('هدیه');
     expect(planReminders({ now, livesFullAt: null, opens: [] }).map((r) => r.id)).toEqual([DAILY_ID]);
   });
 });

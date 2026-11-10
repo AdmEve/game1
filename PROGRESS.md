@@ -446,3 +446,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   help for and winning it clean pays a bonus and says so.
 - Stuck? Ask a friend: the lose card has a share button that sends the level as a picture with «این مرحله گیرم
   انداخته! تو می‌تونی؟» and the Bazaar link.
+- Welcome back: after three or more days away, Mash Rahim greets you with full lives and one of each help, and a
+  reminder after three days away tells you it's waiting.

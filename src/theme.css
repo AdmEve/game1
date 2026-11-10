@@ -587,12 +587,12 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .card.guide-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
 
 /* O2: the starter pack, offered once: what is in it, what it is worth. */
-.starter-offer .so-list { list-style: none; padding: 0; margin: 12px 0 4px; display: flex; flex-direction: column; gap: 6px; text-align: right; }
-.starter-offer .so-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 9px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); }
-.starter-offer .so-list b { color: #fff; font-size: 15px; }
-.starter-offer .so-list small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
-.starter-offer .so-helps { display: inline-flex; gap: 1px; color: var(--accent); }
-.starter-offer .so-helps .ico { width: 18px; height: 18px; }
+.starter-offer .so-list, .welcome-back .so-list { list-style: none; padding: 0; margin: 12px 0 4px; display: flex; flex-direction: column; gap: 6px; text-align: right; }
+.starter-offer .so-list li, .welcome-back .so-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 9px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); }
+.starter-offer .so-list b, .welcome-back .so-list b { color: #fff; font-size: 15px; }
+.starter-offer .so-list small, .welcome-back .so-list small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
+.starter-offer .so-helps, .welcome-back .so-helps { display: inline-flex; gap: 1px; color: var(--accent); }
+.starter-offer .so-helps .ico, .welcome-back .so-helps .ico { width: 18px; height: 18px; }
 .starter-offer .so-worth { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
 .starter-offer .so-later { font-size: 12.5px; margin: 6px 0 0; }
 .starter-offer .so-sub { display: none; margin: 2px 0 0; }

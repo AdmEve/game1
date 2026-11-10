@@ -94,6 +94,27 @@ export function showShop(onClose: () => void, onChange: () => void) {
   c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }
 
+/**
+ * «خوش برگشتی» (P3): back after a few days away, Mash Rahim's gift: lives refilled and one of each help opened so
+ * far. Once per return; the three-day reminder promises exactly this. Resolves when closed.
+ */
+export function showWelcomeBack(days: number, refill: () => void, onChange: () => void): Promise<void> {
+  return new Promise((done) => {
+    const helps = BOOSTERS.filter((b) => helpOpen(b.id, save.level));
+    const c = h('div', 'welcome-back');
+    c.innerHTML = `<div class="burst">${emo('🚕', 'emo huge')}</div><h2>خوش برگشتی!</h2>
+      <div class="speech with-face">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${fa(days)} روز نبودی جوون! ترافیک تهران بدون تو یه چیزی کم داشت. اینا هدیه‌ی برگشتنته:</div></div>
+      <ul class="so-list"><li>${emo('❤️', 'emo sm')}<b>جون‌هات پر</b></li>${helps.length ? `<li><span class="so-helps">${helps.map((b) => icon(b.icon)).join('')}</span><b>از هر کمکی یکی</b></li>` : ''}</ul>`;
+    const close = modal(c, 'pop');
+    c.append(asBack(button('ممنون، بزن بریم!', 'primary big', () => {
+      refill();
+      for (const b of helps) save.boosters[b.id]++;
+      persist(); onChange(); coin(); coin(0.12); haptic('success');
+      close(); done();
+    })));
+  });
+}
+
 /** The first level with ads between levels (monetize.ts maybeInterstitial: from level index 20). */
 const ADS_FROM = 21;
 /**

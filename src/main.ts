@@ -29,10 +29,10 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
-import { introIcon, introTitle, maybeDaily, maybeStarterOffer, showChest, showGuide, showIntro, showRule, showShop, type IntroKind } from './ui/meta';
+import { introIcon, introTitle, maybeDaily, maybeStarterOffer, showWelcomeBack, showChest, showGuide, showIntro, showRule, showShop, type IntroKind } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
-import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
-import { askNotifications, planReminders, syncReminders } from './notify';
+import { FREE_LEVELS, MAX_LIVES, addLives, fullAt, lives, loseLife } from './lives';
+import { AWAY_DAYS, askNotifications, planReminders, syncReminders } from './notify';
 import { UNLOCK_ALL_LEVELS } from './config';
 import { errorReport, errors, installErrorLog } from './errlog';
 import { deviceReport, recordBoot } from './devreport';
@@ -1536,6 +1536,16 @@ function showLevels(back?: () => void) {
   requestAnimationFrame(() => here?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }));
 }
 
+/** Days away at this visit that earn the welcome back (shown once, on home), or 0. */
+let welcomeBack = 0;
+function noteVisit() {
+  const day = today();
+  if (save.lastDay === day) return;
+  const away = save.lastDay ? Math.round((Date.parse(day) - Date.parse(save.lastDay)) / 864e5) : 0;
+  save.lastDay = day; persist();
+  if (away >= AWAY_DAYS && save.level >= 3) welcomeBack = away;
+}
+
 function showHome() {
   modalOpen = true;
   hud.show(false);
@@ -1628,6 +1638,7 @@ function showHome() {
     introSwoop();
   }));
   if (finished && !save.seen.finale) showFinale();
+  else if (welcomeBack) { const days = welcomeBack; welcomeBack = 0; void showWelcomeBack(days, () => addLives(MAX_LIVES), () => hud.refresh()); }
 }
 
 /** Once, the first time home opens with every level won: the whole journey, and what comes next. */
@@ -1726,6 +1737,8 @@ async function boot() {
   // (until then it holds nothing but its Play button). scripts/journey.cjs, smoke.cjs.
   if (debug.has('play')) { /* tests start in the level */ } else if (save.level === 0) introSwoop();
   else showHome();
+  // Back after days away (P3): the welcome back waits for home (none for a new player, or an old save that never kept it).
+  noteVisit();
   // Back from a progress transfer (Settings → انتقال پیشرفت), which restarts the game: say it arrived.
   const moved = takeTransferNote();
   if (moved) note(moved, 3200);
@@ -1747,10 +1760,12 @@ async function boot() {
     if (document.hidden) {
       stopMusic(0.2);
       sfx.pauseAudio();
-      void syncReminders(save.settings.notify, planReminders({ now: Date.now(), livesFullAt: fullAt(), opens: save.opens }));
+      void syncReminders(save.settings.notify, planReminders({ now: Date.now(), livesFullAt: fullAt(), opens: save.opens, comeback: save.level >= 3 }));
       return;
     }
     void syncReminders(false, []);
+    noteVisit(); // the app may have stayed in memory for days
+    if (welcomeBack && topCard()?.querySelector('.home')) { const days = welcomeBack; welcomeBack = 0; void showWelcomeBack(days, () => addLives(MAX_LIVES), () => hud.refresh()); }
     sfx.resumeAudio();
     startMusic();
     // Back from another app in the middle of a level: wait on the pause card instead of dropping straight in.
@@ -1813,7 +1828,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, endless: (i: number) => playEndless(i), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, endless: (i: number) => playEndless(i), welcomeBack: (days: number) => showWelcomeBack(days, () => addLives(MAX_LIVES), () => hud.refresh()), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

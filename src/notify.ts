@@ -1,6 +1,6 @@
 /**
- * Local reminders (nothing leaves the phone): "your lives are full" when they refill, and "today's rush hour
- * is here" the next day at the hour this player usually plays. Both are scheduled only while the game is in
+ * Local reminders (nothing leaves the phone): "your lives are full" when they refill, "today's rush hour is
+ * here" the next day at the hour this player usually plays, and after three days away, the welcome back. Both are scheduled only while the game is in
  * the background and cleared the moment it comes back; nothing rings between 22:00 and 09:00. Permission is
  * asked once, after the tenth level, with a card that says what it is for; Settings can turn it off.
  */
@@ -8,7 +8,9 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface Reminder { id: number; at: number; title: string; body: string }
-export const LIVES_ID = 1, DAILY_ID = 2;
+export const LIVES_ID = 1, DAILY_ID = 2, COMEBACK_ID = 3;
+/** Days away that earn the welcome back (and its reminder). */
+export const AWAY_DAYS = 3;
 
 /** A time inside the quiet hours (22:00–09:00) moves to 09:00 the morning after. */
 export function outsideQuiet(at: number): number {
@@ -25,7 +27,7 @@ export function usualHour(opens: number[]): number {
   return Math.min(21, Math.max(10, m));
 }
 
-export function planReminders(o: { now: number; livesFullAt: number | null; opens: number[] }): Reminder[] {
+export function planReminders(o: { now: number; livesFullAt: number | null; opens: number[]; comeback?: boolean }): Reminder[] {
   const out: Reminder[] = [];
   // Only worth a ping when the wait is real (more than ten minutes away).
   if (o.livesFullAt && o.livesFullAt > o.now + 10 * 60_000) {
@@ -34,6 +36,12 @@ export function planReminders(o: { now: number; livesFullAt: number | null; open
   const d = new Date(o.now);
   d.setDate(d.getDate() + 1); d.setHours(usualHour(o.opens), 0, 0, 0);
   out.push({ id: DAILY_ID, at: d.getTime(), title: 'ساعت شلوغی امروز رسید! ⏰', body: 'چالش امروز آماده‌ست؛ یه سوئیچ جایزه داره.' });
+  // Away for days: the welcome back waits (P3), and the reminder says so (it is cleared if they come back sooner).
+  if (o.comeback) {
+    const c = new Date(o.now);
+    c.setDate(c.getDate() + AWAY_DAYS); c.setHours(usualHour(o.opens), 0, 0, 0);
+    out.push({ id: COMEBACK_ID, at: c.getTime(), title: 'ترافیک تهران منتظرته! 🚕', body: 'مش‌رحیم یه هدیه‌ی خوش‌اومد برات کنار گذاشته: جون پر و از هر کمکی یکی.' });
+  }
   return out;
 }
 
