@@ -41,6 +41,8 @@ const CARDS0 = [
   ['agency', (r) => r.cards.agency()],
   ['pass', (r) => r.cards.pass()],
   ['achievements', (r) => r.cards.achievements()],
+  // With the Journey done: the Endless row too (C10).
+  ['achievements (finished)', (r) => { r.save.level = r.levels.length; r.save.endless = 12; r.cards.achievements(); }],
   ['chest', (r) => r.cards.chest()],
   ['intro (longest text)', (r) => r.cards.intro('wedding')],
   ['no lives', (r) => { r.save.lives = { n: 0, next: Date.now() + 25 * 60e3 }; r.cards.noLives(); }],

@@ -7,9 +7,11 @@ import { emo } from './emoji';
 import { addKeys, CLASSICS } from './garage';
 import { button, fa, faNum, h, modal, asBack } from './hud';
 
-interface Ach { id: string; icon: string; name: string; what: (n: string) => string; tiers: [number, number, number]; value: () => number }
+interface Ach { id: string; icon: string; name: string; what: (n: string) => string; tiers: [number, number, number]; value: () => number; /** Listed only once it means something. */ shown?: () => boolean }
 
 const chaptersDone = () => CHAPTERS.filter((c) => save.level >= c.to).length;
+/** The Journey's length (the last chapter's end). */
+const JOURNEY = CHAPTERS[CHAPTERS.length - 1].to;
 
 export const ACHIEVEMENTS: Ach[] = [
   { id: 'wins', icon: '🏁', name: 'راننده‌ی کارکشته', what: (n) => `${n} مرحله رو ببر`, tiers: [10, 50, 150], value: () => save.stats.wins },
@@ -20,6 +22,8 @@ export const ACHIEVEMENTS: Ach[] = [
   { id: 'rush', icon: '⏰', name: 'سحرخیز', what: (n) => `${n} روز پشت سر هم ساعت شلوغی رو رد کن`, tiers: [3, 7, 30], value: () => save.stats.bestRush },
   { id: 'garage', icon: '🔧', name: 'کلکسیونر', what: (n) => `${n} ماشین کلاسیک بازسازی کن`, tiers: [2, 4, CLASSICS.length], value: () => save.garage.restored.length },
   { id: 'map', icon: '🗺️', name: 'تهران‌گرد', what: (n) => `${n} فصل رو تموم کن`, tiers: [1, 3, CHAPTERS.length], value: chaptersDone },
+  // «تهران بی‌پایان» (C10): goals for the road after the Journey, listed once the Journey is done.
+  { id: 'endless', icon: '🛣️', name: 'جاده‌ی بی‌پایان', what: (n) => `${n} مرحله‌ی تهران بی‌پایان رو ببر`, tiers: [10, 50, 150], value: () => save.endless, shown: () => save.endless > 0 || save.level >= JOURNEY },
 ];
 
 const TIER = [
@@ -54,6 +58,7 @@ export function showAchievements(onClose: () => void, onCoins: () => void) {
   const draw = () => {
     list.innerHTML = '';
     for (const a of ACHIEVEMENTS) {
+      if (a.shown && !a.shown()) continue;
       const got = claimed(a), r = reached(a), v = a.value();
       const next = Math.min(got, 2);
       const goal = a.tiers[next];

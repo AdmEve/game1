@@ -974,10 +974,11 @@ function showEndlessWin(i: number) {
   if (keys) addKeys(keys);
   if (stars) addStars(stars);
   const piggy = fillPiggy(n), station = punch();
+  // Counted before the medals are looked at, so «جاده‌ی بی‌پایان» shows on the win that reaches it.
+  save.endless = Math.max(save.endless, i + 1);
   const ach = recordWin(hard);
   const before = save.coins;
   save.coins += coins;
-  save.endless = Math.max(save.endless, i + 1);
   persist();
   modalOpen = true; hud.show(false); hud.refresh();
   void endlessLevel(i + 1);
