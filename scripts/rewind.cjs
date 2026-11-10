@@ -44,7 +44,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   }
   report(!!offer, `a hopeless loss offers going back to before the losing tap (${JSON.stringify(offer)})`);
   if (offer) {
-    report(offer.buttons[0].startsWith(`از حرکت ${offer.review.match(/حرکت ([۰-۹]+)/)[1]} دوباره`) && /از اول/.test(offer.buttons[offer.buttons.length - 1]) && /هنوز می‌شه برد/.test(offer.note ?? ''),
+    report(offer.buttons[0].startsWith(`از حرکت ${offer.review.match(/حرکت ([۰-۹]+)/)[1]} دوباره`) && /از اول/.test(offer.buttons.filter((b) => b).pop()) && /هنوز می‌شه برد/.test(offer.note ?? ''),
       `the card: «از حرکت N دوباره» first, «از اول» last, and the note says it can still be won (${offer.buttons.join(' | ')})`);
     const after = await p.evaluate(async () => {
       const rb = window.__rb, c0 = rb.save.coins, l0 = rb.save.lives.n;

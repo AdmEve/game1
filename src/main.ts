@@ -1255,7 +1255,7 @@ function showLose(limit?: 'time' | 'moves') {
     });
   }
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
-  const verdictNote = (text: string, cls: string) => { const n = h('div', 'continue-note ' + cls, text); (offer[0] ?? restartAt).before(n); return n; };
+  const verdictNote = (text: string, cls: string) => { const n = h('div', 'continue-note ' + cls, text); (offer[0] ?? restartRow).before(n); return n; };
   const offer: HTMLElement[] = [];
   if (canBay) {
     offer.push(button(`${emo(limit === 'time' ? '⏱️' : limit === 'moves' ? '👆' : bride >= 0 ? '💐' : '🅿️', 'emo sm')} ${limit === 'time' ? '۱۵ ثانیه وقت بیشتر' : limit === 'moves' ? '۴ ضربه‌ی بیشتر' : bride >= 0 ? 'ادامه بده' : 'یه جای پارک دیگه'}، ${emo('🪙', 'emo sm')} ${fa(price)}`, 'gold big', () => {
@@ -1284,7 +1284,15 @@ function showLose(limit?: 'time' | 'moves') {
     }
     void goLevel(current, rush ?? undefined, true, event);
   });
-  c.append(restartAt);
+  // «از اول», and beside it the level as a picture for friends: stuck is when a player most wants to show it.
+  const restartRow = h('div', 'win-row lose-row');
+  restartRow.append(restartAt);
+  const stuck = rush ?? (current < levels.length ? levels[current] : null);
+  if (stuck) {
+    const title = event?.kind === 'endless' ? `تهران بی‌پایان، مرحله‌ی ${fa(levels.length + event.i + 1)}` : event ? '' : rush ? 'چالش ساعت شلوغی' : `مرحله‌ی ${fa(current + 1)} · ${chapterOf(current).name}`;
+    if (title) { restartRow.append(shareButton({ level: stuck, title, badge: stuck.tag ? 'سخت' : undefined, brag: 'این مرحله گیرم انداخته!' })); restartRow.classList.add('with-share'); }
+  }
+  c.append(restartRow);
   // The solver's answer: known now, or patched in when it arrives (a second at most) if the card is still open.
   let hopelessNote: HTMLElement | null = null;
   const apply = (wins: boolean | null) => {
@@ -1316,7 +1324,7 @@ function showLose(limit?: 'time' | 'moves') {
       });
       btns.push(ad);
     }
-    restartAt.before(...btns);
+    restartRow.before(...btns);
     restartAt.className = 'btn ghost';
     if (hopelessNote) hopelessNote.textContent = `با یه جای پارک دیگه هم راهی نمی‌مونه؛ ولی از قبل از حرکت ${fa(move)} هنوز می‌شه برد.`;
   }

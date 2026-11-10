@@ -622,3 +622,7 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .lv-legend { font-size: 12.5px; margin: -2px 0 8px !important; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .lv-legend .dot, .clean-note .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(242, 177, 36, .6); }
 .clean-note b { color: var(--accent-hi); }
+
+/* The lose card's «از اول» shares its row with a share button (the level, to ask friends: «گیرم انداخته»). */
+.lose-row .btn:not(.share) { font-size: 17px; }
+.lose-row .btn.big:not(.share) { font-size: 19px; padding-top: 13px; padding-bottom: 13px; }

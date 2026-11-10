@@ -444,3 +444,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   you continue from a position that can still be won. No life lost.
 - A reason to replay: levels you've won without any help get a gold dot in the level list; replaying one you needed
   help for and winning it clean pays a bonus and says so.
+- Stuck? Ask a friend: the lose card has a share button that sends the level as a picture with «این مرحله گیرم
+  انداخته! تو می‌تونی؟» and the Bazaar link.
