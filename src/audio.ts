@@ -289,10 +289,10 @@ export const VOICES: Record<Voice, { f0: number; fs: number; len: number; jump: 
 const VOWELS: [number, number][] = [[710, 1100], [760, 1650], [500, 1850], [300, 2250], [470, 850], [330, 750]];
 
 /** One syllable: `vowel` 0–5, `lift` bends the pitch (+ a question's rise, − a sentence's fall), `wobble` −1…1. */
-export function syllable(who: Voice, vowel: number, lift = 0, wobble = 0) {
+export function syllable(who: Voice, vowel: number, lift = 0, wobble = 0, delay = 0) {
   const c = ac(); if (!c || !save.settings.voices) return;
-  if (!allow('voice', c.currentTime, 2, 0.04)) return;
-  const p = VOICES[who], t = c.currentTime, d = p.len;
+  if (!allow('voice', c.currentTime + delay, 2, 0.04)) return;
+  const p = VOICES[who], t = c.currentTime + delay, d = p.len;
   const f0 = p.f0 * (1 + lift + wobble * p.jump);
   const src = osc(c, 'sawtooth', f0, t, d + 0.04);
   src.frequency.linearRampToValueAtTime(f0 * (lift < 0 ? 0.88 : lift > 0 ? 1.1 : 0.97), t + d);

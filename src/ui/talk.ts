@@ -21,6 +21,30 @@ function vowelOf(ch: string, i: number): number {
   return [1, 2, 4, 1, 0][ch.charCodeAt(0) % 5];
 }
 
+/** One step of a line being said: how many letters are shown after it, the wait before the next, and its syllable. */
+export interface Step { upto: number; wait: number; syl?: { vowel: number; lift: number; wobble: number } }
+
+/**
+ * How a line is said (the same every time): a letter at the speaker's pace, a breath after punctuation, a run of
+ * spaces and line breaks from the card's markup as one space, and a syllable every third letter, rising before a
+ * question and falling at a sentence's end.
+ */
+export function plan(text: string, who: Voice): Step[] {
+  const steps: Step[] = [];
+  let i = 0, letters = 0;
+  while (i < text.length) {
+    const ch = text[i++];
+    if (/\s/.test(ch)) while (/\s/.test(text[i] ?? '')) i++;
+    const step: Step = { upto: i, wait: 1000 / PACE[who] + (PAUSE[ch] ?? 0) };
+    if (LETTER.test(ch) && letters++ % 3 === 0) {
+      const ahead = text.slice(i, i + 4);
+      step.syl = { vowel: vowelOf(ch, i), lift: /[؟?]/.test(ahead) ? 0.22 : /[.!…]/.test(ahead) ? -0.1 : 0, wobble: Math.sin(i * 1.7) };
+    }
+    steps.push(step);
+  }
+  return steps;
+}
+
 /** What a line is made of, past the speaker's name: its text, and the icons in it (with where in the text they sit). */
 function lineParts(line: HTMLElement): { nodes: Text[]; icons: { el: HTMLElement | SVGElement; at: number }[] } {
   const nodes: Text[] = [], icons: { el: HTMLElement | SVGElement; at: number }[] = [];
@@ -63,7 +87,8 @@ export function talk(card: HTMLElement) {
     n.after(rest); n.textContent = '';
     return { said: n, rest, full: rest.textContent ?? '' };
   });
-  let shown = 0, timer = 0, syl = 0;
+  const steps = plan(text, who);
+  let next = 0, timer = 0;
   const show = (k: number) => {
     let left = k;
     for (const p of parts) {
@@ -84,18 +109,11 @@ export function talk(card: HTMLElement) {
   const step = () => {
     // The card closed (or is closing): stop, silently.
     if (!sp.isConnected || sp.closest('.modal-back.out')) { clearTimeout(timer); card.removeEventListener('pointerdown', done, true); return; }
-    if (shown >= text.length) { done(); return; }
-    const ch = text[shown++];
-    // Line breaks and indentation from the card's markup: one space's time, not one each.
-    if (/\s/.test(ch)) while (/\s/.test(text[shown] ?? '')) shown++;
-    show(shown);
-    // A syllable every few letters, rising before a question and falling at a sentence's end.
-    if (LETTER.test(ch) && (syl++ % 3 === 0)) {
-      const ahead = text.slice(shown, shown + 4);
-      const lift = /[؟?]/.test(ahead) ? 0.22 : /[.!…]/.test(ahead) ? -0.1 : 0;
-      syllable(who, vowelOf(ch, shown), lift, Math.sin(shown * 1.7));
-    }
-    timer = window.setTimeout(step, 1000 / PACE[who] + (PAUSE[ch] ?? 0));
+    if (next >= steps.length) { done(); return; }
+    const st = steps[next++];
+    show(st.upto);
+    if (st.syl) syllable(who, st.syl.vowel, st.syl.lift, st.syl.wobble);
+    timer = window.setTimeout(step, st.wait);
   };
   show(0);
   // After the card's pop, once nothing covers it (a level's veil), and after a card's own entrance (the boss's drums).
