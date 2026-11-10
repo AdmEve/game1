@@ -21,7 +21,7 @@ import { setCarQuality, setCarShadows, warmFleet } from './render/fleet';
 import { addInstanceRoot, attachInstancer, instanceStats, removeInstanceRoot, syncInstances } from './render/instancer';
 import { setPaintLift, setSnow } from './render/cars.js';
 import { sky } from './render/world';
-import { Session, worldCacheInfo, worldCached, worldSteps, worldTextures } from './play/session';
+import { MAX_BAYS, Session, worldCacheInfo, worldCached, worldSteps, worldTextures } from './play/session';
 import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
 import { lightsMaterial } from './render/fleet';
@@ -812,9 +812,11 @@ function useBooster(id: BoosterId) {
   if (!session || modalOpen) return;
   const def = BOOSTERS.find((b) => b.id === id)!;
   if (!helpOpen(id, save.level)) { hud.toast(`${def.name} از مرحله‌ی ${fa(HELP_FROM[id])} باز می‌شه`); return; }
+  // All six bays open: say so before any coins or an offer, not after.
+  if (id === 'bay' && session.s.bays.length >= MAX_BAYS && session.s.over !== 'lost') { hud.toast('همه‌ی جاهای پارک بازه!'); return; }
   const free = hud.free.has(id);
   if (!free && save.boosters[id] <= 0) {
-    if (save.coins < def.price) { hud.toast('سکه کافی نداری!'); return; }
+    if (save.coins < def.price) { offerHelp(id); return; }
     save.coins -= def.price; save.boosters[id]++; persist(); hud.refresh(); coin();
   }
   if (id === 'crane') {
@@ -827,6 +829,30 @@ function useBooster(id: BoosterId) {
   if (!ok) { hud.toast(id === 'bay' ? 'همه‌ی جاهای پارک بازه!' : 'یه لحظه صبر کن…'); return; }
   if (free) hud.free.delete(id); else save.boosters[id]--;
   helped = true; persist(); hud.refresh(); hud.bump(id); haptic('medium');
+}
+
+/**
+ * A help the player has none of and can't afford: not a dead end («سکه کافی نداری!» alone, just when the hint may have
+ * pointed at it): one for a video, the shop, or not now (BEST_IN_MARKET_PLAN H10).
+ */
+function offerHelp(id: BoosterId) {
+  const def = BOOSTERS.find((b) => b.id === id)!;
+  modalOpen = true;
+  const c = h('div', 'help-offer');
+  c.innerHTML = `<div class="burst"><span class="help-tile">${icon(def.icon)}</span></div><h2>${def.name}</h2>
+    <p>${fa(def.price)} سکه می‌خواد و ${fa(save.coins)} سکه داری.</p>`;
+  const close = modal(c, 'pop');
+  const back = () => { close(); modalOpen = false; };
+  if (rewardedAvailable()) {
+    const ad = button(`${emo('🎬', 'emo sm')} با دیدن تبلیغ یکی بگیر`, 'gold big', async () => {
+      ad.setAttribute('disabled', '');
+      if (await showRewarded()) { save.boosters[id]++; persist(); hud.refresh(); back(); useBooster(id); }
+      else ad.removeAttribute('disabled');
+    });
+    c.append(ad);
+  }
+  c.append(button(`${icon('coin')} دکه`, rewardedAvailable() ? 'primary' : 'primary big', () => { close(); showShop(() => { modalOpen = false; }, () => hud.refresh()); }));
+  c.append(asBack(button('بی‌خیال', 'ghost', back)));
 }
 
 const HELP_NAME: Record<Help, string> = { bay: 'جای پارک', crane: 'جرثقیل', whistle: 'سوت پلیس' };
@@ -1568,7 +1594,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), finale: () => showFinale(), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

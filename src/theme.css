@@ -89,9 +89,11 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .bst.locked .ic, .bst.locked .nm { opacity: .38; }
 .bst .cnt.lock { background: #1d2128; color: var(--muted); border: 1px solid var(--line-2); left: 50%; transform: translateX(-50%); padding: 0 7px; font-size: 10.5px; white-space: nowrap; }
 /* The card on the level a help opens: its icon on a large tile, like the button it lights up. */
-.help-intro .help-tile { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: rgba(242, 177, 36, .14);
+.help-intro .help-tile, .help-offer .help-tile { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: rgba(242, 177, 36, .14);
   border: 1px solid rgba(242, 177, 36, .45); box-shadow: 0 0 34px rgba(242, 177, 36, .25); }
-.help-intro .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
+/* Over the card's top edge, so opaque: the gold wash on the card's own colour, not the scene showing through. */
+.help-intro .help-tile, .help-offer .help-tile { background: linear-gradient(rgba(242, 177, 36, .14), rgba(242, 177, 36, .14)), #1a1e26; }
+.help-intro .help-tile .ico, .help-offer .help-tile .ico { width: 50px; height: 50px; color: var(--accent); }
 .help-intro .have { color: var(--accent) !important; font-weight: 700 !important; margin: 8px 0 0; }
 /* Past the ramp a hint is offered, not shown: a chip over the booster bar after a long idle (main.ts updateHand). */
 .btn.hint-chip { position: fixed; z-index: 6; left: 50%; bottom: calc(112px + var(--sab)); width: auto; margin: 0; padding: 8px 16px; border-radius: 999px;
@@ -156,6 +158,7 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .continue-note { margin-top: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.6; }
 .continue-note.still { color: var(--accent-hi); }
 .continue-note.hopeless { color: var(--muted); font-weight: 600; }
+/* A help the player can't afford (H10): its icon, big, in the help bar's gold. */
 @media (max-height: 660px) { .finale-note small { display: none; } }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }

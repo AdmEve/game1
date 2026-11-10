@@ -94,6 +94,22 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     return { found: false };
   });
   report(bay.found && /جای پارک/.test(bay.toast ?? '') && bay.pulse && !bay.hand, `level 13, lost without help but won with one more bay: the hint says so, the parking help pulses (${JSON.stringify(bay)})`);
+
+  // And with no parking help left and too few coins, the pulsing button is not a dead end (H10): a card offers one for
+  // a video (the browser's stub answers at once) or the shop, and the one it gives goes in at once.
+  const offer = await p.evaluate(async () => {
+    const rb = window.__rb, wait = (ms) => new Promise((r) => setTimeout(r, ms)), s = rb.session();
+    rb.save.boosters.bay = 0; rb.save.coins = 100;
+    const bays = s.s.bays.length;
+    document.querySelector('.bst.bst-bay').click(); await wait(500);
+    const card = document.querySelector('.modal-back:not(.out) .help-offer');
+    const buttons = [...(card?.querySelectorAll('.btn') ?? [])].map((x) => x.textContent.trim());
+    [...(card?.querySelectorAll('.btn') ?? [])].find((x) => x.textContent.includes('تبلیغ'))?.click();
+    for (let k = 0; k < 40 && document.querySelector('.modal-back:not(.out) .help-offer'); k++) await wait(100);
+    return { card: !!card, buttons, gone: !document.querySelector('.modal-back:not(.out) .help-offer'), bays: [bays, s.s.bays.length], left: rb.save.boosters.bay, coins: rb.save.coins, modal: rb.input().modalOpen };
+  });
+  report(offer.card && offer.buttons.length === 3 && offer.gone && offer.bays[1] === offer.bays[0] + 1 && offer.left === 0 && offer.coins === 100 && !offer.modal,
+    `no parking help and 100 coins: a card offers one (video, shop, not now); the video's goes in at once (${JSON.stringify(offer)})`);
   report(!errors.length, `no page errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 2).join(' | ') : ''}`);
   console.log(fails ? `${fails} failure(s)` : 'all ok');
   await b.close();

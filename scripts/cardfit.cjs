@@ -16,6 +16,8 @@ const CARDS0 = [
   ['home (finished)', (r) => { r.save.level = r.levels.length; r.save.seen.finale = true; r.cards.home(); }],
   ['finale', (r) => r.cards.finale()],
   // The metro card with the whole line ridden this month (its header says so instead of «تا ایستگاه بعد»).
+  // A help with none left and too few coins: a video, the shop, or not now (H10).
+  ['help offer', (r) => { r.save.coins = 120; r.cards.helpOffer('bay'); }],
   ['pass (end of line)', (r) => { r.save.pass = { month: new Date().toISOString().slice(0, 7), punches: 41, free: [], prem: [], premium: false }; r.cards.pass(); }],
   ['pause', (r) => r.cards.pause()],
   ['levels', (r) => r.cards.levels()],
