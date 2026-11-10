@@ -564,3 +564,21 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 @keyframes buying { from { transform: scale(1); } to { transform: scale(.97); } }
 .packs-wait { color: var(--muted) !important; font-size: 13px; text-align: center; margin: 14px 0 6px !important; }
 .reduce-motion .pack.buying { animation: none; }
+
+/* J6: this level's special rules as chips on the pause card, and «راهنمای بازی». */
+.rules-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 2px; }
+.rules-row small { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; }
+.btn.rule-chip { width: auto; margin: 0; padding: 6px 14px; border-radius: 999px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(242, 177, 36, .1); border-color: rgba(242, 177, 36, .4); color: #ffd166; }
+.btn.rule-chip .emo { width: 18px; height: 18px; }
+.guide h3 { margin: 16px 0 8px; font-size: 15px; color: var(--accent); text-align: right; }
+.guide ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; text-align: right; }
+.guide li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; font-size: 14px; line-height: 1.75; color: var(--muted);
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 12px; }
+.guide li b { display: block; color: #fff; font-size: 14.5px; }
+.guide .gi { flex: none; width: 32px; height: 32px; margin-top: 2px; border-radius: 10px; display: grid; place-items: center; background: rgba(242, 177, 36, .12); color: var(--accent); }
+.guide .gi .ico { width: 20px; height: 20px; }
+.guide .gi .emo { width: 22px; height: 22px; }
+.guide .ahead { margin: 14px 0 0; font-size: 13px; }
+.guide .gi.n { font-weight: 800; font-size: 15px; }
+.card.guide-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }

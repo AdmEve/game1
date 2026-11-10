@@ -1,6 +1,7 @@
 /** Meta screens: the shop «دکه», the daily gift calendar and chapter chests. */
 import { coin } from '../audio';
 import { PRODUCTS } from '../config';
+import { helpOpen } from '../game/helps';
 import { haptic } from '../haptics';
 import { buy, ensureBazaar, iapAvailable, iapConfigured, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
 import { persist, save } from '../save';
@@ -160,6 +161,49 @@ const INTROS = {
 export type IntroKind = keyof typeof INTROS;
 /** A mechanic's short name (for pointing at it on the board after its card). */
 export function introTitle(kind: IntroKind): string { return INTROS[kind].title; }
+/** Its picture, for the pause card's chips. */
+export function introIcon(kind: IntroKind): string { return INTROS[kind].icon; }
+/** In the order the Journey brings them. */
+const RULES: IntroKind[] = ['cover', 'broken', 'vip', 'oddEven', 'courier', 'officer', 'cart', 'wedding', 'granny', 'tunnel'];
+
+/**
+ * A rule read again, from the pause card: Mash Rahim's card without «جدید!», with «نشونم بده» (back to the level,
+ * the rule pointed at on the board) and «برگرد» (to the pause card). Every rule is shown once, at its first level;
+ * a player back after a week has no other way to it (BEST_IN_MARKET_PLAN J6).
+ */
+export function showRule(kind: IntroKind, show: () => void) {
+  const it = INTROS[kind];
+  const c = h('div', 'intro rule');
+  c.innerHTML = `<div class="burst">${emo(it.icon, 'emo huge')}</div><h2>${it.title}</h2>
+    <div class="speech with-face">${RAHIM('sm')}<div><span class="who">مش‌رحیم:</span> ${it.text}</div></div>`;
+  const close = modal(c, 'pop');
+  c.append(button('نشونم بده', 'primary big', () => { close(); show(); }));
+  c.append(asBack(button('برگرد', 'ghost', close)));
+}
+
+/**
+ * «راهنمای بازی» (Settings): the basics (the level-start tips), the helps opened so far, and every special rule met so
+ * far in full, with how many are still ahead (unmet ones stay a surprise).
+ */
+export function showGuide(tips: readonly string[]) {
+  const c = h('div', 'guide');
+  c.innerHTML = `<h2>${icon('book')} راهنمای بازی</h2>`;
+  const sec = (title: string, items: string[]) => {
+    if (!items.length) return;
+    c.append(h('h3', '', title), h('ul', '', items.join('')));
+  };
+  sec('پایه', tips.map((t, i) => `<li><span class="gi n">${fa(i + 1)}</span><span>${t}</span></li>`));
+  sec('کمک‌ها', BOOSTERS.filter((b) => helpOpen(b.id, save.level)).map((b) => `<li><span class="gi">${icon(b.icon)}</span><span><b>${b.name}</b>${b.hint}.</span></li>`));
+  const met = RULES.filter((k) => save.seen[k]);
+  sec('قانون‌های ویژه', met.map((k) => `<li><span class="gi">${emo(INTROS[k].icon, 'emo sm')}</span><span><b>${INTROS[k].title}</b>${INTROS[k].text}</span></li>`));
+  const ahead = RULES.length - met.length;
+  if (ahead) c.append(h('p', 'ahead', ahead === RULES.length ? 'قانون‌های ویژه کم‌کم تو مرحله‌های بعد میان!' : `${fa(ahead)} قانون ویژه‌ی دیگه تو مرحله‌های بعد منتظرته!`));
+  const close = modal(c, 'pop guide-card');
+  // A long card: it scrolls, with its close always in reach at the bottom (as the privacy policy).
+  const foot = h('div', 'privacy-foot');
+  foot.append(asBack(button('بستن', 'primary big', close)));
+  c.append(foot);
+}
 
 /** Mash Rahim introduces a new mechanic. */
 export function showIntro(kind: keyof typeof INTROS): Promise<void> {

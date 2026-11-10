@@ -28,7 +28,7 @@ import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
 import { icon } from './ui/icons';
-import { introTitle, maybeDaily, showChest, showIntro, showShop, type IntroKind } from './ui/meta';
+import { introIcon, introTitle, maybeDaily, showChest, showGuide, showIntro, showRule, showShop, type IntroKind } from './ui/meta';
 import { claimable, newlyReached, showAchievements } from './ui/achieve';
 import { FREE_LEVELS, fullAt, lives, loseLife } from './lives';
 import { askNotifications, planReminders, syncReminders } from './notify';
@@ -351,6 +351,17 @@ function pumpNotes(now: number) {
   noteReadyAt = now + n.ms + (n.banner ? 100 : 350);
 }
 function nudgeHand() { hand.classList.remove('nudge'); void hand.offsetWidth; hand.classList.add('nudge'); haptic('light'); }
+
+/** The special rules a level has, in the Journey's order (for event intros and the pause card's chips). */
+function levelRules(level: Level): IntroKind[] {
+  const v = level.vehicles, o = level.obstacles ?? [];
+  const has: [IntroKind, boolean][] = [
+    ['cover', v.some((x) => x.covered)], ['broken', v.some((x) => x.wait)], ['vip', !!level.vip?.length], ['oddEven', !!level.oddEven],
+    ['courier', v.some((x) => x.kind === 'bike')], ['officer', !!level.officer], ['cart', o.some((x) => x.kind === 'cart')],
+    ['wedding', v.some((x) => x.wedding)], ['granny', !!level.granny?.length], ['tunnel', o.some((x) => x.kind === 'tunnel')],
+  ];
+  return has.filter(([, on]) => on).map(([k]) => k);
+}
 
 let markAt: THREE.Vector3 | null = null, markUntil = 0;
 function pointAt(kind: IntroKind, ms = 2800) {
@@ -754,14 +765,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   if (swoop) introSwoop();
   if (custom) {
     // Event and daily levels may hold mechanics the player hasn't reached yet: explain the first one.
-    const v = level.vehicles, o = level.obstacles ?? [];
-    const has: [NonNullable<Level['intro']>, boolean][] = [
-      ['cover', v.some((x) => x.covered)], ['broken', v.some((x) => x.wait)], ['vip', !!level.vip?.length], ['oddEven', !!level.oddEven],
-      ['courier', v.some((x) => x.kind === 'bike')], ['officer', !!level.officer], ['cart', o.some((x) => x.kind === 'cart')],
-      ['wedding', v.some((x) => x.wedding)], ['granny', !!level.granny?.length], ['tunnel', o.some((x) => x.kind === 'tunnel')],
-    ];
-    const unseen = has.find(([k, on]) => on && !save.seen[k]);
-    if (unseen) { modalOpen = true; void showIntro(unseen[0]).then(() => { save.seen[unseen[0]] = true; persist(); modalOpen = false; pointAt(unseen[0]); }); }
+    const unseen = levelRules(level).find((k) => !save.seen[k]);
+    if (unseen) { modalOpen = true; void showIntro(unseen).then(() => { save.seen[unseen] = true; persist(); modalOpen = false; pointAt(unseen); }); }
     return;
   }
   if (n === ch.from && n > 0 && !save.seen['ch' + ch.n]) {
@@ -1204,6 +1209,15 @@ function showSettings(home = false) {
     row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
     row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', async () => { close(); if (await giveUp()) goHome(); else modalOpen = false; }));
     nav.append(row2);
+    // This level's special rules, to read again (each is explained once, at its first level): J6.
+    const rules = session ? levelRules(session.level) : [];
+    if (rules.length) {
+      const rr = h('div', 'rules-row', '<small>قانون‌های این مرحله</small>');
+      for (const k of rules) {
+        rr.append(button(`${emo(introIcon(k), 'emo xs')}<span>${introTitle(k)}</span>`, 'rule-chip', () => showRule(k, () => { close(); modalOpen = false; pointAt(k, 3600); })));
+      }
+      nav.append(rr);
+    }
     c.append(nav);
     c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
   }
@@ -1280,6 +1294,8 @@ function showSettings(home = false) {
       try { await navigator.clipboard.writeText(text); note('گزارش کپی شد'); } catch { note('کپی نشد'); }
     }));
   }
+  // The basics, the helps and every special rule met so far (J6).
+  c.append(button(`${icon('book')} راهنمای بازی`, 'ghost errs guide-btn', () => showGuide(TIPS)));
   // Progress to or from another phone (a code; Bazaar has no cloud save).
   c.append(button(`${icon('transfer')} انتقال پیشرفت به گوشی دیگه`, 'ghost errs transfer-btn', () => showTransfer(levels.length)));
   // The privacy policy (the store listing's text, store/privacy-fa.md).
@@ -1615,7 +1631,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

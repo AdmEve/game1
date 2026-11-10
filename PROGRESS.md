@@ -424,3 +424,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   home. Before, they were only reachable from inside a level.
 - Purchases and reward videos now say what happened: a failed purchase says to check the internet and Bazaar, a good
   one says what arrived, no ad available says so, and the coin packs reconnect to Bazaar if it was offline at start.
+- Rules on hand: the pause card lists the special rules of the level you're in (tap one to read Mash Rahim's
+  explanation again and have it pointed out on the board), and Settings has a «راهنمای بازی» with the basics, the
+  helps and every rule met so far.
