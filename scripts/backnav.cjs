@@ -47,6 +47,11 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
   await p.keyboard.press('Escape'); await wait(100);
   s = await state(); check('back on home: stays, shows a note', s.note && s.cards.some((c) => c.includes('home-card')), s);
   await wait(2100); // past the double-back window, so the next back on home doesn't count as a second press
+  // Home's gear: the settings alone (no pause controls); back closes them to home.
+  await p.click('.home-gear'); await wait(500);
+  s = await state(); check('home gear: settings over home', s.cards.some((c) => c.includes('home-settings')) && !(await p.$('.home-settings .pause-nav')), s);
+  await p.keyboard.press('Escape'); await wait(400);
+  s = await state(); check('back closes settings to home', !s.cards.some((c) => c.includes('home-settings')) && s.cards.some((c) => c.includes('home-card')), s);
   // Win card → Home.
   await p.click('.home-card .btn.primary.huge'); await wait(900);
   await p.evaluate(async () => {

@@ -1179,31 +1179,34 @@ function goHome() { void goLevel(undefined, undefined, false, null, showHome); }
 
 /**
  * The pause card: resume, restart, levels and home, then the settings. Opened by the gear, Android's back
- * button during play, and on coming back to a level in progress from another app.
+ * button during play, and on coming back to a level in progress from another app. From home's gear (`home`), the
+ * settings alone, under «تنظیمات», closing back to home.
  */
 /** Closes the pause card while it is open. */
 let pauseClose: (() => void) | null = null;
-function showSettings() {
+function showSettings(home = false) {
   modalOpen = true;
   craneMode = false; hud.active(null);
   const c = h('div', 'settings');
-  c.innerHTML = `<h2>${icon('pause')} مکث</h2>`;
-  const nav = h('div', 'pause-nav');
-  const resume = asBack(button(`${icon('play')} ادامه`, 'primary big', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
-  nav.append(resume);
-  const row2 = h('div', 'pause-row');
-  row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', async () => {
-    close();
-    if (!(await giveUp())) { modalOpen = false; return; }
-    // The life it cost may have been the last one.
-    if (!rush && current >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
-    void goLevel(current, rush ?? undefined, true, event);
-  }));
-  row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
-  row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', async () => { close(); if (await giveUp()) goHome(); else modalOpen = false; }));
-  nav.append(row2);
-  c.append(nav);
-  c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
+  c.innerHTML = home ? `<h2>${icon('settings')} تنظیمات</h2>` : `<h2>${icon('pause')} مکث</h2>`;
+  if (!home) {
+    const nav = h('div', 'pause-nav');
+    const resume = asBack(button(`${icon('play')} ادامه`, 'primary big', () => { close(); modalOpen = false; if (needsRestart && session && session.s.exits === 0) void goLevel(current); }));
+    nav.append(resume);
+    const row2 = h('div', 'pause-row');
+    row2.append(button(`${icon('restart')}<span>از اول</span>`, 'ghost', async () => {
+      close();
+      if (!(await giveUp())) { modalOpen = false; return; }
+      // The life it cost may have been the last one.
+      if (!rush && current >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) { void goLevel(current, undefined, false, null, showHome); return; }
+      void goLevel(current, rush ?? undefined, true, event);
+    }));
+    row2.append(button(`${icon('map')}<span>مرحله‌ها</span>`, 'ghost', () => { close(); showLevels(); }));
+    row2.append(button(`${icon('home')}<span>خونه</span>`, 'ghost', async () => { close(); if (await giveUp()) goHome(); else modalOpen = false; }));
+    nav.append(row2);
+    c.append(nav);
+    c.append(h('h3', 'set-h', `${emo('⚙️', 'emo xs')} تنظیمات`));
+  }
   // Volumes: a slider each (zero is off).
   const slider = (label: string, key: 'musicVol' | 'sfxVol') => {
     const r = h('label', 'row slider', `<span>${label}</span>`);
@@ -1265,9 +1268,9 @@ function showSettings() {
   }
   qr.append(seg); c.append(qr);
   let needsRestart = false;
-  const closeCard = modal(c, 'pop pause-card');
+  const closeCard = modal(c, home ? 'pop pause-card home-settings' : 'pop pause-card');
   const close = () => { if (pauseClose === close) pauseClose = null; closeCard(); };
-  pauseClose = close;
+  if (!home) pauseClose = close;
   // Script errors seen on this phone, for testers to send.
   const errs = errors();
   if (errs.length) {
@@ -1308,6 +1311,13 @@ function showSettings() {
     if (taps === 7) { save.devUnlock = true; persist(); hud.toast('همه‌ی مرحله‌ها باز شد (حالت آزمایشی)'); }
   };
   c.append(ver);
+  // From home: a close in the card's corner (the card is taller than most screens); home is still open beneath.
+  if (home) {
+    const x = asBack(h('button', 'iconbtn card-x', icon('close')));
+    x.setAttribute('aria-label', 'بستن');
+    x.onclick = () => { click(); close(); };
+    c.prepend(x);
+  }
 }
 
 /** Level select: every chapter's levels; unlocked ones can be replayed. */
@@ -1367,6 +1377,11 @@ function showHome() {
   });
   if (nb) c.querySelector('.chapter')!.before(nb);
   const close = modal(c, 'home-card');
+  // Settings from home (the HUD and its gear are hidden here): the gear in the corner it has in play.
+  const gear = h('button', 'iconbtn home-gear', icon('settings'));
+  gear.setAttribute('aria-label', 'تنظیمات');
+  gear.onclick = () => { click(); showSettings(true); };
+  c.closest('.modal-back')!.append(gear);
 
   const gar = button(`${icon('wrench')}<span>گاراژ من<small>${icon('key')} ${fa(save.garage.keys)} سوئیچ</small></span>`, 'garage-btn', () => {
     close(); showGarage(() => showHome());
@@ -1600,7 +1615,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

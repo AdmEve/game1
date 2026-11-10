@@ -30,6 +30,8 @@ const CARDS0 = [
   // The metro card with the whole line ridden this month (its header says so instead of «تا ایستگاه بعد»).
   ['pass (end of line)', (r) => { r.save.pass = { month: new Date().toISOString().slice(0, 7), punches: 41, free: [], prem: [], premium: false }; r.cards.pass(); }],
   ['pause', (r) => r.cards.pause()],
+  // Settings from home's gear: no pause controls, a close in the corner (H11).
+  ['settings (home)', (r) => { r.cards.home(); r.cards.settings(); }],
   ['levels', (r) => r.cards.levels()],
   ['shop', (r) => r.cards.shop()],
   ['garage', (r) => r.cards.garage()],

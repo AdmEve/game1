@@ -324,7 +324,7 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .card.home-card { width: min(380px, 100%); height: 100%; display: flex; flex-direction: column; }
 .card.home-card > .home { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .home > .logo { margin: auto 0; flex: 0 1 auto; min-height: 0; overflow: hidden; }
-.home > .radio { flex: none; margin-bottom: 8px; }
+.home > .radio { flex: none; margin-bottom: 8px; margin-top: 52px; } /* below the settings gear (tall screens only show it) */
 @media (max-height: 780px) {
   .home > .radio { display: none; }
   .logo .sign { font-size: 54px; }
@@ -549,3 +549,11 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .transfer-ok .swap .to span { color: var(--accent); }
 .transfer-ok .swap i .ico { width: 20px; height: 20px; color: var(--muted); }
 .transfer-ok .warn { color: #ff8a87; font-weight: 700; margin-top: -4px; }
+
+/* Settings from home: the gear in the corner it has in play (mirrored for the left-handed layout). */
+.home-gear { position: absolute; top: calc(10px + var(--sat)); right: 10px; z-index: 2; display: grid; place-items: center; }
+.left-hand .home-gear { right: auto; left: 10px; }
+.modal-back.out .home-gear { pointer-events: none; }
+.home-settings .settings { position: relative; }
+.home-settings .card-x { position: absolute; top: -6px; left: -4px; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; box-shadow: none; }
+.home-settings .card-x .ico { width: 20px; height: 20px; }

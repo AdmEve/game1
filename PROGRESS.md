@@ -420,3 +420,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Progress to a new phone: Settings → «انتقال پیشرفت به گوشی دیگه» gives a code with all your progress (send it to
   yourself, e.g. Telegram Saved Messages); on the new phone, «وارد کردن کد» shows both phones' progress and swaps
   after you say yes. Bazaar purchases come back from your Bazaar account as before.
+- Settings from the home screen: a gear in the top corner (same place as in play) opens the settings without leaving
+  home. Before, they were only reachable from inside a level.
