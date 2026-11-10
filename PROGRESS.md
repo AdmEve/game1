@@ -466,3 +466,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   comment, not for five stars.
 - The characters react: lose a boss level and Mr. Ajool gloats on the lose card (a line per chapter, in his voice);
   beat the rush hour and Ms. Sabouri cheers over the agency radio.
+- Stuck on a level: lose the same level twice in a row (past level 8) and Mash Rahim's line on the lose card points to
+  the hint; in the next try the «راهنما؟» chip comes after 6 seconds instead of 20.

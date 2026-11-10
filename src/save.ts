@@ -48,6 +48,8 @@ export interface Save {
   rateLast: number;
   /** A high point that came with another card, to ask about after the next win without one. */
   ratePending: HighPoint | null;
+  /** Losses in a row on one Journey level, `lv` 0-based (C14: Mash Rahim points to the hint from the second). */
+  stuck: { lv: number; n: number };
   /** «گاراژ من»: car keys and the classics restored so far. */
   garage: { keys: number; restored: string[] };
   /** Testers: every level selectable. */
@@ -100,6 +102,7 @@ const fresh = (): Save => ({
   rateAsks: 0,
   rateLast: 0,
   ratePending: null,
+  stuck: { lv: -1, n: 0 },
   garage: { keys: 0, restored: [] },
   rush: { day: '', streak: 0 },
   endless: 0,

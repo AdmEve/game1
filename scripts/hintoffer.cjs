@@ -1,6 +1,6 @@
 // Hints on request (BEST_IN_MARKET_PLAN C3): past the ramp nothing shows unasked (no hand after 12 s idle), a
 // «راهنما؟» chip after 20 s, the hand on the hinted car once it's tapped, and both gone after a move; on the ramp
-// (levels 1–8) the hand still comes by itself after 10 s.
+// (levels 1–8) the hand still comes by itself after 10 s; lost twice in a row on a level, the chip comes after 6 s (C14).
 //   npx vite preview --port 4173 & URL=http://127.0.0.1:4173/ node scripts/hintoffer.cjs [out-dir]
 const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:4173/';
@@ -47,6 +47,13 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   // A move: both gone, and the idle clock starts over.
   s = await p.evaluate(async (i) => { const rb = window.__rb; rb.session().tap(i); await rb.advance(0.3, false); return window.__state(); }, asked.hint);
   report(!s.hand && !s.chip, `after the move: no hand, no chip (${JSON.stringify(s)})`);
+
+  // Stuck (C14): lost level 13 twice in a row, the chip comes after 6 s, not 20.
+  await p.evaluate(() => { window.__rb.save.stuck = { lv: 12, n: 2 }; window.__start(12); });
+  s = await p.evaluate(async () => { await window.__idle(4000); return window.__state(); });
+  const s6 = await p.evaluate(async () => { await window.__idle(6500); return window.__state(); });
+  report(!s.chip && s6.chip, `level 13 lost twice in a row: no chip at 4 s, the chip at 6.5 s (${JSON.stringify({ at4: s.chip, at6: s6.chip })})`);
+  await p.evaluate(() => { window.__rb.save.stuck = { lv: -1, n: 0 }; });
 
   // The ramp: level 8 still shows the hand by itself after 10 s.
   await p.evaluate(() => window.__start(7));

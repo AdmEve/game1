@@ -263,8 +263,13 @@ const safe = { top: 132, bottom: 128 };
 const hand = h('div', 'hand', emo('👆', 'emo'));
 /** Past the ramp, a long idle brings this offer instead of the answer. */
 const HINT_OFFER_MS = 20000;
-const hintChip = button(`${icon('bulb')} راهنما؟`, 'hint-chip', () => { hintAsked = performance.now(); hintChip.classList.remove('show'); haptic('light'); });
+const hintChip = button(`${icon('bulb')} راهنما؟`, 'hint-chip', () => { hintAsked = performance.now(); hintedRun = true; hintChip.classList.remove('show'); haptic('light'); });
 let hintAsked = 0; // when the player asked for a hint (0: not asked); any move after it ends the request
+let hintedRun = false; // a hint was asked for in this attempt at the level
+let lostRun = false; // this attempt has already been counted as a loss (a continue bought, then lost again)
+/** Stuck on a level (C14): from the second loss in a row there, the hint is offered after this, not 20 s. */
+const STUCK_HINT_MS = 6000;
+const stuckHere = () => !rush && !event && save.stuck.lv === current && save.stuck.n >= 2;
 // Level 1, the first time: the board dims around the suggested car for the first two taps, and a tap anywhere
 // else is gently refused (the hand bounces). The first moves are shown, not explained.
 const spot = h('div', 'spot');
@@ -313,8 +318,9 @@ function updateHand() {
     else hud.toast('از اینجا دیگه راهی نیست؛ بهتره مرحله رو از اول شروع کنی.', 3400);
   }
   if (hintAsked && now - hintAsked > 3000 && hintFor < 0) { hintAsked = 0; hud.toast('این‌بار راهنمایی پیدا نشد؛ شاید بهتره مرحله رو از اول شروع کنی.', 3200); }
-  // Just back from a rewind (they lost from here a moment ago): the offer comes after 4 s, not 20.
-  const offerAfter = session.taps === rewoundAt ? 4000 : HINT_OFFER_MS;
+  // Just back from a rewind (they lost from here a moment ago): the offer comes after 4 s, not 20; stuck on this level
+  // (lost here twice in a row, C14), after 6 s.
+  const offerAfter = session.taps === rewoundAt ? 4000 : stuckHere() ? STUCK_HINT_MS : HINT_OFFER_MS;
   hintChip.classList.toggle('show', !ramp && !spotOn && !hintAsked && idle > offerAfter);
   const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || (ramp && idle > 10000) || !!hintAsked;
   if (!want) {
@@ -732,6 +738,8 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   modalOpen = false;
   helped = false;
   rewoundAt = -1;
+  hintedRun = false;
+  lostRun = false;
   session = new Session(level, {
     queueLeft: (q, total) => hud.setQueue(q, total),
     toast: (t) => hud.toast(t),
@@ -1081,6 +1089,7 @@ function showWin() {
   const station = !replay && punch();
   const stars = replay ? 0 : starsFor(lvl?.tag);
   count(save.lvStats, n, 'win');
+  if (save.stuck.lv === n) save.stuck = { lv: -1, n: 0 };
   save.streak = nextStreak(save.streak, 'won', !replay);
   if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
@@ -1246,6 +1255,9 @@ function showLose(limit?: 'time' | 'moves') {
   hud.clearToast(); // the in-level advice (e.g. «آخرین جای پارک!») is over
   save.stats.losses++;
   if (!rush && !event) count(save.lvStats, current, 'loss');
+  // Losses in a row on this Journey level (C14: from the second, Mash Rahim points to the hint).
+  if (!rush && !event && !lostRun) save.stuck = save.stuck.lv === current ? { lv: current, n: save.stuck.n + 1 } : { lv: current, n: 1 };
+  lostRun = true;
   save.ratePending = null; // a high point waiting for the rating ask has passed (rating.ts)
   countMissions({ won: false, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
   persist();
@@ -1270,9 +1282,13 @@ function showLose(limit?: 'time' | 'moves') {
   // Only mention continuing when the card offers it.
   const riskWhy = (offer: boolean) => (offer ? 'ادامه بدی، می‌مونه؛ از اول، می‌سوزه.' : 'از اول شروع کنی، از صفر می‌شمره.');
   const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${riskWhy(canBay)}</small></div>` : '';
-  // His own level lost: Mr. Ajool gloats (L3), in his voice (talk.ts).
+  // Stuck (C14): lost here twice in a row past the ramp, without asking for a hint this time: Mash Rahim points to it
+  // (the chip then comes after 6 s, not 20). Every other loss after that, so it doesn't nag.
+  const stuckTip = !rush && !event && current >= MERCY_LEVELS && save.stuck.lv === current && save.stuck.n >= 2 && save.stuck.n % 2 === 0 && !hintedRun;
+  // His own level lost: Mr. Ajool gloats (L3), in his voice (talk.ts); Rahim's tip, when there is one, comes instead.
   const bossLost = !rush && !event && levels[current]?.tag === 'boss';
-  const gloat = bossLost ? `<div class="says bad">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(current).n - 1) % BOSS_LINES.length].gloat}</div></div>` : '';
+  const gloat = stuckTip ? `<div class="says">${RAHIM('sm')}<div><b>مش‌رحیم:</b> گیر کردی جوون؟ دفعه‌ی بعد یه لحظه صبر کن و «راهنما؟» رو بزن.</div></div>`
+    : bossLost ? `<div class="says bad">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(current).n - 1) % BOSS_LINES.length].gloat}</div></div>` : '';
   c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${gloat}${risk}`;
   const close = modal(c, 'pop');
   // Which tap lost it (C12): the solver looks back over the level in the worker; the line appears when it knows,
