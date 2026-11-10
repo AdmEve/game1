@@ -36,7 +36,8 @@ const SEEN = ['spot', 'help-bay', 'help-crane', 'help-whistle', 'cover', 'broken
     r.cards.welcomeBack(5);
     const sp = document.querySelector('.modal-back:not(.out) .speech');
     const rest = () => [...sp.querySelectorAll('.tw-rest')].reduce((n, x) => n + x.textContent.length, 0);
-    const box = () => { const q = sp.getBoundingClientRect(); return `${Math.round(q.width)}x${Math.round(q.height)}`; };
+    // Layout size (offset*: unaffected by the card's pop-in scale, which a slow machine may still be running).
+    const box = () => `${sp.offsetWidth}x${sp.offsetHeight}`;
     const seen = [];
     const t0 = performance.now();
     for (let k = 0; k < 40; k++) {
@@ -48,7 +49,7 @@ const SEEN = ['spot', 'help-bay', 'help-crane', 'help-whistle', 'cover', 'broken
     return { seen, tapped: !!seen.tapped, saws: window.__saws, text: sp.textContent.replace(/\s+/g, ' ').trim() };
   }, opts);
   const a = await follow({ voices: true, still: false });
-  const rests = a.seen.map((s) => s.rest), boxes = new Set(a.seen.slice(5).map((s) => s.box));
+  const rests = a.seen.map((s) => s.rest), boxes = new Set(a.seen.map((s) => s.box));
   report(rests[0] > 40 && rests.some((n, i) => i && n < rests[i - 1] && n > 0) && rests[rests.length - 1] === 0, `the line writes itself in (${rests.filter((_, i) => i % 6 === 0).join(' → ')} letters left)`);
   report(boxes.size === 1, `the bubble keeps its size as it fills (${[...boxes].join(', ')})`);
   report(a.saws >= 8, `Mash Rahim's voice speaks along (${a.saws} syllables)`);
