@@ -408,3 +408,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   only shook before). On-screen notes are solid so they read over anything.
 - Floating combo texts («افسانه‌ای!») no longer print into each other or under the counters at the top of the screen;
   a finished daily rush says so when tapped.
+- Smarter hints when you're stuck: on the hard levels, when no move can win any more, the hint used to say "maybe
+  start over" (which costs a life). It now tells the truth: in 86% of those positions one more parking spot still
+  wins, so it says so and the «جای پارک» help pulses; if even that can't save it, it says the level is lost.

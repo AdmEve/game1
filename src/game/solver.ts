@@ -1,5 +1,5 @@
 /** Solvability and difficulty analysis for levels. */
-import { KIND, canExit, cloneState, grid, startState as newState, tap, type Level, type State } from './rules';
+import { KIND, addBay, canExit, cloneState, grid, startState as newState, tap, type Level, type State } from './rules';
 
 const key = (s: State) =>
   s.inLot.map((x) => (x ? 1 : 0)).join('') + '|' + s.bays.map((b) => (b ? `${b.color}${b.boarded}/${b.cap}` : '-')).sort().join(',') + '|' + s.parity + s.sinceSwitch + s.axis + s.carts.map((c) => `${c.col},${c.row}${c.dir[0]}`).join(';');
@@ -87,4 +87,21 @@ export function playRates(level: Level, runs = 300, seed = 1) {
   let rw = 0, gw = 0;
   for (let i = 0; i < runs; i++) { if (play(false)) rw++; if (play(true)) gw++; }
   return { random: rw / runs, greedy: gw / runs };
+}
+
+/** What the hint can say about a position. 'bay': lost as it stands, but one more parking bay still wins it. */
+export type HintVerdict = 'ok' | 'bay' | 'lost' | 'unsure';
+/**
+ * The hint for a position: the next move of a win, or why there is none. A search that ends inside its budget has
+ * seen every line, so «lost» is certain; and 86% of lost positions on levels 9+ are still won with one more bay
+ * (scripts/hintbudget.ts), so the player is told that rather than to start over (BEST_IN_MARKET_PLAN C8).
+ */
+export function hintFor(level: Level, s: State, limit: number, maxBays: number): { move: number; verdict: HintVerdict } {
+  const r = solve(level, limit, s);
+  if (r.solvable) return { move: r.solution[0], verdict: 'ok' };
+  if (r.nodes >= limit) return { move: -1, verdict: 'unsure' };
+  if (s.bays.length >= maxBays) return { move: -1, verdict: 'lost' };
+  const more = cloneState(s); addBay(more);
+  const b = solve(level, limit, more);
+  return { move: -1, verdict: b.solvable ? 'bay' : b.nodes >= limit ? 'unsure' : 'lost' };
 }

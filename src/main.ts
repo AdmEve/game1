@@ -291,6 +291,15 @@ function updateHand() {
   const spotOn = spotWanted(), ramp = current < MERCY_LEVELS && !rush && !event;
   if (hintAsked && session.lastInput > hintAsked) hintAsked = 0; // a move since: that hint is done
   // Asked, but the search found nothing for this position (or gave up): say so once rather than leave them waiting.
+  // Asked, and the search says there's no winning move from here: say what's true. Most such positions are still won
+  // with one more bay (scripts/hintbudget.ts: 133 of 154), so that comes first, with the parking help pulsing; a
+  // position lost even so is said plainly; only a search that ran out of budget keeps the "maybe" (BEST_IN_MARKET_PLAN C8).
+  const verdict = hintAsked ? session.hintVerdict() : null;
+  if (hintAsked && (verdict === 'bay' || verdict === 'lost')) {
+    hintAsked = 0;
+    if (verdict === 'bay') { hud.toast('بدون کمک دیگه راهی نیست؛ با یه «جای پارک» هنوز می‌شه برد!', 3600); hud.bump('bay'); }
+    else hud.toast('از اینجا دیگه راهی نیست؛ بهتره مرحله رو از اول شروع کنی.', 3400);
+  }
   if (hintAsked && now - hintAsked > 3000 && hintFor < 0) { hintAsked = 0; hud.toast('این‌بار راهنمایی پیدا نشد؛ شاید بهتره مرحله رو از اول شروع کنی.', 3200); }
   hintChip.classList.toggle('show', !ramp && !spotOn && !hintAsked && idle > HINT_OFFER_MS);
   const want = spotOn || (current < 3 && session.taps === 0) || (current < 3 && idle > 3500) || (ramp && idle > 10000) || !!hintAsked;

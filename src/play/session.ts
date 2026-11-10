@@ -15,7 +15,7 @@ import { granny, person, type Person } from '../render/people';
 import { Weather, wetten, type WeatherKind } from '../render/weather';
 import { BAY_D, BAY_W, LOT_Y, ROAD, buildWorld, buildWorldSteps, obstacleProp, type Layout, type WorldOpts } from '../render/world';
 import { bayWarning, confetti, coinBurst, lanePreview, puff, tapRing } from '../render/fx';
-import { solve } from '../game/solver';
+import { hintFor, type HintVerdict } from '../game/solver';
 
 const VISIBLE_QUEUE = 16;
 
@@ -34,28 +34,29 @@ let hintWorker: Worker | null | undefined;
 const PICK_INV = new THREE.Matrix4(), PICK_RAY = new THREE.Ray(), PICK_P = new THREE.Vector3(), PICK_BOX = new THREE.Box3();
 const PICK_PAD = new THREE.Vector3(0.1, 0.1, 0.1), PICK_CAND: [number, number][] = [], PICK_HITS: THREE.Intersection[] = [];
 let hintSeq = 0;
-const hintWaiting = new Map<number, { done: (move: number) => void; level: Level; s: State }>();
+type HintDone = (move: number, verdict: HintVerdict) => void;
+const hintWaiting = new Map<number, { done: HintDone; level: Level; s: State }>();
 /** The small main-thread search used when workers are unavailable. */
-const hintHere = (level: Level, s: State) => { const r = solve(level, 4000, s); return r.solvable ? r.solution[0] : -1; };
-function askHint(level: Level, s: State, done: (move: number) => void) {
+const hintHere = (level: Level, s: State) => hintFor(level, s, 4000, MAX_BAYS);
+function askHint(level: Level, s: State, done: HintDone) {
   if (hintWorker === undefined) {
     try {
       hintWorker = new Worker(new URL('../workers/hint.worker.ts', import.meta.url), { type: 'module' });
-      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number }>) => { hintWaiting.get(e.data.id)?.done(e.data.move); hintWaiting.delete(e.data.id); };
+      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number; verdict: HintVerdict }>) => { hintWaiting.get(e.data.id)?.done(e.data.move, e.data.verdict); hintWaiting.delete(e.data.id); };
       // A worker can also fail after it was created (older WebViews without module workers): answer whatever was
       // waiting here, and search on the main thread from now on, or the hint for that position would never come.
       hintWorker.onerror = () => {
         hintWorker = null;
         const waiting = [...hintWaiting.values()]; hintWaiting.clear();
-        for (const w of waiting) w.done(hintHere(w.level, w.s));
+        for (const w of waiting) { const h = hintHere(w.level, w.s); w.done(h.move, h.verdict); }
       };
     } catch { hintWorker = null; }
   }
-  if (!hintWorker) { done(hintHere(level, s)); return; }
+  if (!hintWorker) { const h = hintHere(level, s); done(h.move, h.verdict); return; }
   const id = ++hintSeq;
   hintWaiting.set(id, { done, level, s });
   const { level: _l, ...plain } = s;
-  hintWorker.postMessage({ id, level, state: { ...plain, level: null }, limit: 60_000 });
+  hintWorker.postMessage({ id, level, state: { ...plain, level: null }, limit: 60_000, maxBays: MAX_BAYS });
 }
 export const MAX_BAYS = 6;
 
@@ -699,9 +700,12 @@ export class Session {
     if (this.hintFor === at) return this.hintMove;
     if (this.hintAsked === at) return -1;
     this.hintAsked = at;
-    askHint(this.level, this.s, (move) => { if (this.hintAsked === at) { this.hintFor = at; this.hintMove = move; } });
+    askHint(this.level, this.s, (move, verdict) => { if (this.hintAsked === at) { this.hintFor = at; this.hintMove = move; this.hintSays = verdict; } });
     return -1;
   }
+  /** Why the hint for the current position is what it is, once its search has answered (null before). */
+  hintVerdict(): HintVerdict | null { return this.hintFor === this.stateKey() ? this.hintSays : null; }
+  private hintSays: HintVerdict = 'unsure';
   private hintFor = '';
   private hintAsked = '';
   private hintMove = -1;

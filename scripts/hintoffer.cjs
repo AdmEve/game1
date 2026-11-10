@@ -70,6 +70,30 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     return { ...window.__state(), cards: document.querySelectorAll('.modal-back:not(.out)').length };
   });
   report(!s.chip && !s.cards, `level 13, 25 s on the pause card, back to the level: no chip yet (${JSON.stringify(s)})`);
+
+  // Asked where no move wins any more, but one more bay would (86% of lost positions on levels 9+): it says so and
+  // the parking help pulses, rather than «maybe start over» (that costs a life from level 13).
+  const bay = await p.evaluate(async () => {
+    const rb = window.__rb, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const verdictOf = async () => { for (let k = 0; k < 60; k++) { const s = rb.session(); s.hint(); const v = s.hintVerdict(); if (v) return v; await wait(100); await rb.advance(0.02, false); } return null; };
+    for (let k = 1; k < 8; k++) for (let w = 0; w < 6; w++) {
+      window.__start(12);
+      const s = rb.session(), sol = rb.solve(s.level);
+      for (let j = 0; j < k && j < sol.length; j++) { s.tap(sol[j]); await rb.advance(0.9, false); }
+      const wrong = s.s.inLot.map((x, i) => i).filter((i) => s.s.inLot[i] && i !== sol[k] && rb.route(i).end === 'out')[w];
+      if (wrong === undefined) continue;
+      s.tap(wrong); await rb.advance(1.2, false);
+      if (s.s.over || document.querySelector('.result')) continue;
+      if ((await verdictOf()) !== 'bay') continue;
+      await window.__idle(21000);
+      if (!window.__state().chip) return { found: true, chip: false };
+      document.querySelector('.hint-chip').click();
+      for (let t = 0; t < 30; t++) { await wait(100); await rb.advance(0.02, false); const tx = document.querySelector('.hud .toast.show')?.textContent; if (tx) return { found: true, chip: true, toast: tx, pulse: document.querySelector('.bst-bay')?.classList.contains('pulse'), hand: window.__state().hand }; }
+      return { found: true, chip: true, toast: null };
+    }
+    return { found: false };
+  });
+  report(bay.found && /جای پارک/.test(bay.toast ?? '') && bay.pulse && !bay.hand, `level 13, lost without help but won with one more bay: the hint says so, the parking help pulses (${JSON.stringify(bay)})`);
   report(!errors.length, `no page errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 2).join(' | ') : ''}`);
   console.log(fails ? `${fails} failure(s)` : 'all ok');
   await b.close();
