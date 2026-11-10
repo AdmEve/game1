@@ -54,6 +54,10 @@ const CARDS0 = [
   ['chapter card', (r) => { delete r.save.seen.ch2; r.save.level = 30; r.startLevel(30, undefined, false); }],
   ['boss card', (r) => { delete r.save.seen.boss29; r.save.level = 29; r.startLevel(29, undefined, false); }],
   ['lose (bays)', (r) => { r.save.level = 40; r.save.streak = 3; r.startLevel(40, undefined, false); r.cards.lose(); }],
+  // With the losing move found (C12): the line the solver adds as the card opens (placed here by hand: no game played).
+  ['lose (with review)', (r) => { r.save.level = 40; r.save.streak = 3; r.startLevel(40, undefined, false); r.cards.lose();
+    const n = document.createElement('div'); n.className = 'review-note'; n.innerHTML = '<span>بدون کمک، از حرکت <b>۱۲</b> به بعد دیگه راهی نبود: <b>وانت زامیاد نقره‌ای</b>.</span>';
+    document.querySelector('.result.lose p').after(n); }],
   ['lose (time)', (r) => { r.save.level = 40; r.startLevel(40, undefined, false); r.cards.lose('time'); }],
   ['win (boss, worst case)', (r) => { r.save.level = 29; r.save.streak = 3; r.save.stats.wins = 0; r.startLevel(29, undefined, false); document.querySelectorAll('.modal-back').forEach((m) => m.remove()); r.cards.win(); }],
   ['rush win', (r) => { r.cards.rushWin(); }],

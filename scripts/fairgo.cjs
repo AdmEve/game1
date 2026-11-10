@@ -14,6 +14,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
   await p.goto(URL + '?play', { waitUntil: 'load' });
   await p.waitForFunction(() => document.title === 'ready', null, { timeout: 300000 });
   const seen = { true: 0, false: 0 };
+  let reviewed = 0;
   for (let attempt = 0; attempt < 24 && (!seen.true || !seen.false); attempt++) {
     const n = [12, 19, 43, 70, 101, 133][attempt % 6];
     const r = await p.evaluate(async ([n, seed]) => {
@@ -37,10 +38,14 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
       if (!card) return { skip: true, why: document.querySelector('.result')?.className ?? 'none' };
       for (let w = 0; w < 40 && s.continueKnown === undefined; w++) await new Promise((x) => setTimeout(x, 100));
       await new Promise((x) => setTimeout(x, 200));
+      // The losing move (C12), found in the worker as the card opens.
+      for (let w = 0; w < 50 && !card.querySelector('.review-note'); w++) await new Promise((x) => setTimeout(x, 100));
+      const review = card.querySelector('.review-note')?.textContent ?? null;
       const btns = [...card.querySelectorAll('.btn')].map((x) => ({ t: x.textContent.trim(), cls: x.className }));
-      return { level: n + 1, known: s.continueKnown, bays: s.s.bays.length, offer: btns.some((x) => x.t.includes('یه جای پارک دیگه')), note: card.querySelector('.continue-note')?.textContent ?? null, restartMain: btns.some((x) => x.t.startsWith('از اول') && x.cls.includes('primary')) };
+      return { level: n + 1, known: s.continueKnown, bays: s.s.bays.length, offer: btns.some((x) => x.t.includes('یه جای پارک دیگه')), note: card.querySelector('.continue-note')?.textContent ?? null, review, restartMain: btns.some((x) => x.t.startsWith('از اول') && x.cls.includes('primary')) };
     }, [n, attempt]);
     if (r.skip || r.known === null || r.known === undefined || r.bays >= 6) continue;
+    if (/از حرکت [۰-۹]+ به بعد دیگه راهی نبود/.test(r.review ?? '')) reviewed++;
     if (seen[r.known]) continue;
     seen[r.known]++;
     if (r.known) report(r.offer && /هنوز می‌شه برد/.test(r.note ?? '') && !r.restartMain, `level ${r.level}, still winnable with one more bay: the paid continue, and it says so (${JSON.stringify(r)})`);
@@ -48,6 +53,7 @@ const report = (ok, msg) => { if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FA
     if (out) await p.screenshot({ path: `${out}/fair-${r.known ? 'still' : 'hopeless'}.png`, timeout: 180000 });
   }
   report(seen.true && seen.false, `found both cases (winnable ${seen.true}, hopeless ${seen.false})`);
+  report(reviewed > 0, `the lose card names the losing move (${reviewed} of the losses looked at)`);
   report(!errors.length, `no page errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 2).join(' | ') : ''}`);
   console.log(fails ? `${fails} failure(s)` : 'all ok');
   await b.close();

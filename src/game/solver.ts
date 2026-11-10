@@ -105,3 +105,23 @@ export function hintFor(level: Level, s: State, limit: number, maxBays: number):
   const b = solve(level, limit, more);
   return { move: -1, verdict: b.solvable ? 'bay' : b.nodes >= limit ? 'unsure' : 'lost' };
 }
+
+/**
+ * The move that lost a level (C12). `snaps[i]` is the position before the player's i-th tap, from a point where only
+ * the rules changed the board (a help or a continue starts the record again, as it can bring a lost position back),
+ * and the last tap lost. Winnability only goes one way along such a record (a winnable position before a tap means
+ * the one after it could only have been lost by that tap), so a binary search finds the tap after which no win was
+ * left: a handful of searches. Null when a search ran out or the record already began lost.
+ */
+export function losingMove(level: Level, snaps: State[], limit = 60_000): number | null {
+  if (!snaps.length) return null;
+  const winnable = (s: State): boolean | null => { const r = solve(level, limit, s); return r.solvable ? true : r.nodes > limit ? null : false; };
+  if (winnable(snaps[0]) !== true) return null;
+  let lo = 0, hi = snaps.length; // snaps[lo] is winnable; the position after tap hi - 1 is not
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1, w = winnable(snaps[mid]);
+    if (w === null) return null;
+    if (w) lo = mid; else hi = mid;
+  }
+  return lo;
+}

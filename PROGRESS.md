@@ -437,3 +437,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   with the game, and it makes new ones after those). No lives needed; wins pay like Journey levels.
 - The daily rush hour challenge is now as hard as the Journey (it was the easiest level a mid-game player met),
   still the same level for everyone each day; it's prepared in the background when home opens.
+- The lose card now tells you which tap actually lost the level («بدون کمک، از حرکت ۷ به بعد دیگه راهی نبود: پیکان
+  سبز»): the solver looks back over your moves. Most losses are decided several moves before the bays fill.

@@ -1176,7 +1176,8 @@ function showLose(limit?: 'time' | 'moves') {
   modalOpen = true;
   const c = h('div', 'result lose');
   const price = 300;
-  const COLOR_FA: Record<string, string> = { red: 'قرمز', yellow: 'زرد', blue: 'آبی', green: 'سبز', purple: 'بنفش', orange: 'نارنجی', white: 'سفید', pink: 'صورتی' };
+  const COLOR_FA: Record<string, string> = { red: 'قرمز', yellow: 'زرد', blue: 'آبی', green: 'سبز', purple: 'بنفش', orange: 'نارنجی', white: 'سفید', pink: 'صورتی', silver: 'نقره‌ای', black: 'مشکی' };
+  const KIND_FA: Record<Kind, string> = { pride: 'پراید', peykan: 'پیکان', p405: 'پژو ۴۰۵', samand: 'سمند', zamyad: 'وانت زامیاد', bus: 'اتوبوس', bike: 'پیک موتوری' };
   const want = session ? session.s.queue[session.s.q] : undefined;
   // Bays still free means the loss came from a wedding car missing its deadline.
   const bride = !limit && session && !session.isFull() ? session.lastLate : -1;
@@ -1195,6 +1196,17 @@ function showLose(limit?: 'time' | 'moves') {
   const risk = newLevelRun && save.streak > 0 ? `<div class="streak-note risk">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهمت در خطره<small>${riskWhy(canBay)}</small></div>` : '';
   c.innerHTML = `<div class="burst">${emo(limit === 'time' ? '⏰' : limit === 'moves' ? '👆' : bride >= 0 ? '💔' : '🚧', 'emo huge')}</div><h2>${limit === 'time' ? 'وقت تموم شد!' : limit === 'moves' ? 'ضربه‌هات تموم شد!' : bride >= 0 ? 'عروسی به هم خورد!' : 'راه‌بندون شد!'}</h2><p>${why}</p>${risk}`;
   const close = modal(c, 'pop');
+  // Which tap lost it (C12): the solver looks back over the level in the worker; the line appears when it knows,
+  // usually as the card opens. Most losses are decided several moves before the bays fill, out of the player's sight.
+  if (!limit && session) {
+    const played = session;
+    void played.review().then((r) => {
+      if (!r || !c.isConnected || session !== played) return;
+      const v = played.level.vehicles[r.car];
+      const car = r.covered ? 'ماشین زیر چادر' : `${KIND_FA[v.kind]} ${COLOR_FA[v.color] ?? ''}`.trim();
+      c.querySelector('p')!.after(h('div', 'review-note', `${emo('🔍', 'emo xs')}<span>بدون کمک، از حرکت <b>${fa(r.move)}</b> به بعد دیگه راهی نبود: <b>${car}</b>.</span>`));
+    });
+  }
   const resume = () => { close(); modalOpen = false; helped = true; if (limit) session!.extend(); else session!.extraBay(); };
   const verdictNote = (text: string, cls: string) => { const n = h('div', 'continue-note ' + cls, text); (offer[0] ?? restartAt).before(n); return n; };
   const offer: HTMLElement[] = [];

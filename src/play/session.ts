@@ -36,22 +36,35 @@ const PICK_PAD = new THREE.Vector3(0.1, 0.1, 0.1), PICK_CAND: [number, number][]
 let hintSeq = 0;
 type HintDone = (move: number, verdict: HintVerdict) => void;
 const hintWaiting = new Map<number, { done: HintDone; level: Level; s: State }>();
+/** Losing-move searches waiting for the worker (C12). */
+const reviewWaiting = new Map<number, (tap: number | null) => void>();
 /** The small main-thread search used when workers are unavailable. */
 const hintHere = (level: Level, s: State) => hintFor(level, s, 4000, MAX_BAYS);
-function askHint(level: Level, s: State, done: HintDone) {
+/** The worker, created on first use (null where workers can't run). */
+function searchWorker(): Worker | null {
   if (hintWorker === undefined) {
     try {
       hintWorker = new Worker(new URL('../workers/hint.worker.ts', import.meta.url), { type: 'module' });
-      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number; verdict: HintVerdict }>) => { hintWaiting.get(e.data.id)?.done(e.data.move, e.data.verdict); hintWaiting.delete(e.data.id); };
+      hintWorker.onmessage = (e: MessageEvent<{ id: number; move: number; verdict: HintVerdict; review?: number | null }>) => {
+        const r = reviewWaiting.get(e.data.id);
+        if (r) { reviewWaiting.delete(e.data.id); r(e.data.review ?? null); return; }
+        hintWaiting.get(e.data.id)?.done(e.data.move, e.data.verdict); hintWaiting.delete(e.data.id);
+      };
       // A worker can also fail after it was created (older WebViews without module workers): answer whatever was
       // waiting here, and search on the main thread from now on, or the hint for that position would never come.
       hintWorker.onerror = () => {
         hintWorker = null;
+        for (const r of reviewWaiting.values()) r(null);
+        reviewWaiting.clear();
         const waiting = [...hintWaiting.values()]; hintWaiting.clear();
         for (const w of waiting) { const h = hintHere(w.level, w.s); w.done(h.move, h.verdict); }
       };
     } catch { hintWorker = null; }
   }
+  return hintWorker;
+}
+function askHint(level: Level, s: State, done: HintDone) {
+  searchWorker();
   if (!hintWorker) { const h = hintHere(level, s); done(h.move, h.verdict); return; }
   const id = ++hintSeq;
   hintWaiting.set(id, { done, level, s });
@@ -615,8 +628,17 @@ export class Session {
   lastLate = -1;
   lastInput = performance.now();
 
+  /**
+   * The losing-move record (C12): the position before each tap since the board last changed outside the rules (a
+   * help, a continue), and which car each tap was.
+   */
+  private record: { snaps: State[]; cars: number[]; from: number } = { snaps: [], cars: [], from: 0 };
+  /** A help or a continue changed the board: the record starts again here. */
+  private restartRecord() { this.record = { snaps: [], cars: [], from: this.taps }; }
+
   tap(i: number) {
     if (this.ended || !this.hooks.canPlay()) return;
+    this.record.snaps.push(cloneState(this.s)); this.record.cars.push(i);
     this.taps++;
     this.lastInput = performance.now();
     // The tunnel hops of the way out, read before the tap rolls the fruit carts on.
@@ -720,6 +742,7 @@ export class Session {
   crane(i: number): boolean {
     if (this.ended || !this.s.inLot[i] || this.s.bays.every((b) => b)) return false;
     this.play(ruleTap(this.s, i, true), i, true);
+    this.restartRecord();
     return true;
   }
 
@@ -740,6 +763,27 @@ export class Session {
     }).then((v) => (this.continueKnown = v));
   }
 
+  /**
+   * After a loss: which tap lost the level (C12), as the tap's number in the level, the car and whether it was still
+   * under its cover then. Null when it can't be told (no worker, a search ran out, nothing recorded).
+   */
+  review(): Promise<{ move: number; car: number; covered: boolean } | null> {
+    const { snaps, cars, from } = this.record;
+    const w = searchWorker();
+    if (!w || !snaps.length) return Promise.resolve(null);
+    const id = ++hintSeq;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { reviewWaiting.delete(id); resolve(null); }, 10_000);
+      reviewWaiting.set(id, (k) => {
+        clearTimeout(timer);
+        if (k === null || k >= cars.length) { resolve(null); return; }
+        const car = cars[k];
+        resolve({ move: from + k + 1, car, covered: !!this.level.vehicles[car].covered && !snaps[k].revealed[car] });
+      });
+      w.postMessage({ id, kind: 'review', level: this.level, snaps: snaps.map(({ level: _l, ...p }) => ({ ...p, level: null })), limit: 60_000 });
+    });
+  }
+
   /** Parking booster / continue: unlock the sixth bay. */
   extraBay(): boolean {
     const wasLost = this.s.over === 'lost';
@@ -747,11 +791,13 @@ export class Session {
       // A late wedding car with bays to spare: the continue just lets the level go on.
       if (!wasLost || this.isFull()) return false;
       this.s.over = false; this.ended = false;
+      this.restartRecord();
       return true;
     }
     addBay(this.s);
     this.openGate();
     if (wasLost) this.ended = false;
+    this.restartRecord();
     return true;
   }
 
@@ -760,6 +806,7 @@ export class Session {
     if (this.ended || this.pending > 0) return false;
     sfx.whistleSound();
     const ev = ruleWhistle(this.s);
+    this.restartRecord();
     // Recolor the visible queue to the new order with a little shuffle hop.
     this.queue.forEach((p, k) => {
       const idx = this.vq + k;
