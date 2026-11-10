@@ -3,6 +3,7 @@
  * short (the app killed mid-save, a full disk) can only ever spoil one of them.
  */
 import type { Missions } from './missions';
+import type { HighPoint } from './rating';
 
 export interface Save {
   /** Save format version (for migrations). */
@@ -42,6 +43,11 @@ export interface Save {
   /** Mechanic intro cards already shown. */
   seen: Record<string, boolean>;
   rated: boolean;
+  /** How many times the rating has been asked for, and when last (rating.ts). */
+  rateAsks: number;
+  rateLast: number;
+  /** A high point that came with another card, to ask about after the next win without one. */
+  ratePending: HighPoint | null;
   /** «گاراژ من»: car keys and the classics restored so far. */
   garage: { keys: number; restored: string[] };
   /** Testers: every level selectable. */
@@ -91,6 +97,9 @@ const fresh = (): Save => ({
   firstOpen: Date.now(),
   seen: {},
   rated: false,
+  rateAsks: 0,
+  rateLast: 0,
+  ratePending: null,
   garage: { keys: 0, restored: [] },
   rush: { day: '', streak: 0 },
   endless: 0,

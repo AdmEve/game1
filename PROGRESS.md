@@ -460,3 +460,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - A Myket build: every push now makes two APKs, `Rahbandoon.apk` for Cafe Bazaar and `Rahbandoon-myket.apk` for
   Myket, each with its own billing and naming only its own store (Bazaar's review turns away apps that mention
   another). Myket's key and products go in when the owner opens a Myket developer account.
+- The rating ask comes at a high point instead of fixed levels (7 and 24): right after a boss or a hard level is
+  beaten or a run of four wins (from level 12), naming that moment; when the win already brought the chest, after the
+  next win instead (a loss in between lets it go). At most three times, days apart; it asks for a rating and a short
+  comment, not for five stars.

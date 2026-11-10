@@ -61,6 +61,7 @@ import { prepareRush, rushReady } from './rush';
 import { countPlayed, missionText, MISSIONS_FROM, todayMissions, type Mission, type Played } from './missions';
 import { showToday, todayBadge, todayLine } from './ui/today';
 import { hello } from './ui/talk';
+import { rateAfterWin, type HighPoint, type WinMoment } from './rating';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
@@ -1115,10 +1116,14 @@ function showWin() {
     pay.close(); close(); modalOpen = true;
     let carded = false;
     if (!replay && (n + 1) % 5 === 0) { carded = true; await showChest(() => hud.refresh()); }
-    // One card at a time after a win (scripts/journey.cjs): the rating ask after level 7 and the reminders ask after 13
-    // (the first level that cost a life) are the only cards there; 8→9 has the crane, 10→11 the chest and the broken car.
-    if ((n + 1 === 7 || n + 1 === 24) && !save.rated) { carded = true; await askRating(); }
+    // One card at a time after a win (scripts/journey.cjs): the chest every fifth level, the reminders ask after 13 (the
+    // first level that cost a life); the rating ask at a high point (rating.ts: a boss or hard level beaten, a run of
+    // wins), or after the next win without a card when the high point came with the chest.
     if (n + 1 === FREE_LEVELS + 1 && !save.notifyAsked && Capacitor.isNativePlatform()) { carded = true; await askReminders(); }
+    const moment: WinMoment = { level: n + 1, replay, boss: lvl?.tag === 'boss', hard: lvl?.tag === 'hard', streak: save.streak };
+    const rate = rateAfterWin({ rated: save.rated, asks: save.rateAsks, lastAsk: save.rateLast, pending: save.ratePending }, moment, carded, Date.now());
+    save.ratePending = rate.pending; persist();
+    if (rate.ask) { carded = true; await askRating(rate.ask); }
     // The starter pack, offered once, on the first win from level 18 with no other card (O2).
     if (!replay && !carded && n + 1 >= 18) await maybeStarterOffer();
     await maybeInterstitial(n);
@@ -1163,13 +1168,24 @@ function shareButton(info: ShareWin): HTMLElement {
   return b;
 }
 
-/** Ask happy players (right after a win) to rate the game on Bazaar; unhappy ones are not sent there. */
-function askRating(): Promise<void> {
+/** The win that made this a good moment to ask, in a line. */
+const RATE_MOMENT: Record<HighPoint, (streak: number) => string> = {
+  boss: () => 'حریف آقای عجول شدی!',
+  hard: () => 'یه مرحله‌ی سخت رو بردی!',
+  streak: (k) => `${fa(k)} برد پشت‌سرهم!`,
+};
+
+/**
+ * Ask for a rating in the store, right after a high point (rating.ts says when): the moment named, then the question.
+ * It asks for a rating and a word on what they liked, not for a number of stars; «بعداً» asks again another day.
+ */
+function askRating(moment: HighPoint | null = null): Promise<void> {
+  save.rateAsks++; save.rateLast = Date.now(); persist();
   return new Promise((done) => {
     const c = h('div', 'rate');
-    c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div><h2>از راه‌بندون خوشت میاد؟</h2><p>با پنج ستاره تو ${STORE.name} کمکمون کن تا مرحله‌های بیشتری بسازیم!</p>`;
+    c.innerHTML = `<div class="burst">${emo('😍', 'emo huge')}</div>${moment ? `<div class="rate-moment">${RATE_MOMENT[moment](save.streak)}</div>` : ''}<h2>از راه‌بندون خوشت میاد؟</h2><p>یه امتیاز و یه نظر کوتاه تو ${STORE.name} خیلی کمکمون می‌کنه تا مرحله‌های بیشتری بسازیم!</p>`;
     const close = modal(c, 'pop');
-    c.append(button(`${emo('⭐', 'emo sm')} آره، پنج ستاره!`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
+    c.append(button(`${emo('⭐', 'emo sm')} آره، امتیاز می‌دم`, 'gold big', () => { save.rated = true; persist(); rateApp(); close(); done(); }));
     c.append(asBack(button('بعداً', 'ghost', () => { close(); done(); })));
   });
 }
@@ -1229,6 +1245,7 @@ function showLose(limit?: 'time' | 'moves') {
   hud.clearToast(); // the in-level advice (e.g. «آخرین جای پارک!») is over
   save.stats.losses++;
   if (!rush && !event) count(save.lvStats, current, 'loss');
+  save.ratePending = null; // a high point waiting for the rating ask has passed (rating.ts)
   countMissions({ won: false, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
   persist();
   modalOpen = true;

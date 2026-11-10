@@ -670,3 +670,5 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 .sabouri-says { margin: 0 0 8px; font-size: 13px; }
 /* L2: a character's line writing itself in: the words not yet said keep their place, unseen. */
 .tw-rest { color: transparent; }
+/* K5: the high point the rating ask comes after, above its question. */
+.rate .rate-moment { margin: -4px 0 4px; color: var(--accent); font-weight: 800; font-size: 15px; }

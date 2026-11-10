@@ -48,6 +48,7 @@ const CARDS0 = [
   ['no lives', (r) => { r.save.lives = { n: 0, next: Date.now() + 25 * 60e3 }; r.cards.noLives(); }],
   ['daily gift (day 7)', (r) => { r.save.daily = { day: '2000-01-01', streak: 6 }; r.save.daily.day = new Date(Date.now() - 864e5).toISOString().slice(0, 10); r.cards.daily(); }],
   ['rate', (r) => r.cards.rate()],
+  ['rate (after a boss)', (r) => r.cards.rate('boss')],
   // «امروز»: the rush and today's missions, one done and one claimed (P4).
   ['today', (r) => { r.save.level = 40; r.save.missions = { day: new Date().toISOString().slice(0, 10), bonus: false, list: [{ kind: 'win', goal: 3, got: 3, claimed: false }, { kind: 'dot', goal: 1, got: 0, claimed: false }, { kind: 'people', goal: 100, got: 100, claimed: true }] }; r.cards.today(); }],
   // Back after days away (P3).
