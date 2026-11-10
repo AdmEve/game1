@@ -38,16 +38,19 @@ class AdsPlugin : Plugin() {
                 override fun response(model: TapsellPlusAdModel) {
                     var rewarded = false
                     var done = false
-                    val finish = { if (!done) { done = true; call.resolve(JSObject().put("rewarded", rewarded)) } }
+                    // Why there was no reward, for the game to say: closed before the end, or the ad failed to play.
+                    var reason = "closed"
+                    val finish = { if (!done) { done = true; call.resolve(JSObject().put("rewarded", rewarded).put("reason", if (rewarded) "ok" else reason)) } }
                     activity.runOnUiThread {
                         TapsellPlus.showRewardedVideoAd(activity, model.responseId, object : AdShowListener() {
                             override fun onRewarded(m: TapsellPlusAdModel?) { rewarded = true }
                             override fun onClosed(m: TapsellPlusAdModel?) { finish() }
-                            override fun onError(e: TapsellPlusErrorModel?) { finish() }
+                            override fun onError(e: TapsellPlusErrorModel?) { reason = "error"; finish() }
                         })
                     }
                 }
-                override fun error(message: String?) { call.resolve(JSObject().put("rewarded", false)) }
+                // No ad to show (no fill, or no network).
+                override fun error(message: String?) { call.resolve(JSObject().put("rewarded", false).put("reason", "nofill")) }
             })
         }
     }

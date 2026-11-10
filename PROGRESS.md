@@ -422,3 +422,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   after you say yes. Bazaar purchases come back from your Bazaar account as before.
 - Settings from the home screen: a gear in the top corner (same place as in play) opens the settings without leaving
   home. Before, they were only reachable from inside a level.
+- Purchases and reward videos now say what happened: a failed purchase says to check the internet and Bazaar, a good
+  one says what arrived, no ad available says so, and the coin packs reconnect to Bazaar if it was offline at start.

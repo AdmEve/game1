@@ -2,18 +2,21 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { CONFIG, PRODUCTS, type Product } from './config';
 import { persist, save } from './save';
+import { faNum, note } from './ui/hud';
 
 interface BazaarPlugin {
   connect(o: { rsaKey: string }): Promise<{ connected: boolean }>;
   getPrices(o: { skus: string[] }): Promise<{ prices: Record<string, string> }>;
-  purchase(o: { sku: string }): Promise<{ purchased: boolean; token?: string }>;
+  /** `reason` when not purchased: «canceled» by the player, «failed», or the flow could not «begin». */
+  purchase(o: { sku: string }): Promise<{ purchased: boolean; token?: string; reason?: string }>;
   consume(o: { token: string }): Promise<void>;
   owned(): Promise<{ skus: string[]; tokens: Record<string, string> }>;
   rate(o: { packageName: string }): Promise<void>;
 }
 interface AdsPlugin {
   init(o: { appId: string }): Promise<void>;
-  rewarded(o: { zoneId: string }): Promise<{ rewarded: boolean }>;
+  /** `reason` without a reward: «nofill» (nothing to show), «closed» before the end, or «error» while playing. */
+  rewarded(o: { zoneId: string }): Promise<{ rewarded: boolean; reason?: string }>;
   interstitial(o: { zoneId: string }): Promise<{ shown: boolean }>;
 }
 
@@ -22,11 +25,32 @@ const Bazaar = registerPlugin<BazaarPlugin>('Bazaar');
 const Ads = registerPlugin<AdsPlugin>('Ads');
 let bazaarReady = false;
 export const prices: Record<string, string> = {};
+/** The browser build simulates the stores; `?iap=fail` and `?ads=none` make them fail, for tests. */
+const sim = new URLSearchParams(typeof location === 'undefined' ? '' : location.search);
 
 export async function initMonetization() {
   if (!native) return;
   if (CONFIG.TAPSELL_APP_ID) Ads.init({ appId: CONFIG.TAPSELL_APP_ID }).catch(() => {});
+  await connectBazaar();
+}
+
+/** Bazaar can sell in this build (an RSA key is set), whether or not it is reachable right now. */
+export const iapConfigured = () => !native || !!CONFIG.BAZAAR_RSA_KEY;
+let lastTry = 0;
+/**
+ * Bazaar again, if it wasn't reachable at start (no network, Bazaar updating): the shop asks on opening, so the coin
+ * packs come back without a restart. At most every 15 s.
+ */
+export async function ensureBazaar(): Promise<boolean> {
+  if (iapAvailable() || !iapConfigured() || Date.now() - lastTry < 15_000) return iapAvailable();
+  // Never longer than 8 s: a purchase or the shop waits on this.
+  await Promise.race([connectBazaar(), new Promise((w) => setTimeout(w, 8000))]);
+  return iapAvailable();
+}
+
+async function connectBazaar() {
   if (!CONFIG.BAZAAR_RSA_KEY) return;
+  lastTry = Date.now();
   try {
     bazaarReady = (await Bazaar.connect({ rsaKey: CONFIG.BAZAAR_RSA_KEY })).connected;
     if (!bazaarReady) return;
@@ -61,34 +85,82 @@ function deliver(p: Product, restoring = false) {
   persist();
 }
 
-/** Buy a product. In the browser build purchases are simulated so the flow can be tested. */
-export async function buy(sku: string): Promise<boolean> {
+/**
+ * How a purchase ended: «ok» (delivered), «cancel» (the player backed out, or one was already under way), «error»
+ * (Bazaar unreachable or the payment failed), «pending» (paid, but Bazaar didn't confirm the delivery: it comes on
+ * the next start, see initMonetization).
+ */
+export type BuyResult = 'ok' | 'cancel' | 'error' | 'pending';
+let buying = false;
+
+/** Buy a product, and say how it went. In the browser build purchases are simulated so the flow can be tested. */
+export async function buy(sku: string): Promise<BuyResult> {
   const p = PRODUCTS.find((x) => x.sku === sku);
-  if (!p) return false;
-  if (!native) {
-    if (!confirm('نسخه‌ی آزمایشی: خرید شبیه‌سازی شود؟')) return false;
-    deliver(p);
-    return true;
-  }
-  if (!bazaarReady) return false;
+  if (!p || buying) return 'cancel';
+  buying = true;
   try {
-    const r = await Bazaar.purchase({ sku });
-    if (!r.purchased) return false;
-    if (p.consumable && r.token) await Bazaar.consume({ token: r.token });
+    const r = await purchase(p);
+    purchaseNote(p, r);
+    return r;
+  } finally { buying = false; }
+}
+
+async function purchase(p: Product): Promise<BuyResult> {
+  if (!native) {
+    if (sim.get('iap') === 'fail') return 'error';
+    if (!confirm('نسخه‌ی آزمایشی: خرید شبیه‌سازی شود؟')) return 'cancel';
     deliver(p);
-    return true;
-  } catch { return false; }
+    return 'ok';
+  }
+  if (!(await ensureBazaar())) return 'error';
+  let r: { purchased: boolean; token?: string; reason?: string };
+  try { r = await Bazaar.purchase({ sku: p.sku }); } catch { return 'error'; }
+  if (!r.purchased) return r.reason === 'canceled' ? 'cancel' : 'error';
+  if (p.consumable && r.token) {
+    // Consumed before it is delivered, so it can never be delivered twice; one retry for a blip.
+    const consume = () => Bazaar.consume({ token: r.token! }).then(() => true, () => false);
+    if (!(await consume()) && !(await new Promise((w) => setTimeout(w, 1500)).then(consume))) return 'pending';
+  }
+  deliver(p);
+  return 'ok';
+}
+
+/** What the player is told after a purchase (the cards add their own celebration on «ok»). */
+function purchaseNote(p: Product, r: BuyResult) {
+  if (r === 'ok') {
+    note(p.sku === 'no_ads' ? 'تبلیغ‌های بین مرحله‌ها برای همیشه حذف شد!' : p.sku === 'pass' ? 'کارت طلایی این ماه مال تو شد!'
+      : p.sku === 'starter' ? 'بسته‌ی شروع مال تو شد!' : p.coins ? `${faNum(p.coins)} سکه اومد تو کیفت!` : 'خرید انجام شد!', 2600);
+  } else if (r === 'error') note('خرید انجام نشد. اینترنت و ورودت به کافه‌بازار رو چک کن و دوباره امتحان کن.', 3600);
+  else if (r === 'pending') note('پولش رو دادی و ثبت شد؛ بازی رو دوباره که باز کنی تحویلت می‌دیم.', 4000);
 }
 
 export const priceLabel = (p: Product) => prices[p.sku] ?? `${p.fallbackPrice.toLocaleString('fa-IR')} تومان`;
 
 export const rewardedAvailable = () => !native || (!!CONFIG.TAPSELL_APP_ID && !!CONFIG.TAPSELL_REWARDED_ZONE);
 
-/** Show a rewarded video; resolves true if the player earned the reward. */
+let watching = false;
+/**
+ * Show a rewarded video; resolves true if the player earned the reward. Without one, it says why (nothing to show
+ * right now, or closed before the end) rather than leaving the button to quietly come back.
+ */
 export async function showRewarded(): Promise<boolean> {
-  if (!native) { await new Promise((r) => setTimeout(r, 700)); return true; }
-  if (!rewardedAvailable()) return false;
-  try { return (await Ads.rewarded({ zoneId: CONFIG.TAPSELL_REWARDED_ZONE })).rewarded; } catch { return false; }
+  if (watching) return false;
+  watching = true;
+  try {
+    const reason = await rewarded();
+    if (reason === 'nofill' || reason === 'error') note('الان تبلیغی برای نمایش نیست؛ چند دقیقه‌ی دیگه دوباره امتحان کن.', 3200);
+    else if (reason === 'closed') note('جایزه مال وقتیه که تبلیغ تا آخر دیده بشه.', 2800);
+    return reason === 'ok';
+  } finally { watching = false; }
+}
+
+async function rewarded(): Promise<string> {
+  if (!native) { await new Promise((r) => setTimeout(r, 700)); return sim.get('ads') === 'none' ? 'nofill' : 'ok'; }
+  if (!rewardedAvailable()) return 'nofill';
+  try {
+    const r = await Ads.rewarded({ zoneId: CONFIG.TAPSELL_REWARDED_ZONE });
+    return r.rewarded ? 'ok' : r.reason ?? 'closed';
+  } catch { return 'nofill'; }
 }
 
 /**

@@ -2,7 +2,7 @@
 import { coin } from '../audio';
 import { PRODUCTS } from '../config';
 import { haptic } from '../haptics';
-import { buy, iapAvailable, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
+import { buy, ensureBazaar, iapAvailable, iapConfigured, priceLabel, rewardedAvailable, showRewarded } from '../monetize';
 import { persist, save } from '../save';
 import { RAHIM } from './characters';
 import { emo } from './emoji';
@@ -59,20 +59,36 @@ export function showShop(onClose: () => void, onChange: () => void) {
     coinsAt = free;
   }
 
-  // Coin packs for real money.
-  if (iapAvailable()) {
+  // Coin packs for real money. If Bazaar wasn't reachable when the game started, it is asked again now, so they come
+  // back without a restart; a purchase under way greys the others out (one at a time), and each says how it went.
+  const packsBox = h('div', 'packs-box');
+  const fillPacks = () => {
     const packs = h('h3', '', 'سکه و بسته‌ها');
-    c.append(packs);
-    coinsAt ??= packs;
     const grid = h('div', 'shop-grid');
     for (const p of PRODUCTS) {
       if (p.sku === 'piggy' || p.sku === 'pass' || (!p.consumable && save.owned[p.sku as 'starter' | 'no_ads'])) continue;
       const card = h('button', 'pack' + (p.sku === 'starter' ? ' starter' : ''), `${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<span class="ic">${emo(p.icon)}</span><b>${p.title}</b><small>${p.desc}</small><span class="price">${priceLabel(p)}</span>`);
-      card.onclick = async () => { if (await buy(p.sku)) { coin(); haptic('success'); refresh(); if (!p.consumable) card.remove(); } };
+      card.onclick = async () => {
+        if (grid.classList.contains('busy')) return;
+        grid.classList.add('busy'); card.classList.add('buying');
+        const r = await buy(p.sku);
+        grid.classList.remove('busy'); card.classList.remove('buying');
+        if (r === 'ok') { coin(); haptic('success'); refresh(); if (!p.consumable) card.remove(); } else if (r === 'error') haptic('warn');
+      };
       grid.append(card);
     }
-    c.append(grid);
+    packsBox.replaceChildren(packs, grid);
+    coinsAt ??= packs;
+  };
+  if (iapAvailable()) fillPacks();
+  else if (iapConfigured()) {
+    packsBox.append(h('p', 'packs-wait', 'در حال وصل شدن به کافه‌بازار…'));
+    void ensureBazaar().then((ok) => {
+      if (ok) fillPacks();
+      else packsBox.replaceChildren(h('p', 'packs-wait', 'کافه‌بازار در دسترس نیست؛ برای خرید سکه، اینترنت و کافه‌بازار رو چک کن.'));
+    });
   }
+  c.append(packsBox);
   const close = modal(c, 'pop shop-card-wrap');
   c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));
 }

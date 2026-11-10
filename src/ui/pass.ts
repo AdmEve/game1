@@ -96,7 +96,7 @@ export function showPass(onChange: () => void, onClose: () => void) {
     if (!p.premium && iapAvailable()) {
       const prod = PRODUCTS.find((x) => x.sku === 'pass')!;
       c.append(button(`${emo('🎫', 'emo sm')} کارت طلایی این ماه، ${priceLabel(prod)}`, 'gold big', async () => {
-        if (await buy('pass')) { p.premium = true; persist(); haptic('success'); draw(); }
+        if ((await buy('pass')) === 'ok') { p.premium = true; persist(); haptic('success'); draw(); }
       }));
     }
     c.append(asBack(button('بستن', 'ghost', () => { close(); onClose(); })));

@@ -49,7 +49,7 @@ export function showPiggy(onChange: () => void, onClose: () => void) {
     const b = button(`بشکنش! ${priceLabel(p)}`, ready ? 'gold big' : 'ghost', async () => {
       if (!ready) { haptic('warn'); return; }
       const got = save.piggy;
-      if (await buy('piggy')) {
+      if ((await buy('piggy')) === 'ok') {
         persist(); onChange();
         c.querySelector('svg')!.classList.add('broken');
         c.querySelector('.pamt')!.innerHTML = `🪙 <b dir="ltr">+${faNum(got)}</b>`;

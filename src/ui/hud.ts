@@ -5,7 +5,8 @@ import { HELP_FROM, anyHelpOpen, helpOpen } from '../game/helps';
 import { icon } from './icons';
 
 export const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
-export const faNum = (n: number) => fa(n.toLocaleString('en-US'));
+/** With the Persian thousands separator «٬» (as the store's prices and the product titles write them). */
+export const faNum = (n: number) => fa(n.toLocaleString('en-US').replace(/,/g, '٬'));
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = ''): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);

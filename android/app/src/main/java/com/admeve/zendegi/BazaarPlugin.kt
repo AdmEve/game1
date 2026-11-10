@@ -64,12 +64,12 @@ class BazaarPlugin : Plugin() {
                 registry = bridge.activity.activityResultRegistry,
                 request = PurchaseRequest(productId = sku, payload = "")
             ) {
-                failedToBeginFlow { call.resolve(JSObject().put("purchased", false)) }
+                failedToBeginFlow { call.resolve(JSObject().put("purchased", false).put("reason", "begin")) }
                 purchaseSucceed { info ->
                     call.resolve(JSObject().put("purchased", true).put("token", info.purchaseToken))
                 }
-                purchaseCanceled { call.resolve(JSObject().put("purchased", false)) }
-                purchaseFailed { call.resolve(JSObject().put("purchased", false)) }
+                purchaseCanceled { call.resolve(JSObject().put("purchased", false).put("reason", "canceled")) }
+                purchaseFailed { call.resolve(JSObject().put("purchased", false).put("reason", "failed")) }
             }
         }
     }
