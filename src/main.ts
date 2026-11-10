@@ -24,6 +24,7 @@ import { sky } from './render/world';
 import { MAX_BAYS, Session, worldCacheInfo, worldCached, worldSteps, worldTextures } from './play/session';
 import type { WorldOpts } from './render/world';
 import { CHAPTERS, chapterOf, type Light } from './game/chapters';
+import { endlessLevel, placeOf } from './game/endless';
 import { lightsMaterial } from './render/fleet';
 import { BOOSTERS, Hud, asBack, backPress, button, fa, faNum, h, modal, note, topCard, type BoosterId } from './ui/hud';
 import { emo } from './ui/emoji';
@@ -609,7 +610,7 @@ let rush: Level | null = null;
 /** A booster or a continue was used this level (it then doesn't count as a clean win). */
 let helped = false;
 /** A seasonal event level being played («شب یلدا» night or «نوروز» day), or null. */
-type EventRun = { kind: 'yalda' | 'nowruz'; i: number };
+type EventRun = { kind: 'yalda' | 'nowruz' | 'endless'; i: number };
 let event: EventRun | null = null;
 
 /** Which level, chapter look and world a start of (pick, custom, ev) means. */
@@ -619,8 +620,10 @@ function levelPlan(pick?: number, custom?: Level, ev: EventRun | null = null) {
   // Yalda nights are played at home in Tajrish, after dark. The rush hour rotates day by day through
   // the places the player has already unlocked (never spoiling a chapter they haven't reached).
   const unlocked = CHAPTERS.filter((c) => c.from <= save.level);
-  const ch = ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const, weather: ev.kind === 'yalda' ? 'snow' as const : 'petals' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n);
-  const world: WorldOpts = { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, worldSeed: ev ? 9000 + ev.i : custom ? 8000 + ch.n : 100 + ch.n, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind };
+  // Endless Tehran is played in the places themselves, in turn (game/endless.ts), in each one's own world.
+  const place = ev?.kind === 'endless' ? placeOf(ev.i) : null;
+  const ch = place ?? (ev ? { ...CHAPTERS[0], light: ev.kind === 'yalda' ? 'night' as const : 'spring' as const, weather: ev.kind === 'yalda' ? 'snow' as const : 'petals' as const } : custom ? unlocked[Math.floor(Date.now() / 864e5) % unlocked.length] : chapterOf(n));
+  const world: WorldOpts = { stop: ch.stop, night: ch.light === 'night' || ch.light === 'dusk', snow: ch.light === 'snow', weather: ch.weather, worldSeed: place ? 100 + place.n : ev ? 9000 + ev.i : custom ? 8000 + ch.n : 100 + ch.n, landmark: ch.landmark, autumn: ch.light === 'autumn', boulevard: ch.n === 2, yalda: ev?.kind === 'yalda', nowruz: ev?.kind === 'nowruz', skins: save.garage.restored, colorblind: save.settings.colorblind };
   return { n, level, ch, world, seed: world.worldSeed ?? n + 1 };
 }
 
@@ -750,13 +753,14 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
   }
   renderer.shadowMap.needsUpdate = true;
   if (session.weather) session.weather.onThunder = () => sfx.thunder();
-  if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
+  if (ev?.kind === 'endless') hud.setLevel(levels.length + ev.i + 1, level.tag);
+  else if (ev?.kind === 'yalda') hud.setEvent(`شب یلدا ${fa(ev.i + 1)}`, POM('hud'));
   else if (ev?.kind === 'nowruz') hud.setEvent(`نوروز، روز ${fa(ev.i + 1)}`, emo(HAFT_SIN[ev.i].icon, 'emo'));
   else if (custom) hud.setRush(); else hud.setLevel(n + 1, level.tag);
   // Notes at the start (first-levels tip, the streak's gift, the level's limit) wait until the player can see them.
   notes.length = 0; noteReadyAt = performance.now() + 700; banner.classList.remove('show');
   // A «سخت» level is an event: its call first, with what winning it pays on a level not yet beaten (showWin).
-  if (!custom && level.tag === 'hard') queueNote(`<b>مرحله‌ی سخت!</b>${n >= save.level ? `<small>${emo('🔑', 'emo xs')} یه سوئیچ و ${emo('🪙', 'emo xs')} سکه‌ی بیشتر</small>` : ''}`, 2200, false, true);
+  if ((!custom || ev?.kind === 'endless') && level.tag === 'hard') queueNote(`<b>مرحله‌ی سخت!</b>${n >= save.level || ev?.kind === 'endless' ? `<small>${emo('🔑', 'emo xs')} یه سوئیچ و ${emo('🪙', 'emo xs')} سکه‌ی بیشتر</small>` : ''}`, 2200, false, true);
   if (!custom && n < TIPS.length) queueNote(TIPS[n], 5000);
   if (streakNote) queueNote(streakNote, 2600, true);
   // Bosses have both a clock and a tap budget: each gets its note.
@@ -951,6 +955,62 @@ function payout(c: HTMLElement, coins: number, before: number) {
   return { more: (amount: number) => pay(amount, 0), close: () => wallet.remove() };
 }
 
+/** Play endless level `i` (0-based; level 241 is 0). One that couldn't be made is skipped. */
+async function playEndless(i: number) {
+  let lvl = await endlessLevel(i);
+  for (let k = 1; !lvl && k < 4; k++) { i++; save.endless = i; lvl = await endlessLevel(i); }
+  if (!lvl) { note('مرحله‌ی بعد آماده نشد؛ کمی بعد دوباره امتحان کن.'); showHome(); return; }
+  void goLevel(undefined, lvl, true, { kind: 'endless', i });
+}
+
+/**
+ * An endless level won: what a Journey level pays (coins, and a key and stars when it was «سخت»), the metro-card punch
+ * and the piggy, a chest every five; then the next one, already being prepared while this card shows (C10).
+ */
+function showEndlessWin(i: number) {
+  const lvl = rush, hard = lvl?.tag === 'hard', n = levels.length + i;
+  const coins = 60 + (hard ? 40 : 0) + (session?.bonus ?? 0);
+  const keys = hard ? 1 : 0, stars = starsFor(lvl?.tag);
+  if (keys) addKeys(keys);
+  if (stars) addStars(stars);
+  const piggy = fillPiggy(n), station = punch();
+  const ach = recordWin(hard);
+  const before = save.coins;
+  save.coins += coins;
+  save.endless = Math.max(save.endless, i + 1);
+  persist();
+  modalOpen = true; hud.show(false); hud.refresh();
+  void endlessLevel(i + 1);
+  const c = h('div', 'result win');
+  const rewards = `<div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div>`
+    + (stars ? `<div class="reward starr">${emo('⭐')}<b dir="ltr">+${fa(stars)}</b><small>ستاره</small></div>` : '')
+    + (keys ? `<div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(keys)}</b><small>سوئیچ</small></div>` : '');
+  const toChest = 5 - ((i + 1) % 5 || 5), pips = Array.from({ length: 5 }, (_, k) => `<i class="${k < 5 - toChest ? 'on' : ''}"></i>`).join('');
+  const notes = (toChest ? `<div class="chest-note">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه: <b>${fa(toChest)}</b> مرحله‌ی دیگه</span></div>`
+    : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`)
+    + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
+    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
+  c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>تهران بی‌پایان، مرحله‌ی ${fa(n + 1)} · ${placeOf(i).name}</p>
+    <div class="rewards">${rewards}</div>${notes}${ach}`;
+  const close = modal(c, 'pop');
+  const pay = payout(c, coins, before);
+  setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
+  const next = async (home = false) => {
+    pay.close(); close(); modalOpen = true;
+    if ((i + 1) % 5 === 0) await showChest(() => hud.refresh());
+    await maybeInterstitial(n);
+    if (home) goHome(); else await playEndless(i + 1);
+  };
+  c.append(button(`مرحله‌ی بعد ${fa(n + 2)}`, 'primary big', () => { void next(); }));
+  const row = h('div', 'win-row');
+  row.append(asBack(button(`${icon('home')} <span class="lbl">خونه</span>`, 'ghost home-link', () => { void next(true); })));
+  if (hard && lvl) {
+    row.append(shareButton({ level: lvl, title: `تهران بی‌پایان، مرحله‌ی ${fa(n + 1)}`, badge: 'سخت', brag: session?.taps ? `با ${fa(session.taps)} حرکت ردش کردم!` : 'ردش کردم!' }));
+    row.classList.add('with-share');
+  }
+  c.append(row);
+}
+
 function showRushWin() {
   const streak = save.rush.day === new Date(Date.now() - 864e5).toISOString().slice(0, 10) ? save.rush.streak + 1 : 1;
   save.rush = { day: today(), streak };
@@ -971,6 +1031,7 @@ function showRushWin() {
 }
 
 function showWin() {
+  if (event?.kind === 'endless') { showEndlessWin(event.i); return; }
   if (event) {
     recordWin(false);
     modalOpen = true; hud.show(false); hud.refresh();
@@ -1445,9 +1506,14 @@ function showHome() {
   // Every level won: there is no level 241 to offer (Play used to replay the final boss under that number). Home says
   // so, Play opens the level list for any replay, and the finish gets its card once (BEST_IN_MARKET_PLAN C6).
   const finished = save.level >= levels.length;
-  if (finished) c.querySelector('.chapter')!.append(h('div', 'finale-note', `${emo('🏆', 'emo xs')} همه‌ی ${fa(levels.length)} مرحله رو بردی! <small>مرحله‌های تازه به‌زودی می‌رسن؛ تا اون موقع ساعت شلوغی هر روز منتظرته.</small>`));
-  c.append(button(finished ? `<span class="go">${icon('map')}دوباره بازی کن</span><small>هر مرحله‌ای که دوست داری</small>` : `<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
-    if (finished) { close(); showLevels(() => showHome()); return; }
+  if (finished) {
+    // Every Journey level won: Play goes on into Endless Tehran; the levels stay a tap away for replays (C10).
+    const fin = h('div', 'finale-note', `${emo('🏆', 'emo xs')} همه‌ی ${fa(levels.length)} مرحله رو بردی! <small>حالا تهران بی‌پایانه؛ مرحله‌های قبلی هم هر وقت بخوای:</small>`);
+    fin.append(button(`${icon('map')} مرحله‌ها`, 'ghost replay-link', () => { close(); showLevels(() => showHome()); }));
+    c.querySelector('.chapter')!.append(fin);
+  }
+  c.append(button(finished ? `<span class="go">${icon('play')}تهران بی‌پایان</span><small>مرحله‌ی ${fa(levels.length + save.endless + 1)} · ${placeOf(save.endless).name}</small>` : `<span class="go">${icon('play')}بزن بریم</span><small>مرحله‌ی ${fa(save.level + 1)}</small>`, 'primary huge', async () => {
+    if (finished) { close(); modalOpen = false; await playEndless(save.endless); return; }
     if (save.level >= FREE_LEVELS && lives() <= 0 && !(await showNoLives(() => hud.refresh()))) return;
     close();
     // The daily gift waits until the first levels are done: a new player's Play goes straight into level 1 (scripts/journey.cjs).
@@ -1464,7 +1530,7 @@ function showFinale() {
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>تبریک! راه‌بندون باز شد</h2>
     <p>همه‌ی ${fa(levels.length)} مرحله رو بردی، از تجریش تا برج میلاد، و آقای عجول رو ${fa(CHAPTERS.length)} بار شکست دادی. مش‌رحیم بهت افتخار می‌کنه!</p>
     <div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> باشه، باشه… این دفعه رو تو بردی. ولی من بیکار نمی‌شینم!</div></div>
-    <p class="next">مرحله‌های تازه به‌زودی می‌رسن. تا اون موقع ساعت شلوغی هر روز یه چالش تازه داره.</p>`;
+    <p class="next">حالا «تهران بی‌پایان» باز شده: مرحله‌های تازه، بی‌انتها، توی همین محله‌ها. ساعت شلوغی هم هر روز سر جاشه.</p>`;
   const close = modal(c, 'pop');
   c.append(asBack(button('دمت گرم!', 'primary big', () => { save.seen.finale = true; persist(); close(); })));
 }
@@ -1641,7 +1707,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, endless: (i: number) => playEndless(i), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

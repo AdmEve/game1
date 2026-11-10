@@ -21,7 +21,8 @@ const LEVELS = Number(process.argv[2] || 12), out = process.argv[3];
   });
   const closeCard = () => p.evaluate(() => {
     const c = [...document.querySelectorAll('.modal-back:not(.out) .card')].pop();
-    const btn = c.querySelector('.btn.primary.big, .btn.primary, .btn.gold.big, [data-back]');
+    // An offer to buy (the starter pack): a player in this run says no, as most do.
+    const btn = c.querySelector('.starter-offer') ? c.querySelector('[data-back]') : c.querySelector('.btn.primary.big, .btn.primary, .btn.gold.big, [data-back]');
     btn?.click();
   });
   const log = [];

@@ -40,6 +40,8 @@ export interface Save {
   devUnlock?: boolean;
   /** «ساعت شلوغی»: the last day it was beaten and the streak of days in a row. */
   rush: { day: string; streak: number };
+  /** «تهران بی‌پایان»: endless levels won after the Journey (the next one to play). */
+  endless: number;
   /** «شب یلدا» event: the year it was played and how many of its nights are done. */
   yalda: { year: number; done: number; last?: string };
   /** «نوروز» event: the year it was played and how many «سین»s are collected. */
@@ -79,6 +81,7 @@ const fresh = (): Save => ({
   rated: false,
   garage: { keys: 0, restored: [] },
   rush: { day: '', streak: 0 },
+  endless: 0,
   yalda: { year: 0, done: 0 },
   nowruz: { year: 0, done: 0 },
   agency: { stars: 0, done: [], init: true },

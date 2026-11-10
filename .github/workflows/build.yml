@@ -52,6 +52,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/fairgo.cjs
           # Progress to another phone by code: refuses bad codes, asks first, keeps this phone's purchases (scripts/transfer.cjs).
           URL=http://127.0.0.1:4173/ node scripts/transfer.cjs
+          # After the 240 levels, Endless Tehran: Play goes on to 241, wins pay, no lives (scripts/endless.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/endless.cjs
           # Screen-reader names and structure on the main screens (axe-core, WCAG 2 A/AA: scripts/a11y.cjs).
           URL=http://127.0.0.1:4173/ node scripts/a11y.cjs
 

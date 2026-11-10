@@ -161,6 +161,9 @@ body::after { display: none; } /* the vignette now lives in the post pass */
 .continue-note.hopeless { color: var(--muted); font-weight: 600; }
 /* A help the player can't afford (H10): its icon, big, in the help bar's gold. */
 @media (max-height: 660px) { .finale-note small { display: none; } }
+/* C10: from the finish note on home, the Journey's levels for replays (Play goes on into Endless Tehran). */
+.finale-note .btn.replay-link { display: inline-flex; align-items: center; gap: 4px; width: auto; margin: 4px 0 0; padding: 3px 10px; font-size: 12.5px; border-radius: 999px; }
+.finale-note .btn.replay-link .ico { width: 14px; height: 14px; }
 .reward small { color: var(--muted) !important; }
 .speech { background: rgba(255, 255, 255, .05); color: var(--text); border: 1px solid var(--line); border-radius: 14px; font-weight: 500; }
 .speech .who { color: var(--accent); }

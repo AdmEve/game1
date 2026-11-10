@@ -432,3 +432,6 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   sound now stops when the app goes to the background.
 - The starter pack is offered once (after a win from level 18), saying plainly what's in it, including that it turns
   off the ads between levels, which the shop never mentioned. «نه، ممنون» closes it for good; it stays in the shop.
+- Endless Tehran: after the 240 Journey levels the game goes on: «تهران بی‌پایان» starts at level 241 and runs through
+  the eight places in turn, each with its own rules, as hard as the last chapter (240 more hand-hardened levels ship
+  with the game, and it makes new ones after those). No lives needed; wins pay like Journey levels.
