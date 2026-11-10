@@ -273,6 +273,64 @@ export function sting(boss = false) {
   [196, 233, 277, 392].forEach((f, i) => pluck(f * k, 0.4 + i * 0.035, 0.14));
 }
 
+// ───── Voices (L2) ─────
+/**
+ * The characters' voices, until actors record their lines (GDD §5): babble, one syllable at a time, a sawtooth
+ * through the two formants of a Persian vowel. Mash Rahim is low, slow and a little gravelly; Ms. Sabouri comes over
+ * the agency radio (a narrow band, with a squelch either side); Mr. Ajool talks fast, nasal and jumpy, as his name says.
+ */
+export type Voice = 'rahim' | 'sabouri' | 'ajool';
+export const VOICES: Record<Voice, { f0: number; fs: number; len: number; jump: number; vol: number; rasp?: boolean; radio?: boolean; nasal?: boolean }> = {
+  rahim: { f0: 108, fs: 0.92, len: 0.1, jump: 0.05, vol: 0.5, rasp: true },
+  sabouri: { f0: 212, fs: 1.16, len: 0.078, jump: 0.07, vol: 0.5, radio: true },
+  ajool: { f0: 148, fs: 1.02, len: 0.062, jump: 0.14, vol: 0.7, nasal: true },
+};
+/** Persian vowels' first two formants (Hz): â, a, e, i, o, u. */
+const VOWELS: [number, number][] = [[710, 1100], [760, 1650], [500, 1850], [300, 2250], [470, 850], [330, 750]];
+
+/** One syllable: `vowel` 0–5, `lift` bends the pitch (+ a question's rise, − a sentence's fall), `wobble` −1…1. */
+export function syllable(who: Voice, vowel: number, lift = 0, wobble = 0) {
+  const c = ac(); if (!c || !save.settings.voices) return;
+  if (!allow('voice', c.currentTime, 2, 0.04)) return;
+  const p = VOICES[who], t = c.currentTime, d = p.len;
+  const f0 = p.f0 * (1 + lift + wobble * p.jump);
+  const src = osc(c, 'sawtooth', f0, t, d + 0.04);
+  src.frequency.linearRampToValueAtTime(f0 * (lift < 0 ? 0.88 : lift > 0 ? 1.1 : 0.97), t + d);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(p.vol, t + 0.014);
+  g.gain.setValueAtTime(p.vol, t + d * 0.55);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.04);
+  const [F1, F2] = VOWELS[vowel % VOWELS.length];
+  for (const [f, q, k] of [[F1 * p.fs, 5, 1], [F2 * p.fs, 8, 0.55], ...(p.nasal ? [[2500, 4, 0.5]] : [])]) {
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+    const kg = c.createGain(); kg.gain.value = k;
+    src.connect(bp).connect(kg).connect(g);
+  }
+  if (p.rasp) {
+    // Gravel: a little breath, and the voice fluttering at 30-odd Hz.
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = F1 * 1.6; bp.Q.value = 1.2;
+    const ng = c.createGain(); ng.gain.value = 0.25;
+    noise(c, t, d + 0.04).connect(bp).connect(ng).connect(g);
+    const fl = osc(c, 'triangle', 33, t, d + 0.04), fg = c.createGain(); fg.gain.value = 0.06;
+    fl.connect(fg).connect(g.gain);
+  }
+  if (p.radio) {
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 480;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2900;
+    g.connect(hp).connect(lp).connect(master);
+  } else g.connect(master);
+}
+
+/** The radio's squelch (Ms. Sabouri keying the mic, and letting go). */
+export function squelch(delay = 0) {
+  const c = ac(); if (!c || !save.settings.voices) return;
+  const t = c.currentTime + delay;
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 0.8;
+  noise(c, t, 0.07).connect(bp).connect(env(c, t, 0.003, 0.6, 0.07)).connect(master);
+  osc(c, 'square', 1250, t, 0.02).connect(env(c, t, 0.001, 0.15, 0.02)).connect(master);
+}
+
 // ───── Weather sounds ─────
 let ambBuf: AudioBuffer | null = null;
 let amb: { src: AudioBufferSourceNode; gain: GainNode; lfo?: OscillatorNode } | null = null;

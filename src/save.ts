@@ -21,6 +21,8 @@ export interface Save {
     leftHand: boolean;
     /** Reminders (lives full, daily rush hour); off until the player says yes. */
     notify: boolean;
+    /** The characters' voices as their lines write in (ui/talk.ts). */
+    voices: boolean;
   };
   /** Whether the reminders question has been asked; the hours of recent app opens (for its timing). */
   notifyAsked: boolean;
@@ -75,7 +77,7 @@ const fresh = (): Save => ({
   level: 0,
   coins: 200,
   boosters: { crane: 2, whistle: 2, bay: 2 },
-  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, leftHand: false, notify: false },
+  settings: { sound: true, music: true, haptics: true, colorblind: false, quality: 'auto', sfxVol: 90, musicVol: 70, reduceMotion: null, bigText: false, leftHand: false, notify: false, voices: true },
   notifyAsked: false,
   opens: [],
   lastDay: '',

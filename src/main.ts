@@ -60,6 +60,7 @@ import { today } from './game/daily';
 import { prepareRush, rushReady } from './rush';
 import { countPlayed, missionText, MISSIONS_FROM, todayMissions, type Mission, type Played } from './missions';
 import { showToday, todayBadge, todayLine } from './ui/today';
+import { hello } from './ui/talk';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
@@ -801,7 +802,7 @@ function startLevel(pick?: number, custom?: Level, swoop = true, ev: EventRun | 
     modalOpen = true;
     const c = h('div', 'boss-card');
     const line = BOSS_LINES[(ch.n - 1) % BOSS_LINES.length];
-    c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad">${line.taunt}</div>`;
+    c.innerHTML = `<div class="vs">مرحله‌ی رئیس</div>${AJOOL('big')}<h2>آقای عجول</h2><div class="speech bad" data-talk-after="700">${line.taunt}</div>`;
     const close = modal(c, 'pop boss');
     afterVeil(() => { sfx.sting(true); duckMusic(1.2); });
     c.append(asBack(button('حالا می‌بینیم! 💪', 'primary big', () => { save.seen['boss' + n] = true; persist(); close(); modalOpen = false; })));
@@ -1415,7 +1416,7 @@ function showSettings(home = false) {
     t.onchange = () => { persist(); if (key === 'sfxVol') { click(); soundscape(save.settings.sound ? placeLight : null); } };
     r.append(t); c.append(r);
   };
-  const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText' | 'leftHand', apply?: () => void) => {
+  const row = (label: string, key: 'haptics' | 'colorblind' | 'bigText' | 'leftHand' | 'voices', apply?: () => void) => {
     const r = h('label', 'row', `<span>${label}</span>`);
     const t = h('input') as HTMLInputElement; t.type = 'checkbox'; t.checked = save.settings[key]; t.className = 'switch';
     t.setAttribute('role', 'switch'); // read as on/off, not as a checkbox
@@ -1426,7 +1427,7 @@ function showSettings(home = false) {
     };
     r.append(t); c.append(r);
   };
-  slider('موسیقی', 'musicVol'); slider('صداها', 'sfxVol'); row('لرزش', 'haptics');
+  slider('موسیقی', 'musicVol'); slider('صداها', 'sfxVol'); row('صدای شخصیت‌ها', 'voices', () => { if (save.settings.voices) hello('rahim'); }); row('لرزش', 'haptics');
   // Reduced motion: follows the phone until switched here.
   const mr = h('label', 'row', '<span>حرکت کمتر<small>بدون لرزش دوربین و جلوه‌های پرتحرک</small></span>');
   const mt = h('input') as HTMLInputElement; mt.type = 'checkbox'; mt.className = 'switch'; mt.checked = reduceMotion();

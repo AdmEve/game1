@@ -56,6 +56,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/missions.cjs
           # A hopeless loss offers going back to before the losing tap, replayed exactly (scripts/rewind.cjs).
           URL=http://127.0.0.1:4173/ node scripts/rewind.cjs
+          # Characters' lines write themselves in, in their voices; tap, voices off, reduced motion, the veil (scripts/talk.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/talk.cjs
           # After the 240 levels, Endless Tehran: Play goes on to 241, wins pay, no lives (scripts/endless.cjs).
           URL=http://127.0.0.1:4173/ node scripts/endless.cjs
           # Screen-reader names and structure on the main screens (axe-core, WCAG 2 A/AA: scripts/a11y.cjs).

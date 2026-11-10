@@ -453,3 +453,7 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - Ms. Sabouri has a face: her portrait (headset, agency uniform) speaks in the «امروز» card, her line following the
   day's progress, and the radio on home passes on her missions now and then while any are left. The daily reminder
   mentions the missions too.
+- The characters speak: Mash Rahim's, Ms. Sabouri's and Mr. Ajool's lines on cards write themselves in, a syllable
+  at a time, each in a voice of their own (Rahim low and gravelly, Sabouri over the agency radio, Ajool fast and
+  nasal); a tap shows the rest. «صدای شخصیت‌ها» in settings turns the voices off; with «حرکت کمتر» the line is
+  there at once.

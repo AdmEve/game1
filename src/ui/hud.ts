@@ -3,6 +3,7 @@ import { click } from '../audio';
 import { save } from '../save';
 import { HELP_FROM, anyHelpOpen, helpOpen } from '../game/helps';
 import { icon } from './icons';
+import { talk } from './talk';
 
 export const fa = (n: number | string) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
 /** With the Persian thousands separator «٬» (as the store's prices and the product titles write them). */
@@ -145,6 +146,8 @@ export function modal(content: HTMLElement, cls = ''): () => void {
   const home = card.classList.contains('home-card');
   if (home) { back.classList.add('home-back'); document.body.classList.add('at-home'); }
   document.body.append(back);
+  // A character's line on the card speaks (once the code building the card has filled it in).
+  void Promise.resolve().then(() => talk(card));
   // Commit the start state, then animate in (transform and opacity only: the compositor runs it).
   void back.offsetWidth;
   back.classList.add('in');

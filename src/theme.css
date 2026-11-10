@@ -668,3 +668,5 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
   .today-h { margin: 12px 0 6px; }
 }
 .sabouri-says { margin: 0 0 8px; font-size: 13px; }
+/* L2: a character's line writing itself in: the words not yet said keep their place, unseen. */
+.tw-rest { color: transparent; }

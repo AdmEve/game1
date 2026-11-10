@@ -4,7 +4,7 @@
  */
 
 /** Mash Rahim: flat cap, big grey moustache, kind eyes, a brown driver's jacket. */
-export const RAHIM = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true">
+export const RAHIM = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true" data-who="rahim">
   <defs><clipPath id="fr"><circle cx="60" cy="60" r="56"/></clipPath>
     <radialGradient id="rbg" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#f6c453"/></radialGradient></defs>
   <circle cx="60" cy="60" r="58" fill="#7c4a21"/><circle cx="60" cy="60" r="56" fill="url(#rbg)"/>
@@ -29,7 +29,7 @@ export const RAHIM = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 12
 </svg>`;
 
 /** Mr. Ajool: slick hair, pencil moustache, aviators, a loud shirt and a gold chain. */
-export const AJOOL = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true">
+export const AJOOL = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true" data-who="ajool">
   <defs><clipPath id="fa"><circle cx="60" cy="60" r="56"/></clipPath>
     <radialGradient id="abg" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#fbcfe8"/><stop offset="1" stop-color="#be185d"/></radialGradient>
     <pattern id="ash" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#7c3aed"/><circle cx="4" cy="4" r="2.5" fill="#fde047"/><circle cx="11" cy="10" r="2" fill="#22d3ee"/></pattern></defs>
@@ -55,7 +55,7 @@ export const AJOOL = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 12
 </svg>`;
 
 /** Ms. Sabouri, the agency's dispatcher (GDD §5): a navy headscarf, a radio headset with its microphone, a warm smile. */
-export const SABOURI = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true">
+export const SABOURI = (cls = '') => `<svg class="face ${cls}" viewBox="0 0 120 120" aria-hidden="true" data-who="sabouri">
   <defs><clipPath id="fs"><circle cx="60" cy="60" r="56"/></clipPath>
     <radialGradient id="sbg" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#ccfbf1"/><stop offset="1" stop-color="#0f766e"/></radialGradient></defs>
   <circle cx="60" cy="60" r="58" fill="#134e4a"/><circle cx="60" cy="60" r="56" fill="url(#sbg)"/>

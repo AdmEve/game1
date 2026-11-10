@@ -15,7 +15,7 @@ const URL = process.env.URL || 'http://127.0.0.1:5173/';
       ['bump (blocked)', () => a.bump()], ['chirp', () => a.chirp()], ['engine', () => a.engine()], ['engine (heavy)', () => a.engine(0, true)],
       ['horn new', () => a.horn('new')], ['horn old', () => a.horn('old')], ['horn bus', () => a.horn('bus')], ['horn x2 (depart)', () => a.horn('new', 2)],
       ['wedding horns', () => a.weddingHorns()], ['whistle', () => a.whistleSound()], ['crane', () => a.craneSound()],
-      ['win jingle', () => a.win()], ['lose jingle', () => a.lose()], ['thunder', () => a.thunder()],
+      ['win jingle', () => a.win()], ['voice rahim', () => a.syllable('rahim', 0)], ['voice sabouri', () => { a.syllable('sabouri', 1); }], ['voice ajool', () => a.syllable('ajool', 2)], ['radio squelch', () => a.squelch()], ['lose jingle', () => a.lose()], ['thunder', () => a.thunder()],
       // Worst case: three cars leaving at once while passengers board and coins land.
       ['BURST (all at once)', () => { for (let k = 0; k < 3; k++) { a.horn('new', 2, k * 0.05); a.engine(k * 0.05); a.chirp(k * 0.05); } for (let k = 0; k < 5; k++) a.pop(k / 4); a.coin(); a.coin(0.05); a.bump(); a.win(); }],
     ];
