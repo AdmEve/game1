@@ -58,6 +58,8 @@ import { nextStreak, streakHelps, type Help } from './streak';
 import { count, hardest, statsCsv } from './levelstats';
 import { today } from './game/daily';
 import { prepareRush, rushReady } from './rush';
+import { countPlayed, missionText, MISSIONS_FROM, todayMissions, type Mission, type Played } from './missions';
+import { showToday, todayBadge, todayLine } from './ui/today';
 import { initMonetization, maybeInterstitial, rateApp, rewardedAvailable, showRewarded } from './monetize';
 import { persist, save } from './save';
 import * as sfx from './audio';
@@ -918,6 +920,15 @@ function reward(n: number) {
   return 20 + Math.min(40, n * 2) + (levels[n]?.tag ? 40 : 0);
 }
 
+/** A level played, counted towards today's missions (P4); the ones it completed, for the win card. */
+function countMissions(p: Played): Mission[] {
+  if (save.level < MISSIONS_FROM) return [];
+  const done = countPlayed(todayMissions(save, today()), p);
+  persist();
+  return done;
+}
+const missionNotes = (done: Mission[]) => done.map((m) => `<div class="piggy-note mission-note">${emo('📻', 'emo xs')} مأموریت انجام شد: ${missionText(m, fa)}</div>`).join('');
+
 /** Counts a win towards the achievements; returns a banner for any medal just earned. */
 function recordWin(boss: boolean) {
   const st = save.stats;
@@ -983,6 +994,7 @@ function showEndlessWin(i: number) {
   // Counted before the medals are looked at, so «جاده‌ی بی‌پایان» shows on the win that reaches it.
   save.endless = Math.max(save.endless, i + 1);
   const ach = recordWin(hard);
+  const missionsDone = countMissions({ won: true, clean: !helped, hard, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
   const before = save.coins;
   save.coins += coins;
   persist();
@@ -996,7 +1008,7 @@ function showEndlessWin(i: number) {
   const notes = (toChest ? `<div class="chest-note">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه: <b>${fa(toChest)}</b> مرحله‌ی دیگه</span></div>`
     : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`)
     + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
-    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
+    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '') + missionNotes(missionsDone);
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>تهران بی‌پایان، مرحله‌ی ${fa(n + 1)} · ${placeOf(i).name}</p>
     <div class="rewards">${rewards}</div>${notes}${ach}`;
   const close = modal(c, 'pop');
@@ -1024,10 +1036,11 @@ function showRushWin() {
   const coins = 250 + Math.min(6, streak - 1) * 50;
   const before = save.coins;
   save.coins += coins; addKeys(1); const ach = recordWin(false); persist();
+  const missionsDone = countMissions({ won: true, rush: true, hard: true, clean: !helped, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
   modalOpen = true; hud.show(false); hud.refresh();
   const c = h('div', 'result win');
   c.innerHTML = `<div class="burst">${emo('⏰', 'emo huge')}</div><h2>ساعت شلوغی رو رد کردی!</h2><p>${fa(streak)} روز پشت سر هم! فردا یه ترافیک تازه منتظرته.</p>
-    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${ach}`;
+    <div class="reward">${emo('🪙')}<b dir="ltr">+${faNum(coins)}</b></div><div class="reward keyr">${emo('🔑')}<b dir="ltr">+${fa(1)}</b></div>${missionNotes(missionsDone)}${ach}`;
   const close = modal(c, 'pop');
   const pay = payout(c, coins, before);
   setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
@@ -1041,6 +1054,7 @@ function showWin() {
   if (event?.kind === 'endless') { showEndlessWin(event.i); return; }
   if (event) {
     recordWin(false);
+    countMissions({ won: true, clean: !helped, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
     modalOpen = true; hud.show(false); hud.refresh();
     const back = () => { hud.refresh(); void goLevel(undefined, undefined, false, null, showHome); };
     setTimeout(() => { if (modalBacks.length) prepareAhead(); }, 1500);
@@ -1067,6 +1081,7 @@ function showWin() {
   save.streak = nextStreak(save.streak, 'won', !replay);
   if (stars) addStars(stars);
   const ach = recordWin(!replay && !!lvl?.tag);
+  const missionsDone = countMissions({ won: true, clean: !helped, hard: !!lvl?.tag, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0, dot: replay && cleanNow });
   const before = save.coins;
   save.coins += coins;
   if (!replay) save.level = Math.min(save.level + 1, levels.length);
@@ -1088,7 +1103,7 @@ function showWin() {
     : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`;
   const notes = chestLine + (masteryBonus ? `<div class="piggy-note clean-note"><i class="dot"></i> این بار بدون هیچ کمکی! <b dir="ltr">+${fa(masteryBonus)}</b> ${emo('🪙', 'emo xs')}</div>` : '')
     + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
-    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
+    + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '') + missionNotes(missionsDone);
   const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small>` : ''}</div>` : '';
   const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
   c.innerHTML = `<div class="burst">${emo('🏆', 'emo huge')}</div><h2>آفرین!</h2><p>همه‌ی مسافرها سوار شدن و ترافیک باز شد.</p>
@@ -1213,6 +1228,7 @@ function showLose(limit?: 'time' | 'moves') {
   hud.clearToast(); // the in-level advice (e.g. «آخرین جای پارک!») is over
   save.stats.losses++;
   if (!rush && !event) count(save.lvStats, current, 'loss');
+  countMissions({ won: false, people: session?.s.q ?? 0, combo: session?.bestCombo ?? 0 });
   persist();
   modalOpen = true;
   const c = h('div', 'result lose');
@@ -1588,21 +1604,27 @@ function showHome() {
   const rowEl = h('div', 'home-row');
   rowEl.append(gar);
   c.append(rowEl);
+  // «امروز» (P4): today's rush hour and Ms. Sabouri's three missions, in one card; the badge counts rewards waiting.
   const rushDone = save.rush.day === today();
-  const rushBtn = button(rushDone ? `${icon('clock')}<span>ساعت شلوغی<small>امروز رد شد!</small></span>` : `${icon('clock')}<span>ساعت شلوغی<small>چالش امروز ${icon('key')}</small></span>`, rushDone ? 'rush-btn done' : 'rush-btn', async () => {
-    if (rushDone) { note('چالش امروز رو رد کردی؛ فردا یه ترافیک تازه منتظرته!', 2400); return; }
-    if (rushBtn.classList.contains('busy')) return;
-    // Today's level is made ahead (rush.ts); if it isn't ready yet, the button says so and waits for it.
-    const small = rushBtn.querySelector('small')!, was = small.innerHTML;
-    if (!rushReady()) { rushBtn.classList.add('busy'); small.textContent = 'آماده می‌شه…'; }
-    const lvl = await prepareRush();
-    rushBtn.classList.remove('busy'); small.innerHTML = was;
-    if (!rushBtn.isConnected) return; // home was left meanwhile
-    if (!lvl) { note('چالش امروز آماده نشد، بعداً سر بزن!'); return; }
-    close(); modalOpen = false;
-    void goLevel(undefined, lvl);
+  const waitingToday = todayBadge(today());
+  const todayBtn = button(`${icon('radio')}<span>امروز<small>${todayLine(today(), rushDone)}</small></span>${waitingToday ? `<i class="badge">${fa(waitingToday)}</i>` : ''}`, 'rush-btn today-btn', () => {
+    close();
+    showToday({
+      day: today(), rushDone, rushStreak: save.rush.streak, onChange: () => hud.refresh(), onClose: () => showHome(),
+      playRush: async (busy) => {
+        // Today's level is made ahead (rush.ts); if it isn't ready yet, the row says so and waits for it.
+        if (!rushReady()) busy(true);
+        const lvl = await prepareRush();
+        busy(false);
+        if (!lvl) { note('چالش امروز آماده نشد، بعداً سر بزن!'); return false; }
+        modalOpen = false;
+        void goLevel(undefined, lvl);
+        return true;
+      },
+    });
   });
-  rowEl.append(rushBtn);
+  todayBtn.setAttribute('aria-label', `امروز: ساعت شلوغی و مأموریت‌ها${waitingToday ? `، ${fa(waitingToday)} جایزه آماده` : ''}`);
+  rowEl.append(todayBtn);
   if (!rushDone) void prepareRush();
   const tickets = passReady();
   const passBtn = button(`${icon('ticket')}${tickets ? `<i class="badge">${fa(tickets)}</i>` : ''}`, 'ach-btn pass-btn', () => {
@@ -1828,7 +1850,7 @@ async function boot() {
       home: showHome, pause: showSettings, levels: showLevels, rate: askRating, reminders: askReminders, giveUp, lose: showLose, win: showWin, rushWin: showRushWin,
       shop: () => showShop(() => {}, () => {}), garage: () => showGarage(() => {}), agency: () => showAgency(() => {}), pass: () => showPass(() => {}, () => {}),
       achievements: () => showAchievements(() => {}, () => {}), chest: () => showChest(() => {}), intro: (k: IntroKind) => showIntro(k), noLives: () => showNoLives(() => {}),
-      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, endless: (i: number) => playEndless(i), welcomeBack: (days: number) => showWelcomeBack(days, () => addLives(MAX_LIVES), () => hud.refresh()), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
+      daily: () => maybeDaily(() => {}), settings: () => showSettings(true), guide: () => showGuide(TIPS), starter: () => { delete save.seen.starterOffer; return maybeStarterOffer(); }, endless: (i: number) => playEndless(i), today: () => showToday({ day: today(), rushDone: save.rush.day === today(), rushStreak: save.rush.streak, onChange: () => hud.refresh(), onClose: () => {}, playRush: async () => false }), welcomeBack: (days: number) => showWelcomeBack(days, () => addLives(MAX_LIVES), () => hud.refresh()), privacy: () => showPrivacy(), transfer: () => showTransfer(levels.length), finale: () => showFinale(), helpOffer: (id: BoosterId) => offerHelp(id), yaldaWin: (i: number) => showYaldaWin(i, () => {}), nowruzWin: (i: number) => showNowruzWin(i, () => {}),
     },
     /** The solver (bundled anyway for hints), so a smoke test can win a level in the production build. */
     solve: (lv: Level) => solveLevel(lv).solution,

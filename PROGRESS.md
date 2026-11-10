@@ -448,3 +448,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
   انداخته! تو می‌تونی؟» and the Bazaar link.
 - Welcome back: after three or more days away, Mash Rahim greets you with full lives and one of each help, and a
   reminder after three days away tells you it's waiting.
+- Daily missions: home's rush button is now «امروز», with today's rush hour and three missions from Ms. Sabouri over
+  the agency radio (win levels, a clean win, a combo, a hard level…), coins for each and a key for all three.

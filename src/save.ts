@@ -2,6 +2,8 @@
  * Player progress, kept in localStorage under two keys: the save and a backup written with it, so a write cut
  * short (the app killed mid-save, a full disk) can only ever spoil one of them.
  */
+import type { Missions } from './missions';
+
 export interface Save {
   /** Save format version (for migrations). */
   v: number;
@@ -25,6 +27,8 @@ export interface Save {
   opens: number[];
   /** The day (YYYY-MM-DD) the game was last opened, for the welcome back after a few days away. */
   lastDay: string;
+  /** «مأموریت‌های امروز» (missions.ts): today's three and how far along. */
+  missions: Missions;
   stats: { wins: number; losses: number; people: number; bestCombo: number; clean: number; bosses: number; bestRush: number };
   /** «افتخارات»: tiers claimed and tiers already announced, per achievement. */
   ach: Record<string, number>;
@@ -75,6 +79,7 @@ const fresh = (): Save => ({
   notifyAsked: false,
   opens: [],
   lastDay: '',
+  missions: { day: '', list: [], bonus: false },
   stats: { wins: 0, losses: 0, people: 0, bestCombo: 0, clean: 0, bosses: 0, bestRush: 0 },
   ach: {},
   achSeen: {},

@@ -626,3 +626,44 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 /* The lose card's «از اول» shares its row with a share button (the level, to ask friends: «گیرم انداخته»). */
 .lose-row .btn:not(.share) { font-size: 17px; }
 .lose-row .btn.big:not(.share) { font-size: 19px; padding-top: 13px; padding-bottom: 13px; }
+
+/* P4: «امروز», today's rush and Ms. Sabouri's three missions. */
+.today-btn { position: relative; }
+.today-btn .badge { position: absolute; top: -7px; left: -5px; min-width: 20px; height: 20px; line-height: 20px; border-radius: 10px; font-size: 12px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 800; text-align: center; padding: 0 5px; box-sizing: border-box; box-shadow: none; animation: none; }
+.today h2 { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.today h2 .ico { width: 24px; height: 24px; color: var(--accent); }
+.btn.rush-row { display: flex; align-items: center; gap: 10px; text-align: right; margin-top: 12px; padding: 12px 14px; font-size: 16px; }
+.btn.rush-row > span { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.btn.rush-row small { color: var(--muted); font-weight: 600; font-size: 12px; }
+.btn.rush-row .ico { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.btn.rush-row .ico.go { color: var(--accent); }
+.btn.rush-row .ico.ok { color: #6ee7a8; }
+.btn.rush-row.done { opacity: .75; }
+.btn.rush-row.busy small { animation: breathe 1.2s ease-in-out infinite; }
+.today-h { margin: 16px 0 8px; font-size: 15px; color: var(--accent); text-align: right; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.today-h small { font-size: 11.5px; color: var(--muted); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.today-h small .ico, .today-h small .emo { width: 14px; height: 14px; }
+.missions { display: flex; flex-direction: column; gap: 6px; }
+.mission { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); text-align: right; }
+.mission .mi { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: rgba(242, 177, 36, .1); }
+.mission .mt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mission .mt b { font-size: 13.5px; color: #fff; line-height: 1.5; }
+.mission .mt small { font-size: 11px; color: var(--muted); }
+.mission .bar { display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.mission .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.mission .mr { flex: none; font-size: 12.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 3px; }
+.mission .mr.got .ico { width: 20px; height: 20px; color: #6ee7a8; }
+.mission .btn.claim { flex: none; width: auto; margin: 0; padding: 6px 12px; font-size: 13px; border-radius: 10px; }
+.mission.done:not(.claimed) { border-color: rgba(242, 177, 36, .55); background: rgba(242, 177, 36, .08); }
+.mission.claimed { opacity: .6; }
+.mission.bonus .mt b { color: var(--accent-hi); }
+.today-foot { font-size: 12px; margin: 10px 0 0; }
+.mission-note { color: #ffd166 !important; }
+.card.today-card { max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-height: 660px) {
+  .today-foot { display: none; }
+  .mission { padding: 6px 10px; }
+  .btn.rush-row { margin-top: 8px; padding: 10px 12px; }
+  .today-h { margin: 12px 0 6px; }
+}

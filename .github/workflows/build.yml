@@ -52,6 +52,8 @@ jobs:
           URL=http://127.0.0.1:4173/ node scripts/fairgo.cjs
           # Progress to another phone by code: refuses bad codes, asks first, keeps this phone's purchases (scripts/transfer.cjs).
           URL=http://127.0.0.1:4173/ node scripts/transfer.cjs
+          # «امروز»: daily missions count wins, claims pay, the rush starts from the card (scripts/missions.cjs).
+          URL=http://127.0.0.1:4173/ node scripts/missions.cjs
           # A hopeless loss offers going back to before the losing tap, replayed exactly (scripts/rewind.cjs).
           URL=http://127.0.0.1:4173/ node scripts/rewind.cjs
           # After the 240 levels, Endless Tehran: Play goes on to 241, wins pay, no lives (scripts/endless.cjs).
