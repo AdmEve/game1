@@ -1050,8 +1050,13 @@ function showWin() {
   if (rush) { showRushWin(); return; }
   const n = current;
   const replay = n < save.level;
+  // Won without any help: marked in the level list. A level won before only with help, now won clean on a replay,
+  // is a goal reached, and pays a little more (the level list's gold dots are the reason to replay).
+  const cleanNow = !helped && !save.cleanLv[String(n + 1)];
+  if (!helped) save.cleanLv[String(n + 1)] = 1;
+  const masteryBonus = replay && cleanNow ? 30 : 0;
   // Replays pay a little; keys and progress only come from new levels.
-  const coins = replay ? 10 : reward(n) + (session?.bonus ?? 0);
+  const coins = replay ? 10 + masteryBonus : reward(n) + (session?.bonus ?? 0);
   const lvl = levels[n];
   const keys = replay ? 0 : (lvl?.tag ? 1 : 0) + (n + 1 === chapterOf(n).to ? 2 : 0);
   if (keys) addKeys(keys);
@@ -1081,7 +1086,8 @@ function showWin() {
   const toChest = 5 - ((n + 1) % 5 || 5), pips = Array.from({ length: 5 }, (_, k) => `<i class="${k < 5 - toChest ? 'on' : ''}"></i>`).join('');
   const chestLine = replay ? '' : toChest ? `<div class="chest-note">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه: <b>${fa(toChest)}</b> مرحله‌ی دیگه</span></div>`
     : `<div class="chest-note ready">${emo('🎁', 'emo xs')}<span class="pips">${pips}</span><span>صندوق جایزه آماده‌ست!</span></div>`;
-  const notes = chestLine + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
+  const notes = chestLine + (masteryBonus ? `<div class="piggy-note clean-note"><i class="dot"></i> این بار بدون هیچ کمکی! <b dir="ltr">+${fa(masteryBonus)}</b> ${emo('🪙', 'emo xs')}</div>` : '')
+    + (station ? `<div class="piggy-note">${emo('🚇', 'emo xs')} رسیدی به ایستگاه بعدی کارت بلیت!</div>` : '')
     + (piggy ? `<div class="piggy-note">${emo('🏺', 'emo xs')} ${fa(piggy)} سکه رفت تو قلکت</div>` : '');
   const streakLine = !replay && save.streak > 0 ? `<div class="streak-note">${emo('🔥', 'emo xs')} <b>${fa(save.streak)}</b> برد پشت‌سرهم${helpsText(save.streak) ? `<small>مرحله‌ی بعد: ${helpsText(save.streak)} مجانی</small>` : ''}</div>` : '';
   const beaten = lvl?.tag === 'boss' && !replay ? `<div class="beaten">${AJOOL('sm')}<div><b>آقای عجول:</b> ${BOSS_LINES[(chapterOf(n).n - 1) % BOSS_LINES.length].beaten}</div></div>` : '';
@@ -1492,6 +1498,8 @@ function showLevels(back?: () => void) {
   modalOpen = true;
   const c = h('div', 'levels');
   c.innerHTML = `<h2>${emo('🗺️')} مرحله‌ها</h2>`;
+  // The gold dot: won without any help (a replay can earn it).
+  if (Object.keys(save.cleanLv).length) c.append(h('p', 'lv-legend', '<i class="dot"></i> بدون کمک برده شده؛ بقیه رو دوباره بازی کن و بگیرش!'));
   const unlocked = save.devUnlock || UNLOCK_ALL_LEVELS ? levels.length : save.level;
   let close = () => {};
   for (const ch of CHAPTERS) {
@@ -1500,7 +1508,9 @@ function showLevels(back?: () => void) {
     for (let i = ch.from; i < ch.to && i < levels.length; i++) {
       const open = i <= unlocked;
       const tag = levels[i].tag;
-      const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
+      const clean = i < save.level && !!save.cleanLv[String(i + 1)];
+      const b = h('button', `lv ${i < save.level ? 'done' : i === save.level ? 'now' : ''} ${open ? '' : 'locked'} ${tag ?? ''}${clean ? ' clean' : ''}`, open ? fa(i + 1) : emo('🔒', 'emo xs'));
+      if (clean) b.setAttribute('aria-label', `${fa(i + 1)}، بدون کمک برده شده`);
       if (open) b.onclick = async () => {
         // Picked from the pause card in the middle of a level: leaving it is a give-up (the card stays on a no).
         if (!(await giveUp())) return;

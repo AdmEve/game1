@@ -56,6 +56,8 @@ export interface Save {
   streak: number;
   /** Attempts, losses and wins per Journey level (see levelstats.ts). */
   lvStats: Record<string, [number, number, number]>;
+  /** Journey levels (1-based) won at least once without any help: the level list marks them. */
+  cleanLv: Record<string, 1>;
   /** «کارت بلیت»: this month's punches, stations collected on each track, and the premium card. */
   pass: { month: string; punches: number; free: number[]; prem: number[]; premium: boolean };
 }
@@ -89,6 +91,7 @@ const fresh = (): Save => ({
   piggy: 0,
   streak: 0,
   lvStats: {},
+  cleanLv: {},
   pass: { month: '', punches: 0, free: [], prem: [], premium: false },
 });
 
@@ -113,7 +116,7 @@ export function normalize(s: Partial<Save>): Save {
   return {
     ...f, ...s, v: SAVE_VERSION,
     boosters: { ...f.boosters, ...s.boosters }, settings: st, stats: { ...f.stats, ...s.stats },
-    owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
+    owned: { ...f.owned, ...s.owned }, daily: { ...f.daily, ...s.daily }, ads: { ...f.ads, ...s.ads }, seen: { ...s.seen }, cleanLv: { ...s.cleanLv }, ach: { ...s.ach }, achSeen: { ...s.achSeen }, garage: { ...f.garage, ...s.garage }, rush: { ...f.rush, ...s.rush }, yalda: { ...f.yalda, ...s.yalda }, nowruz: { ...f.nowruz, ...s.nowruz }, lives: { ...f.lives, ...s.lives }, pass: { ...f.pass, ...s.pass }, agency: s.agency ? { ...f.agency, ...s.agency } : { stars: 0, done: [] },
   };
 }
 

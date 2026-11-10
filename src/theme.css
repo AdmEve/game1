@@ -615,3 +615,10 @@ body.at-home #app canvas { transform: scale(1.08); transition: transform 40s cub
 @keyframes reviewIn { from { opacity: 0; transform: translateY(-4px); } }
 .reduce-motion .review-note { animation: none; }
 @media (max-height: 660px) { .review-note { font-size: 12.5px; line-height: 1.6; padding: 6px 10px; margin-bottom: 8px; } }
+
+/* Mastery: levels won without any help carry a gold dot in the level list (a replay can earn it). */
+.lv { position: relative; }
+.lv.clean::after { content: ''; position: absolute; top: 4px; left: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(242, 177, 36, .6); }
+.lv-legend { font-size: 12.5px; margin: -2px 0 8px !important; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.lv-legend .dot, .clean-note .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(242, 177, 36, .6); }
+.clean-note b { color: var(--accent-hi); }

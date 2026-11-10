@@ -442,3 +442,5 @@ Plan and per-item results: `rahbandoon/BEST_IN_MARKET_PLAN.md` (17 aspects: now 
 - When even an extra bay can't save a level, the lose card now offers to go back to just before the losing move
   («از حرکت ۷ دوباره», 300 coins or a video) instead of offering nothing: the game replays your moves up to there and
   you continue from a position that can still be won. No life lost.
+- A reason to replay: levels you've won without any help get a gold dot in the level list; replaying one you needed
+  help for and winning it clean pays a bonus and says so.
